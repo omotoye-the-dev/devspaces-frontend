@@ -68,7 +68,7 @@ export const FormInput = forwardRef<HTMLInputElement, FormInputProps>(function F
     error,
     leftIcon,
     rightIcon,
-    inputSize = "md",
+    inputSize = "sm",
     fullWidth = true,
     disabled = false,
     required = false,
@@ -140,7 +140,7 @@ export const FormInput = forwardRef<HTMLInputElement, FormInputProps>(function F
   return (
     <div className={cn("relative flex flex-col gap-1.5", fullWidth ? "w-full" : "w-auto")}>
       {label && (
-        <label htmlFor={inputId} className="text-xs font-medium text-text select-none">
+        <label htmlFor={inputId} className="text-s font-medium text-text select-none">
           {label}
           {required}
         </label>
