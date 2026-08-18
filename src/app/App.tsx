@@ -1,6 +1,6 @@
 import type { JSX } from "react";
 import { RouterProvider } from "react-router-dom";
-import { ToastProvider } from "@/components/ui";
+import { ToastProvider } from "@/components/common";
 import { router } from "./router";
 
 export default function App(): JSX.Element {
@@ -10,4 +10,3 @@ export default function App(): JSX.Element {
     </ToastProvider>
   );
 }
-

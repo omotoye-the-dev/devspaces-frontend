@@ -1,6 +1,12 @@
 export { Button, type ButtonProps, type ButtonVariant, type ButtonSize } from "./Button";
 export { Input, type InputProps, type InputSize } from "./Input";
-export { FormInput, type FormInputProps, type FormInputSize } from "./FormInput";
+export {
+  FormInput,
+  type FormInputProps,
+  type FormInputSize,
+  type PasswordRequirement,
+} from "./FormInput";
+export { defaultPasswordRequirements } from "@/lib/constants/password";
 export { Textarea, type TextareaProps } from "./Textarea";
 export { Select, type SelectProps, type SelectOption, type SelectSize } from "./Select";
 export {

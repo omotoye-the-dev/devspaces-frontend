@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils/cn";
 
 export type ButtonVariant = "primary" | "secondary" | "outline" | "ghost" | "teal" | "danger";
 
-export type ButtonSize = "sm" | "md" | "lg";
+export type ButtonSize = "sm" | "md" | "lg" | "icon";
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -33,6 +33,7 @@ const sizeStyles: Record<ButtonSize, string> = {
   sm: "h-8 px-3 text-xs gap-1.5 rounded-sm",
   md: "h-10 px-4 text-sm gap-2 rounded-md",
   lg: "h-12 px-6 text-base gap-2.5 rounded-lg",
+  icon: "h-10 px-6 text-sm gap-2 rounded-md",
 };
 
 export function Button({

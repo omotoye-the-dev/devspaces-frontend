@@ -1,9 +1,9 @@
-import Authleftimage from "@/components/pages/Authleftimage";
+import Authleftimage from "@/components/features/Auth/Authleftimage";
 import { Outlet } from "react-router-dom";
 
 const AuthLayout = () => {
   return (
-    <div className="min-h-screen lg:h-screen grid lg:grid-cols-2 overflow-x-hidden">
+    <div className="min-h-screen lg:h-screen grid  lg:grid-cols-2 overflow-x-hidden">
       {/* Image - LEFT */}
       <Authleftimage />
 
