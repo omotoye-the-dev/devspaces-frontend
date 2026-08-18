@@ -8,6 +8,7 @@ import { FcGoogle } from "react-icons/fc";
 
 import { FormInput, Button, defaultPasswordRequirements } from "@/components/common";
 import { toast } from "@/hooks/useToast";
+import { initiateOAuth } from "@/lib/api/auth.api";
 
 const signUpSchema = z
   .object({
@@ -186,15 +187,19 @@ export default function SignUpPage() {
       {/* Social Logins */}
       <div className="flex gap-2 justify-center items-center w-full">
         <Button
+          type="button"
           variant="outline"
           size="icon"
+          onClick={() => initiateOAuth("github")}
           leftIcon={<FaGithub className="w-3.5 h-3.5 text-text" />}
         >
           GitHub
         </Button>
         <Button
+          type="button"
           variant="outline"
           size="icon"
+          onClick={() => initiateOAuth("google")}
           leftIcon={<FcGoogle className="w-3.5 h-3.5" />}
         >
           Google
