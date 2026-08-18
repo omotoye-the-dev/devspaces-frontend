@@ -1,131 +1,167 @@
-import { useState, type JSX, type FormEvent } from "react";
-import { Link } from "react-router-dom";
-import { FaGithub} from "react-icons/fa";
+import { Link, useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { FaEnvelope, FaLock, FaGithub } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
-import { FiEye, FiEyeOff, FiLock, FiMail } from "react-icons/fi";
-import { Button, Input } from "@/components/ui";
 
-export default function SignInPage(): JSX.Element {
-  const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
+import { FormInput, Button } from "@/components/ui";
+import { toast } from "@/hooks/useToast";
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
-    event.preventDefault();
+const signInSchema = z.object({
+  email: z
+    .string()
+    .regex(/^[^\s]/, "Email cannot start with a space")
+    .email("Please enter a valid email address"),
+  password: z
+    .string()
+    .regex(/^[^\s]/, "Password cannot start with a space")
+    .min(1, "Password is required"),
+  rememberMe: z.boolean().optional(),
+});
+
+type SignInFormData = z.infer<typeof signInSchema>;
+
+export default function SignInPage() {
+  const navigate = useNavigate();
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    reset,
+  } = useForm<SignInFormData>({
+    resolver: zodResolver(signInSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+      rememberMe: true,
+    },
+    mode: "onBlur",
+  });
+
+  const onSubmit = async () => {
+    try {
+      // Simulated API response delay
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      toast.success("Welcome back to DevSpace!");
+      reset();
+      navigate("/playground");
+    } catch {
+      toast.error("Failed to sign in. Please try again.");
+    }
   };
 
   return (
-    <div className="w-150 min-h-screen flex items-center justify-center px-4">
-      <div className="w-full sm:max-w-">
-        {/* Login Card */}
-        <div className=" bg-white border border-slate-200 rounded-lg shadow-sm px-7 py-8">
-          {/* Header */}
-          <div className="text-center mb-6">
-            <h1 className="text-[30px] font-bold text-gray-800">
-              Welcome back
-            </h1>
+    <div className="shadow-xl sm:shadow-2xl rounded-lg flex flex-col gap-2.5 p-4 sm:p-6 items-center w-full max-w-md bg-white border border-border my-auto">
+      {/* Mobile Brand Logo */}
+      <div className="lg:hidden flex items-center justify-center gap-1.5 pb-0.5">
+        <span className="font-mono font-bold text-primary text-base leading-none">&lt;/&gt;</span>
+        <span className="font-bold text-lg text-text tracking-tight">DevSpace</span>
+      </div>
 
-            <p className="mt-1 text-[11px] text-gray-500">
-              Sign in to continue to DevSpace
-            </p>
-          </div>
+      {/* Header */}
+      <div className="text-center space-y-0.5 w-full">
+        <h1 className="text-text font-black leading-tight font-inter text-xl sm:text-2xl tracking-tight">
+          Welcome back
+        </h1>
+        <p className="text-text/70 text-xs sm:text-sm">Sign in to continue to DevSpace</p>
+      </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <Input
-              label="Email address"
-              name="email"
-              type="email"
-              placeholder="you@example.com"
-              autoComplete="email"
-              leftIcon={<FiMail />}
-              inputSize="md"
+      {/* Sign-In Form */}
+      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col w-full gap-2 pt-1">
+        <FormInput
+          label="Email address"
+          type="email"
+          inputSize="sm"
+          leftIcon={<FaEnvelope className="text-text/40" />}
+          placeholder="you@example.com"
+          {...register("email")}
+          errorMessage={errors.email?.message}
+          required
+        />
+
+        <FormInput
+          label="Password"
+          type="password"
+          inputSize="sm"
+          leftIcon={<FaLock className="text-text/40" />}
+          placeholder="Enter your password"
+          {...register("password")}
+          errorMessage={errors.password?.message}
+          required
+        />
+
+        <div className="flex items-center justify-between gap-3 pt-0.5 w-full">
+          <label className="flex cursor-pointer items-center gap-2 text-xs text-text/70">
+            <input
+              type="checkbox"
+              {...register("rememberMe")}
+              className="h-3.5 w-3.5 rounded border-border text-primary focus:ring-primary"
             />
+            <span>Remember me</span>
+          </label>
 
-            <Input
-              label="Password"
-              name="password"
-              type={showPassword ? "text" : "password"}
-              placeholder="Enter your password"
-              autoComplete="current-password"
-              leftIcon={<FiLock />}
-              rightIcon={
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((previous) => !previous)}
-                  className="flex h-7 w-7 items-center justify-center rounded-sm text-text/60 transition hover:text-text"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? <FiEyeOff className="h-4 w-4" /> : <FiEye className="h-4 w-4" />}
-                </button>
-              }
-              inputSize="md"
-            />
-
-            <div className="flex items-center justify-between gap-3 pt-1">
-              <label className="flex cursor-pointer items-center gap-2 text-sm text-text/70">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(event) => setRememberMe(event.target.checked)}
-                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
-                />
-                <span>Remember me</span>
-              </label>
-
-              <Link to="/auth/forgot-password" className="text-sm font-medium text-primary hover:text-primary-dark">
-                Forgot password?
-              </Link>
-            </div>
-
-            <Button type="submit" variant="primary" size="lg" fullWidth className="mt-2 mb-2">
-              Sign in
-            </Button>
-          </form>
-
-          <div className="relative mb-2">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border" />
-            </div>
-            <div className="relative flex justify-center">
-              <span className="bg-white/90 px-3 text-[11px] font-medium tracking-[0.18em] text-text/50">
-                or continue with
-              </span>
-            </div>
-          </div>
-
-          <div className="grid gap-2 sm:grid-cols-3 mb-2">
-            <Button type="button" variant="secondary" fullWidth leftIcon={<FaGithub className="h-4 w-4" />}>
-              GitHub
-            </Button>
-
-            <Button type="button" variant="secondary" fullWidth leftIcon={<FcGoogle className="h-4 w-4" />}>
-              Google
-            </Button>
-
-            <Button type="button" variant="secondary" fullWidth leftIcon={<FiMail className="h-4 w-4" />}>
-              Email link
-            </Button>
-          </div>
-
-          <div className="text-center text-sm text-text/70">
-            New to DevSpace?{" "}
-            <Link to="/auth/sign-up" className="font-semibold text-primary hover:text-primary-dark">
-              Create account
-            </Link>
-          </div>
+          <Link
+            to="/auth/forgot-password"
+            className="text-xs font-semibold text-primary hover:underline transition-colors"
+          >
+            Forgot password?
+          </Link>
         </div>
 
-        <p className="mt-6 text-center text-xs text-text/55">
-          By signing in, you agree to our{" "}
-          <Link to="/terms" className="font-medium text-primary hover:text-primary-dark">
-            Terms of Service
-          </Link>{" "}
-          and{" "}
-          <Link to="/privacy" className="font-medium text-primary hover:text-primary-dark">
-            Privacy Policy
-          </Link>
-          .
-        </p>
+        <Button
+          type="submit"
+          variant="primary"
+          fullWidth
+          isLoading={isSubmitting}
+          size="md"
+          className="mt-1 font-semibold"
+        >
+          Sign in
+        </Button>
+      </form>
+
+      {/* Divider */}
+      <span className="text-text/50 text-xs">or continue with</span>
+
+      {/* Social Logins */}
+      <div className="flex gap-2 justify-center items-center w-full">
+        <Button
+          variant="outline"
+          size="sm"
+          fullWidth
+          leftIcon={<FaGithub className="w-3.5 h-3.5 text-text" />}
+        >
+          GitHub
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          fullWidth
+          leftIcon={<FcGoogle className="w-3.5 h-3.5" />}
+        >
+          Google
+        </Button>
       </div>
+
+      {/* Footer Navigation */}
+      <div className="text-center text-xs text-text/70">
+        New to DevSpace?{" "}
+        <Link
+          to="/auth/sign-up"
+          className="text-primary font-semibold hover:underline transition-colors"
+        >
+          Create account
+        </Link>
+      </div>
+
+      {/* Terms & Privacy */}
+      <p className="text-text/50 text-[11px] text-center leading-tight">
+        By continuing, you agree to DevSpace's{" "}
+        <span className="text-primary hover:underline cursor-pointer">terms of service</span> and{" "}
+        <span className="text-primary hover:underline cursor-pointer">privacy policy</span>
+      </p>
     </div>
   );
 }
