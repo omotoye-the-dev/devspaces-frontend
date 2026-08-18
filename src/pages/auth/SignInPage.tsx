@@ -2,7 +2,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { FaEnvelope, FaLock, FaGithub } from "react-icons/fa";
+import { FaGithub } from "react-icons/fa";
+import { CiLock } from "react-icons/ci";
+import { MdOutlineEmail } from "react-icons/md";
 import { FcGoogle } from "react-icons/fc";
 
 import { FormInput, Button } from "@/components/ui";
@@ -62,7 +64,7 @@ export default function SignInPage() {
 
       {/* Header */}
       <div className="text-center space-y-0.5 w-full">
-        <h1 className="text-text font-black leading-tight font-inter text-xl sm:text-2xl tracking-tight">
+        <h1 className="text-text font-black leading-tight font-inter text-lg sm:text-lg tracking-tight">
           Welcome back
         </h1>
         <p className="text-text/70 text-xs sm:text-sm">Sign in to continue to DevSpace</p>
@@ -73,8 +75,8 @@ export default function SignInPage() {
         <FormInput
           label="Email address"
           type="email"
-          inputSize="sm"
-          leftIcon={<FaEnvelope className="text-text/40" />}
+          inputSize="md"
+          leftIcon={<MdOutlineEmail className="text-text/40 text-4xl" />}
           placeholder="you@example.com"
           {...register("email")}
           errorMessage={errors.email?.message}
@@ -84,8 +86,8 @@ export default function SignInPage() {
         <FormInput
           label="Password"
           type="password"
-          inputSize="sm"
-          leftIcon={<FaLock className="text-text/40" />}
+          inputSize="md"
+          leftIcon={<CiLock className="text-text/40 text-4xl" />}
           placeholder="Enter your password"
           {...register("password")}
           errorMessage={errors.password?.message}
@@ -93,7 +95,7 @@ export default function SignInPage() {
         />
 
         <div className="flex items-center justify-between gap-3 pt-0.5 w-full">
-          <label className="flex cursor-pointer items-center gap-2 text-xs text-text/70">
+          <label className="flex cursor-pointer items-center gap-2 text-base text-text/70">
             <input
               type="checkbox"
               {...register("rememberMe")}
@@ -104,7 +106,7 @@ export default function SignInPage() {
 
           <Link
             to="/auth/forgot-password"
-            className="text-xs font-semibold text-primary hover:underline transition-colors"
+            className="text-base font-semibold text-primary hover:underline transition-colors"
           >
             Forgot password?
           </Link>
@@ -123,13 +125,21 @@ export default function SignInPage() {
       </form>
 
       {/* Divider */}
-      <span className="text-text/50 text-xs">or continue with</span>
+      <div className="my-4 flex w-full items-center gap-3">
+        <div className="h-px flex-1 bg-slate-200" />
+
+        <span className="whitespace-nowrap text-[9px] text-slate-500">
+          Or continue with
+        </span>
+
+        <div className="h-px flex-1 bg-slate-200" />
+      </div>
 
       {/* Social Logins */}
       <div className="flex gap-2 justify-center items-center w-full">
         <Button
           variant="outline"
-          size="sm"
+          size="md"
           fullWidth
           leftIcon={<FaGithub className="w-3.5 h-3.5 text-text" />}
         >
@@ -146,13 +156,13 @@ export default function SignInPage() {
       </div>
 
       {/* Footer Navigation */}
-      <div className="text-center text-xs text-text/70">
-        New to DevSpace?{" "}
+      <div className="text-center text-base text-text/70">
+        New to DevSpace? {" "}
         <Link
           to="/auth/sign-up"
           className="text-primary font-semibold hover:underline transition-colors"
         >
-          Create account
+         Create account
         </Link>
       </div>
 
