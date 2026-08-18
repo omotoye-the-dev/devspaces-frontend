@@ -8,7 +8,9 @@ import { FcGoogle } from "react-icons/fc";
 
 import { FormInput, Button, defaultPasswordRequirements } from "@/components/common";
 import { toast } from "@/hooks/useToast";
-import { initiateOAuth } from "@/lib/api/auth.api";
+import { initiateOAuth, signUp } from "@/lib/api/auth.api";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { getApiErrorMessage } from "@/lib/utils/apiError";
 
 const signUpSchema = z
   .object({
@@ -49,6 +51,7 @@ type SignUpFormData = z.infer<typeof signUpSchema>;
 
 export default function SignUpPage() {
   const navigate = useNavigate();
+  const setAuth = useAuthStore((state) => state.setAuth);
 
   const {
     register,
@@ -71,13 +74,34 @@ export default function SignUpPage() {
 
   const onSubmit = async (data: SignUpFormData) => {
     try {
-      // Simulated API response delay
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      toast.success(`Welcome to DevSpace, ${data.firstName}! Please sign in.`);
-      reset();
-      navigate("/auth/sign-in");
-    } catch {
-      toast.error("Failed to create account. Please try again.");
+      const response = await signUp({
+        firstName: data.firstName.trim(),
+        lastName: data.lastName.trim(),
+        username: data.username.trim(),
+        email: data.email.trim(),
+        password: data.password,
+        confirmPassword: data.confirmPassword,
+      });
+
+      const authToken = response.token || response.accessToken;
+      if (authToken) {
+        setAuth(authToken, response.user);
+        toast.success(response.message || `Welcome to DevSpace, ${data.firstName}!`);
+        reset();
+        navigate("/playground");
+      } else {
+        toast.success(
+          response.message || "Account created successfully! Please sign in to continue.",
+        );
+        reset();
+        navigate("/auth/sign-in");
+      }
+    } catch (error: unknown) {
+      const errorMessage = getApiErrorMessage(
+        error,
+        "Failed to create account. Please try again.",
+      );
+      toast.error(errorMessage);
     }
   };
 

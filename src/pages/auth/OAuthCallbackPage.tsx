@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { handleOAuthCallback } from "@/lib/api/auth.api";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { toast } from "@/hooks/useToast";
+import { getApiErrorMessage } from "@/lib/utils/apiError";
 
 export default function OAuthCallbackPage(): JSX.Element {
   const navigate = useNavigate();
@@ -64,8 +65,10 @@ export default function OAuthCallbackPage(): JSX.Element {
           navigate("/playground");
         }
       } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : "Authentication failed. Please try again.";
+        const message = getApiErrorMessage(
+          err,
+          "Authentication failed. Please try again.",
+        );
         toast.error(message);
         navigate("/auth/sign-in");
       }

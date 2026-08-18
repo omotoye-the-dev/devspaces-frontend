@@ -1,6 +1,21 @@
 import { apiClient } from "./client";
 import { ENDPOINTS } from "./endpoints";
-import type { OAuthCallbackPayload, AuthResponse } from "@/types/auth.types";
+import type {
+  OAuthCallbackPayload,
+  AuthResponse,
+  SignUpPayload,
+} from "@/types/auth.types";
+
+/**
+ * Registers a new user with their personal details and credentials.
+ */
+export async function signUp(payload: SignUpPayload): Promise<AuthResponse> {
+  const response = await apiClient.post<AuthResponse>(
+    ENDPOINTS.AUTH.SIGN_UP,
+    payload,
+  );
+  return response.data;
+}
 
 /**
  * Redirects the user to the backend OAuth initiation endpoint.
