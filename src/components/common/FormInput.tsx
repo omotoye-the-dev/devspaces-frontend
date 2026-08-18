@@ -5,10 +5,17 @@ import {
   type InputHTMLAttributes,
   type ReactNode,
   type JSX,
+  type ChangeEvent,
+  type FocusEvent,
 } from "react";
 import { cn } from "@/lib/utils/cn";
+import {
+  defaultPasswordRequirements,
+  type PasswordRequirement,
+} from "@/lib/constants/password";
 
 export type FormInputSize = "sm" | "md" | "lg";
+export type { PasswordRequirement };
 
 export interface FormInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "size"> {
   /** Label text displayed above the input */
@@ -29,6 +36,10 @@ export interface FormInputProps extends Omit<InputHTMLAttributes<HTMLInputElemen
   fullWidth?: boolean;
   /** Show a toggle button to show/hide password when type="password" */
   showPasswordToggle?: boolean;
+  /** Show floating password requirement checklist popup while typing / focused */
+  showPasswordRequirements?: boolean;
+  /** Custom password requirements */
+  passwordRequirements?: PasswordRequirement[];
 }
 
 const sizeStyles: Record<FormInputSize, { input: string; icon: string; toggle: string }> = {
@@ -63,12 +74,17 @@ export const FormInput = forwardRef<HTMLInputElement, FormInputProps>(function F
     required = false,
     type = "text",
     showPasswordToggle = true,
+    showPasswordRequirements = false,
+    passwordRequirements,
     id,
     className,
     autoComplete,
     inputMode,
     autoCapitalize,
     spellCheck,
+    onFocus,
+    onBlur,
+    onChange,
     ...restProps
   },
   ref,
@@ -79,6 +95,14 @@ export const FormInput = forwardRef<HTMLInputElement, FormInputProps>(function F
   const errorId = `${inputId}-error`;
 
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const [currentValue, setCurrentValue] = useState<string>(
+    typeof restProps.value === "string"
+      ? restProps.value
+      : typeof restProps.defaultValue === "string"
+        ? restProps.defaultValue
+        : "",
+  );
 
   const activeError = errorMessage ?? error;
   const hasError = Boolean(activeError);
@@ -86,6 +110,10 @@ export const FormInput = forwardRef<HTMLInputElement, FormInputProps>(function F
 
   const isPasswordType = type === "password";
   const effectiveType = isPasswordType ? (isPasswordVisible ? "text" : "password") : type;
+  const effectiveValue = typeof restProps.value === "string" ? restProps.value : currentValue;
+
+  const requirements = passwordRequirements ?? defaultPasswordRequirements;
+  const shouldShowPopup = showPasswordRequirements && isPasswordType && isFocused;
 
   // Defaults for email
   const resolvedAutoComplete =
@@ -94,12 +122,27 @@ export const FormInput = forwardRef<HTMLInputElement, FormInputProps>(function F
   const resolvedAutoCapitalize = autoCapitalize ?? (type === "email" ? "none" : undefined);
   const resolvedSpellCheck = spellCheck ?? (type === "email" ? false : undefined);
 
+  const handleFocus = (e: FocusEvent<HTMLInputElement>) => {
+    setIsFocused(true);
+    onFocus?.(e);
+  };
+
+  const handleBlur = (e: FocusEvent<HTMLInputElement>) => {
+    setIsFocused(false);
+    onBlur?.(e);
+  };
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setCurrentValue(e.target.value);
+    onChange?.(e);
+  };
+
   return (
-    <div className={cn("flex flex-col gap-1.5", fullWidth ? "w-full" : "w-auto")}>
+    <div className={cn("relative flex flex-col gap-1.5", fullWidth ? "w-full" : "w-auto")}>
       {label && (
         <label htmlFor={inputId} className="text-xs font-medium text-text select-none">
           {label}
-          {required && <span className="text-red-500 ml-0.5" aria-hidden="true">*</span>}
+          {required}
         </label>
       )}
 
@@ -107,7 +150,7 @@ export const FormInput = forwardRef<HTMLInputElement, FormInputProps>(function F
         {leftIcon && (
           <div
             className={cn(
-              "absolute left-3 flex items-center justify-center text-text/50 pointer-events-none z-10",
+              "absolute left-3 flex items-center justify-center font-bold text-text/50 pointer-events-none z-10",
               sizeConfig.icon,
             )}
           >
@@ -127,21 +170,18 @@ export const FormInput = forwardRef<HTMLInputElement, FormInputProps>(function F
           spellCheck={resolvedSpellCheck}
           aria-invalid={hasError}
           aria-describedby={hasError ? errorId : helperText ? helperId : undefined}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          onChange={handleChange}
           className={cn(
-            "w-full bg-white text-text font-inter border transition-all duration-150 ease-in-out",
+            "w-full bg-white text-text font-inter border-text/20 border transition-all duration-150 ease-in-out",
             "placeholder:text-text/40",
             "focus:outline-none focus:ring-2 focus:ring-offset-0",
-            hasError
-              ? "border-red-500 focus:ring-red-500/20"
-              : "focus:border-primary focus:ring-primary/20",
+            hasError ? "border-red-500 focus:ring-red-500/20" : " focus:ring-primary/70",
             "disabled:bg-background disabled:text-text/40 disabled:cursor-not-allowed disabled:border-border/60",
             sizeConfig.input,
             leftIcon ? "pl-10" : "pl-3.5",
-            isPasswordType && showPasswordToggle
-              ? "pr-10"
-              : rightIcon
-                ? "pr-10"
-                : "pr-3.5",
+            isPasswordType && showPasswordToggle ? "pr-10" : rightIcon ? "pr-10" : "pr-3.5",
             className,
           )}
           {...restProps}
@@ -150,6 +190,7 @@ export const FormInput = forwardRef<HTMLInputElement, FormInputProps>(function F
         {isPasswordType && showPasswordToggle ? (
           <button
             type="button"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => setIsPasswordVisible((prev) => !prev)}
             disabled={disabled}
             aria-label={isPasswordVisible ? "Hide password" : "Show password"}
@@ -207,6 +248,59 @@ export const FormInput = forwardRef<HTMLInputElement, FormInputProps>(function F
           </div>
         ) : null}
       </div>
+
+      {/* Floating Password Requirements Popup */}
+      {shouldShowPopup && (
+        <div
+          onMouseDown={(e) => e.preventDefault()}
+          className="absolute left-0 top-full z-50 mt-1.5 w-full min-w-60 rounded-lg border border-border bg-white p-3 shadow-xl backdrop-blur-md"
+          role="tooltip"
+        >
+          <div className="mb-2 flex items-center justify-between border-b border-border/60 pb-1.5">
+            <span className="text-[11px] font-semibold text-text">Password requirements</span>
+            <span className="text-[10px] font-medium text-text/60">
+              {requirements.filter((r) => r.test(effectiveValue)).length}/{requirements.length}
+            </span>
+          </div>
+
+          <div className="space-y-1.5">
+            {requirements.map((req) => {
+              const isMet = req.test(effectiveValue);
+              return (
+                <div
+                  key={req.id}
+                  className={cn(
+                    "flex items-center gap-2 text-[11px] transition-colors duration-150",
+                    isMet ? "text-emerald-600 font-medium" : "text-text/50",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full text-[8px] transition-all duration-150",
+                      isMet ? "bg-emerald-500 text-white" : "bg-text/10 text-text/40",
+                    )}
+                  >
+                    {isMet ? (
+                      <svg
+                        className="h-2 w-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        strokeWidth={3}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      "•"
+                    )}
+                  </span>
+                  <span>{req.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {hasError ? (
         <p id={errorId} className="text-xs text-red-500 font-medium flex items-center gap-1">

@@ -5,7 +5,7 @@ import { z } from "zod";
 import { FaEnvelope, FaLock, FaGithub } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
 
-import { FormInput, Button } from "@/components/ui";
+import { FormInput, Button } from "@/components/common";
 import { toast } from "@/hooks/useToast";
 
 const signInSchema = z.object({

@@ -21,7 +21,7 @@ import {
   CardFooter,
   CardSkeleton,
   type ModalSize,
-} from "@/components/ui";
+} from "@/components/common";
 
 export default function Playground(): JSX.Element {
   const { success, error, warning, info } = useToast();

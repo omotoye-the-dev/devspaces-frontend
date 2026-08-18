@@ -10,10 +10,10 @@ export default function Authleftimage() {
       </div>
 
       {/* Main Center Content */}
-      <div className="w-full my-auto py-2 space-y-4">
+      <div className="w-full my-6 py-2 space-y-4">
         {/* Main Headline */}
         <div>
-          <h1 className="font-black text-2xl sm:text-3xl lg:text-4xl text-background tracking-tight leading-tight">
+          <h1 className="font-bold text-2xl sm:text-3xl lg:text-4xl text-background tracking-wide leading-wider">
             Learn. Build. Share.
           </h1>
           <p className="text-background/80 text-xs sm:text-sm max-w-sm mt-1.5 leading-relaxed">
@@ -28,15 +28,15 @@ export default function Authleftimage() {
       </div>
 
       {/* Bottom Feature Highlights (Learn, Build, Share) */}
-      <div className="grid grid-cols-3 gap-2 pt-4 border-t border-background/10 shrink-0">
+      <div className="grid grid-cols-3 gap-2  shrink-0">
         {/* Learn */}
         <div className="flex items-start gap-2">
-          <div className="w-8 h-8 rounded-sm bg-background/15 backdrop-blur-sm border border-background/20 flex items-center justify-center text-background shrink-0 shadow-xs">
+          <div className="w-8 h-8 rounded-sm bg-background/15 backdrop-blur-sm  flex items-center justify-center text-background shrink-0 shadow-xs">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
             </svg>
           </div>
-          <div className="space-y-0.5">
+          <div className="space-y-0.5"> 
             <h3 className="font-bold text-xs text-background">Learn</h3>
             <p className="text-[10px] text-background/75 leading-tight">
               Explore in-depth articles and guides.

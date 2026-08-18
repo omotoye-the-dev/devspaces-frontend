@@ -2,10 +2,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { FaUser, FaEnvelope, FaLock, FaGithub } from "react-icons/fa";
+import { FaRegUser, FaRegEnvelope, FaGithub } from "react-icons/fa";
+import { IoLockClosedOutline } from "react-icons/io5";
 import { FcGoogle } from "react-icons/fc";
 
-import { FormInput, Button } from "@/components/ui";
+import { FormInput, Button, defaultPasswordRequirements } from "@/components/common";
 import { toast } from "@/hooks/useToast";
 
 const signUpSchema = z
@@ -29,13 +30,12 @@ const signUpSchema = z
       .email("Please enter a valid email address"),
     password: z
       .string()
-      .regex(/^[^\s]/, "Password cannot start with a space")
-      .min(8, "Password must be at least 8 characters long")
-      .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-      .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-      .regex(
-        /[^a-zA-Z0-9\s.]/,
-        "Password must contain at least one special symbol (excluding full stop)",
+      .min(1, "Please enter your password")
+      .refine(
+        (val) => defaultPasswordRequirements.every((req) => req.test(val)),
+        {
+          message: "Please satisfy all password requirements",
+        },
       ),
     confirmPassword: z.string().min(1, "Please confirm your password"),
   })
@@ -64,7 +64,8 @@ export default function SignUpPage() {
       password: "",
       confirmPassword: "",
     },
-    mode: "onBlur",
+    mode: "onSubmit",
+    reValidateMode: "onChange",
   });
 
   const onSubmit = async (data: SignUpFormData) => {
@@ -80,7 +81,7 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="shadow-xl sm:shadow-2xl rounded-lg flex flex-col gap-2.5 p-4 sm:p-6 items-center w-full max-w-md bg-white border border-border my-auto">
+    <div className="shadow-xl sm:shadow-2xl rounded-lg flex flex-col gap-2.5 p-4 sm:p-6 items-center w-full max-w-sm bg-white border border-border my-auto">
       {/* Mobile Brand Logo */}
       <div className="lg:hidden flex items-center justify-center gap-1.5 pb-0.5">
         <span className="font-mono font-bold text-primary text-base leading-none">&lt;/&gt;</span>
@@ -89,19 +90,19 @@ export default function SignUpPage() {
 
       {/* Header */}
       <div className="text-center space-y-0.5 w-full">
-        <h1 className="text-text font-black leading-tight font-inter text-xl sm:text-2xl tracking-tight">
+        <h1 className="text-text font-bold leading-tight font-inter text-xl sm:text-2xl tracking-tight">
           Let's get you started
         </h1>
-        <p className="text-text/70 text-xs sm:text-sm">Enter your details to create an account</p>
+        <p className="text-text/50 text-xs sm:text-sm">Enter your details to create an account</p>
       </div>
 
       {/* Sign-Up Form */}
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col w-full gap-2 pt-1">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-start">
+      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col w-full gap-3 pt-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
           <FormInput
             label="First Name"
             inputSize="sm"
-            leftIcon={<FaUser className="text-text/40" />}
+            leftIcon={<FaRegUser className="text-text/40" />}
             placeholder="John"
             {...register("firstName")}
             errorMessage={errors.firstName?.message}
@@ -110,7 +111,7 @@ export default function SignUpPage() {
           <FormInput
             label="Last Name"
             inputSize="sm"
-            leftIcon={<FaUser className="text-text/40" />}
+            leftIcon={<FaRegUser className="text-text/40" />}
             placeholder="Doe"
             {...register("lastName")}
             errorMessage={errors.lastName?.message}
@@ -121,7 +122,7 @@ export default function SignUpPage() {
         <FormInput
           label="Username"
           inputSize="sm"
-          leftIcon={<FaUser className="text-text/40" />}
+          leftIcon={<FaRegUser className="text-text/40" />}
           placeholder="johndoe"
           {...register("username")}
           errorMessage={errors.username?.message}
@@ -132,20 +133,21 @@ export default function SignUpPage() {
           label="Email"
           type="email"
           inputSize="sm"
-          leftIcon={<FaEnvelope className="text-text/40" />}
+          leftIcon={<FaRegEnvelope className="text-text/40" />}
           placeholder="you@example.com"
           {...register("email")}
           errorMessage={errors.email?.message}
           required
         />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-start">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
           <FormInput
             label="Password"
             type="password"
             inputSize="sm"
-            leftIcon={<FaLock className="text-text/40" />}
+            leftIcon={<IoLockClosedOutline className="text-text/40" />}
             placeholder="••••••••"
+            showPasswordRequirements
             {...register("password")}
             errorMessage={errors.password?.message}
             required
@@ -154,7 +156,7 @@ export default function SignUpPage() {
             label="Confirm Password"
             type="password"
             inputSize="sm"
-            leftIcon={<FaLock className="text-text/40" />}
+            leftIcon={<IoLockClosedOutline className="text-text/40" />}
             placeholder="••••••••"
             {...register("confirmPassword")}
             errorMessage={errors.confirmPassword?.message}
@@ -175,22 +177,24 @@ export default function SignUpPage() {
       </form>
 
       {/* Divider */}
-      <span className="text-text/50 text-xs">or continue with</span>
+      <div className="w-full flex items-center gap-2">
+        <hr className="border-border flex-1" />
+        <span className="text-text/50 text-xs">or continue with</span>
+        <hr className="border-border flex-1" />
+      </div>
 
       {/* Social Logins */}
       <div className="flex gap-2 justify-center items-center w-full">
         <Button
           variant="outline"
-          size="sm"
-          fullWidth
+          size="icon"
           leftIcon={<FaGithub className="w-3.5 h-3.5 text-text" />}
         >
           GitHub
         </Button>
         <Button
           variant="outline"
-          size="sm"
-          fullWidth
+          size="icon"
           leftIcon={<FcGoogle className="w-3.5 h-3.5" />}
         >
           Google
