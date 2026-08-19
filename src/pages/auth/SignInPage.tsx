@@ -157,7 +157,7 @@ export default function SignInPage() {
         <Button
           type="button"
           variant="outline"
-          size="md"
+          size="icon"
           fullWidth
           onClick={() => initiateOAuth("github")}
           leftIcon={<FaGithub className="w-3.5 h-3.5 text-text" />}
@@ -167,7 +167,7 @@ export default function SignInPage() {
         <Button
           type="button"
           variant="outline"
-          size="sm"
+          size="icon"
           fullWidth
           onClick={() => initiateOAuth("google")}
           leftIcon={<FcGoogle className="w-3.5 h-3.5" />}
