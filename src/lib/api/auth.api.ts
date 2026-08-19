@@ -4,6 +4,8 @@ import type {
   OAuthCallbackPayload,
   AuthResponse,
   SignUpPayload,
+  SignInPayload,
+  SignInResponse,
 } from "@/types/auth.types";
 
 /**
@@ -12,6 +14,17 @@ import type {
 export async function signUp(payload: SignUpPayload): Promise<AuthResponse> {
   const response = await apiClient.post<AuthResponse>(
     ENDPOINTS.AUTH.SIGN_UP,
+    payload,
+  );
+  return response.data;
+}
+
+/**
+ * Sign in a user with email and password.
+ */
+export async function signIn(payload: SignInPayload): Promise<SignInResponse> {
+  const response = await apiClient.post<SignInResponse>(
+    ENDPOINTS.AUTH.SIGN_IN,
     payload,
   );
   return response.data;

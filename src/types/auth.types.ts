@@ -12,6 +12,22 @@ export interface SignUpPayload {
   confirmPassword?: string;
 }
 
+export interface SignInPayload {
+  email: string;
+  password: string;
+}
+
+export interface SignInResponse {
+  accessToken: string;
+  refreshToken?: string;
+  userId?: string;
+  email?: string;
+  userName?: string;
+  expiresAt?: string;
+  success?: boolean;
+  message?: string;
+}
+
 export interface AuthUser {
   id?: string;
   email?: string;

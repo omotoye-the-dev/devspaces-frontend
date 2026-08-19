@@ -9,7 +9,8 @@ import { FcGoogle } from "react-icons/fc";
 
 import { FormInput, Button } from "@/components/common";
 import { toast } from "@/hooks/useToast";
-import { initiateOAuth } from "@/lib/api/auth.api";
+import { initiateOAuth, signIn } from "@/lib/api/auth.api";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 const signInSchema = z.object({
   email: z
@@ -43,14 +44,29 @@ export default function SignInPage() {
     mode: "onBlur",
   });
 
-  const onSubmit = async () => {
+  
+
+  const submitHandler = async (data: SignInFormData) => {
+    const setAuth = useAuthStore.getState().setAuth;
     try {
-      // Simulated API response delay
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      toast.success("Welcome back to DevSpace!");
-      reset();
-      navigate("/playground");
-    } catch {
+      const res = await signIn({ email: data.email, password: data.password });
+      if (res && res.success) {
+        if (res.accessToken) localStorage.setItem("devspace_token", res.accessToken);
+        if (res.refreshToken) localStorage.setItem("devspace_refresh", res.refreshToken);
+        setAuth(res.accessToken ?? "", {
+          id: res.userId,
+          email: res.email,
+          username: res.userName,
+        });
+        toast.success(res.message ?? "Welcome back to DevSpace!");
+        reset();
+        navigate("/playground");
+      } else {
+        toast.error(res.message ?? "Sign in failed. Check your credentials.");
+      }
+    } catch (error) {
+      // log for debugging and show a user-friendly message
+      console.error(error);
       toast.error("Failed to sign in. Please try again.");
     }
   };
@@ -72,7 +88,7 @@ export default function SignInPage() {
       </div>
 
       {/* Sign-In Form */}
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col w-full gap-2 pt-1">
+      <form onSubmit={handleSubmit(submitHandler)} className="flex flex-col w-full gap-2 pt-1">
         <FormInput
           label="Email address"
           type="email"
