@@ -66,3 +66,6 @@ export {
   type CardVariant,
   type CardPadding,
 } from "./Card";
+export { ResendOtpButton, type ResendOtpButtonProps } from "./ResendOtpButton";
+export { OtpInput, type OtpInputProps } from "./OtpInput";
+

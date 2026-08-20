@@ -6,6 +6,10 @@ import type {
   SignUpPayload,
   SignInPayload,
   SignInResponse,
+  ForgotPasswordPayload,
+  ResetPasswordPayload,
+  VerifyAccountPayload,
+  ResendOtpPayload,
 } from "@/types/auth.types";
 
 /**
@@ -29,6 +33,60 @@ export async function signIn(payload: SignInPayload): Promise<SignInResponse> {
   );
   return response.data;
 }
+
+/**
+ * Verifies a user's account using the email and 6-digit OTP.
+ */
+export async function verifyAccount(
+  payload: VerifyAccountPayload,
+): Promise<AuthResponse> {
+  const response = await apiClient.post<AuthResponse>(
+    ENDPOINTS.AUTH.VERIFY_ACCOUNT,
+    payload,
+  );
+  return response.data;
+}
+
+/**
+ * Resends a verification OTP code to the specified email.
+ */
+export async function resendOtp(
+  payload: ResendOtpPayload,
+): Promise<AuthResponse> {
+  const response = await apiClient.post<AuthResponse>(
+    ENDPOINTS.AUTH.RESEND_OTP,
+    payload,
+  );
+  return response.data;
+}
+
+/**
+ * Requests an OTP code to be sent to the specified email for password reset.
+ */
+export async function requestPasswordReset(
+  payload: ForgotPasswordPayload,
+): Promise<AuthResponse> {
+  const response = await apiClient.post<AuthResponse>(
+    ENDPOINTS.AUTH.FORGOT_PASSWORD,
+    payload,
+  );
+  return response.data;
+}
+
+/**
+ * Resets the password using email, 6-digit OTP, and the new password.
+ */
+export async function resetPassword(
+  payload: ResetPasswordPayload,
+): Promise<AuthResponse> {
+  const response = await apiClient.post<AuthResponse>(
+    ENDPOINTS.AUTH.RESET_PASSWORD,
+    payload,
+  );
+  return response.data;
+}
+
+
 
 /**
  * Redirects the user to the backend OAuth initiation endpoint.

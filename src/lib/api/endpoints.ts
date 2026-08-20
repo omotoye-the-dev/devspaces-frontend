@@ -9,5 +9,9 @@ export const ENDPOINTS = {
     GITHUB_INIT: `${API_BASE_URL}/api/Auth/github`,
     GOOGLE_CALLBACK: `${API_BASE_URL}/api/Auth/google/callback`,
     GITHUB_CALLBACK: `${API_BASE_URL}/api/Auth/github/callback`,
+    FORGOT_PASSWORD: `${API_BASE_URL}/api/Auth/forgot-password`,
+    RESET_PASSWORD: `${API_BASE_URL}/api/Auth/reset-password`,
+    VERIFY_ACCOUNT: `${API_BASE_URL}/api/Auth/verify-account`,
+    RESEND_OTP: `${API_BASE_URL}/api/Auth/resend-otp`,
   },
 } as const;

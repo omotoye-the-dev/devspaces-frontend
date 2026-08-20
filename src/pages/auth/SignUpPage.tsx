@@ -91,10 +91,10 @@ export default function SignUpPage() {
         navigate("/playground");
       } else {
         toast.success(
-          response.message || "Account created successfully! Please sign in to continue.",
+          response.message || "Account created! Please enter the OTP verification code sent to your email.",
         );
         reset();
-        navigate("/auth/sign-in");
+        navigate("/auth/verify-account", { state: { email: data.email.trim() } });
       }
     } catch (error: unknown) {
       const errorMessage = getApiErrorMessage(

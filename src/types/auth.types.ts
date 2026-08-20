@@ -47,3 +47,25 @@ export interface AuthResponse {
   isSuccess?: boolean;
   errors?: string[] | Record<string, string[]>;
 }
+
+export interface ForgotPasswordPayload {
+  email: string;
+}
+
+export interface ResetPasswordPayload {
+  email: string;
+  otp: string;
+  newPassword: string;
+  confirmPassword?: string;
+}
+
+export interface VerifyAccountPayload {
+  email: string;
+  otp: string;
+}
+
+export interface ResendOtpPayload {
+  email: string;
+}
+
+
