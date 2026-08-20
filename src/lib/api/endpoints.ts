@@ -12,5 +12,6 @@ export const ENDPOINTS = {
     RESET_PASSWORD: `${API_BASE_URL}/api/Auth/reset-password`,
     VERIFY_ACCOUNT: `${API_BASE_URL}/api/Auth/verify-email`,
     RESEND_OTP: `${API_BASE_URL}/api/Auth/resend-otp`,
+    LOGOUT: `${API_BASE_URL}/api/Auth/logout`,
   },
 } as const;

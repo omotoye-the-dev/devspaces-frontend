@@ -10,6 +10,7 @@ import type {
   ResetPasswordPayload,
   VerifyAccountPayload,
   ResendOtpPayload,
+  LogoutPayload,
 } from "@/types/auth.types";
 
 /**
@@ -25,6 +26,14 @@ export async function signUp(payload: SignUpPayload): Promise<AuthResponse> {
  */
 export async function signIn(payload: SignInPayload): Promise<SignInResponse> {
   const response = await apiClient.post<SignInResponse>(ENDPOINTS.AUTH.SIGN_IN, payload);
+  return response.data;
+}
+
+/**
+ * Logs out the user by invalidating their refresh token.
+ */
+export async function logoutUser(payload: LogoutPayload): Promise<AuthResponse> {
+  const response = await apiClient.post<AuthResponse>(ENDPOINTS.AUTH.LOGOUT, payload);
   return response.data;
 }
 

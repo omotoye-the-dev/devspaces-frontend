@@ -1,5 +1,6 @@
 import { useState, type JSX } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { FiLogOut } from "react-icons/fi";
 import {
   Button,
   Input,
@@ -22,9 +23,33 @@ import {
   CardSkeleton,
   type ModalSize,
 } from "@/components/common";
+import { logoutUser } from "@/lib/api/auth.api";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 export default function Playground(): JSX.Element {
+  const navigate = useNavigate();
+  const logoutStore = useAuthStore((state) => state.logout);
   const { success, error, warning, info } = useToast();
+
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async (): Promise<void> => {
+    setIsLoggingOut(true);
+    const refreshToken = localStorage.getItem("devspace_refresh") || "";
+    try {
+      await logoutUser({ refreshToken });
+    } catch {
+      // Proceed with client logout even if backend request fails
+    } finally {
+      localStorage.removeItem("devspace_refresh");
+      logoutStore();
+      success("Logged out successfully", {
+        description: "You have been redirected to the sign-in page.",
+      });
+      setIsLoggingOut(false);
+      navigate("/auth/sign-in");
+    }
+  };
 
   // 1. Button Interactive States
   const [btnLoading, setBtnLoading] = useState(false);
@@ -88,20 +113,35 @@ export default function Playground(): JSX.Element {
       <div className="max-w-6xl mx-auto space-y-12">
         {/* Navigation & Header */}
         <div className="flex items-center justify-between pb-2 border-b border-border">
-          <Link
-            to="/"
-            className="inline-flex items-center gap-2 text-xs font-semibold text-text/70 hover:text-primary transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10 19l-7-7m0 0l7-7m-7 7h18"
-              />
-            </svg>
-            <span>Back to DevSpace Home</span>
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 text-xs font-semibold text-text/70 hover:text-primary transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
+              </svg>
+              <span>Back to DevSpace Home</span>
+            </Link>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              isLoading={isLoggingOut}
+              onClick={handleLogout}
+              leftIcon={<FiLogOut className="w-3.5 h-3.5" />}
+              className="text-xs font-semibold"
+            >
+              Logout
+            </Button>
+          </div>
+
           <div className="flex items-center gap-2">
             <Tag variant="primary" dot>
               11 UI Components
