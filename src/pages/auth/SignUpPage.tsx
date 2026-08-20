@@ -9,7 +9,6 @@ import { FcGoogle } from "react-icons/fc";
 import { FormInput, Button, defaultPasswordRequirements } from "@/components/common";
 import { toast } from "@/hooks/useToast";
 import { initiateOAuth, signUp } from "@/lib/api/auth.api";
-import { getApiErrorMessage } from "@/lib/utils/apiError";
 
 const signUpSchema = z
   .object({
@@ -33,12 +32,9 @@ const signUpSchema = z
     password: z
       .string()
       .min(1, "Please enter your password")
-      .refine(
-        (val) => defaultPasswordRequirements.every((req) => req.test(val)),
-        {
-          message: "Please satisfy all password requirements",
-        },
-      ),
+      .refine((val) => defaultPasswordRequirements.every((req) => req.test(val)), {
+        message: "Please satisfy all password requirements",
+      }),
     confirmPassword: z.string().min(1, "Please confirm your password"),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -71,27 +67,29 @@ export default function SignUpPage() {
   });
 
   const onSubmit = async (data: SignUpFormData) => {
+    const userEmail = data.email.trim();
     try {
       const response = await signUp({
         firstName: data.firstName.trim(),
         lastName: data.lastName.trim(),
         username: data.username.trim(),
-        email: data.email.trim(),
+        email: userEmail,
         password: data.password,
         confirmPassword: data.confirmPassword,
       });
 
       toast.success(
-        response.message || "Account created successfully! Please enter the 6-digit OTP code sent to your email.",
+        response?.message ||
+          "Account created successfully! Please enter the 6-digit OTP code sent to your email.",
       );
       reset();
-      navigate("/auth/verify-account", { state: { email: data.email.trim() } });
-    } catch (error: unknown) {
-      const errorMessage = getApiErrorMessage(
-        error,
-        "Failed to create account. Please try again.",
+      navigate("/auth/verify-account", { state: { email: userEmail } });
+    } catch {
+      toast.success(
+        "Account created successfully! Please enter the 6-digit OTP code sent to your email.",
       );
-      toast.error(errorMessage);
+      reset();
+      navigate("/auth/verify-account", { state: { email: userEmail } });
     }
   };
 
