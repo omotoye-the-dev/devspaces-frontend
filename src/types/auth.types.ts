@@ -68,4 +68,9 @@ export interface ResendOtpPayload {
   email: string;
 }
 
+export interface LogoutPayload {
+  refreshToken?: string;
+}
+
+
 
