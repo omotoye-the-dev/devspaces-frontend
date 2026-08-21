@@ -5,7 +5,7 @@ import { router } from "./router";
 
 export default function App(): JSX.Element {
   return (
-    <ToastProvider position="bottom-right">
+    <ToastProvider position="top-right">
       <RouterProvider router={router} />
     </ToastProvider>
   );

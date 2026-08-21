@@ -14,21 +14,28 @@ const signUpSchema = z
   .object({
     firstName: z
       .string()
-      .regex(/^[^\s]/, "First name cannot start with a space")
-      .min(2, "First name must be at least 2 characters"),
+      .min(1, "First name is required")
+      .refine((val) => !val.startsWith(" "), "First name cannot start with a space")
+      .refine((val) => val.length >= 2, "First name must be at least 2 characters"),
     lastName: z
       .string()
-      .regex(/^[^\s]/, "Last name cannot start with a space")
-      .min(2, "Last name must be at least 2 characters"),
+      .min(1, "Last name is required")
+      .refine((val) => !val.startsWith(" "), "Last name cannot start with a space")
+      .refine((val) => val.length >= 2, "Last name must be at least 2 characters"),
     username: z
       .string()
-      .regex(/^[^\s]/, "Username cannot start with a space")
-      .min(3, "Username must be at least 3 characters")
-      .regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores"),
+      .min(1, "Username is required")
+      .refine((val) => !val.startsWith(" "), "Username cannot start with a space")
+      .refine((val) => val.length >= 3, "Username must be at least 3 characters")
+      .refine(
+        (val) => /^[a-zA-Z0-9_]+$/.test(val),
+        "Username can only contain letters, numbers, and underscores",
+      ),
     email: z
       .string()
-      .regex(/^[^\s]/, "Email cannot start with a space")
-      .email("Please enter a valid email address"),
+      .min(1, "Email is required")
+      .refine((val) => !val.startsWith(" "), "Email cannot start with a space")
+      .refine((val) => z.string().email().safeParse(val).success, "Please enter a valid email address"),
     password: z
       .string()
       .min(1, "Please enter your password")
@@ -94,7 +101,7 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="shadow-xl sm:shadow-2xl rounded-lg flex flex-col gap-2.5 p-4 sm:p-6 items-center w-full max-w-sm bg-white border border-border my-auto">
+    <div className="shadow-xl sm:shadow-2xl rounded-lg flex flex-col gap-2.5 p-4 sm:p-6 items-center w-full max-w-md bg-white border border-border my-auto">
       {/* Mobile Brand Logo */}
       <div className="lg:hidden flex items-center justify-center gap-1.5 pb-0.5">
         <span className="font-mono font-bold text-primary text-base leading-none">&lt;/&gt;</span>
@@ -114,7 +121,7 @@ export default function SignUpPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
           <FormInput
             label="First Name"
-            inputSize="sm"
+            inputSize="md"
             leftIcon={<FaRegUser className="text-text/40" />}
             placeholder="John"
             {...register("firstName")}
@@ -123,7 +130,7 @@ export default function SignUpPage() {
           />
           <FormInput
             label="Last Name"
-            inputSize="sm"
+            inputSize="md"
             leftIcon={<FaRegUser className="text-text/40" />}
             placeholder="Doe"
             {...register("lastName")}
@@ -134,7 +141,7 @@ export default function SignUpPage() {
 
         <FormInput
           label="Username"
-          inputSize="sm"
+          inputSize="md"
           leftIcon={<FaRegUser className="text-text/40" />}
           placeholder="johndoe"
           {...register("username")}
@@ -145,7 +152,7 @@ export default function SignUpPage() {
         <FormInput
           label="Email"
           type="email"
-          inputSize="sm"
+          inputSize="md"
           leftIcon={<FaRegEnvelope className="text-text/40" />}
           placeholder="you@example.com"
           {...register("email")}
@@ -157,7 +164,7 @@ export default function SignUpPage() {
           <FormInput
             label="Password"
             type="password"
-            inputSize="sm"
+            inputSize="md"
             leftIcon={<IoLockClosedOutline className="text-text/40" />}
             placeholder="••••••••"
             showPasswordRequirements
@@ -168,7 +175,7 @@ export default function SignUpPage() {
           <FormInput
             label="Confirm Password"
             type="password"
-            inputSize="sm"
+            inputSize="md"
             leftIcon={<IoLockClosedOutline className="text-text/40" />}
             placeholder="••••••••"
             {...register("confirmPassword")}

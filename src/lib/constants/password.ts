@@ -27,8 +27,8 @@ export const defaultPasswordRequirements: PasswordRequirement[] = [
   },
   {
     id: "special",
-    label: "One special symbol (excluding .)",
-    test: (p: string) => /[^a-zA-Z0-9\s.]/.test(p),
+    label: "One special symbol",
+    test: (p: string) => /[!@#$%^&*(),.?":{}|<>[\]\\/'`~_+=;-]/.test(p),
   },
   {
     id: "space",

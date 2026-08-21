@@ -15,12 +15,13 @@ import { useAuthStore } from "@/stores/useAuthStore";
 const signInSchema = z.object({
   email: z
     .string()
-    .regex(/^[^\s]/, "Email cannot start with a space")
-    .email("Please enter a valid email address"),
+    .min(1, "Email address is required")
+    .refine((val) => !val.startsWith(" "), "Email cannot start with a space")
+    .refine((val) => z.string().email().safeParse(val).success, "Please enter a valid email address"),
   password: z
     .string()
-    .regex(/^[^\s]/, "Password cannot start with a space")
-    .min(1, "Password is required"),
+    .min(1, "Password is required")
+    .refine((val) => !val.startsWith(" "), "Password cannot start with a space"),
   rememberMe: z.boolean().optional(),
 });
 
@@ -41,7 +42,8 @@ export default function SignInPage() {
       password: "",
       rememberMe: true,
     },
-    mode: "onBlur",
+    mode: "onSubmit",
+    reValidateMode: "onChange",
   });
 
   
@@ -145,7 +147,7 @@ export default function SignInPage() {
       <div className="my-4 flex w-full items-center gap-3">
         <div className="h-px flex-1 bg-slate-200" />
 
-        <span className="whitespace-nowrap text-[9px] text-slate-500">
+        <span className="whitespace-nowrap text-xs text-slate-500">
           Or continue with
         </span>
 
