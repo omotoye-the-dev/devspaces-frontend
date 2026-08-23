@@ -22,7 +22,7 @@ export async function signUp(payload: SignUpPayload): Promise<AuthResponse> {
 }
 
 /**
- * Sign in a user with email and password.
+ * Sign in a user with username or email and password.
  */
 export async function signIn(payload: SignInPayload): Promise<SignInResponse> {
   const response = await apiClient.post<SignInResponse>(ENDPOINTS.AUTH.SIGN_IN, payload);
