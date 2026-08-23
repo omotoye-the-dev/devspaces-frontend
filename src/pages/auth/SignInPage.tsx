@@ -62,7 +62,7 @@ export default function SignInPage() {
         });
         toast.success(res.message ?? "Welcome back to DevSpace!");
         reset();
-        navigate("/playground");
+        navigate("/");
       } else {
         toast.error(res.message ?? "Sign in failed. Check your credentials.");
       }

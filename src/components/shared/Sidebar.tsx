@@ -122,11 +122,11 @@ export function Sidebar({
       {/* Desktop Sidebar (hidden on mobile) */}
       <aside
         className={cn(
-          "hidden md:flex w-60 bg-white border-r border-border flex-col justify-between h-screen max-h-screen shrink-0 p-3 overflow-hidden font-inter select-none",
+          "hidden md:flex w-60 bg-white border-r border-border flex-col justify-between h-screen max-h-screen shrink-0 p-3 overflow-y-auto overflow-x-hidden font-inter select-none",
           className
         )}
       >
-        <div className="flex flex-col h-full justify-between overflow-hidden">
+        <div className="flex flex-col min-h-full justify-between">
           {/* Main Navigation */}
           <nav aria-label="Main Navigation" className="space-y-0.5">
             {MAIN_NAV_ITEMS.map((item) => {

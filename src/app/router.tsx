@@ -7,19 +7,30 @@ import VerifyAccount from "@/pages/auth/VerifyAccount";
 import OAuthCallbackPage from "@/pages/auth/OAuthCallbackPage";
 import Playground from "@/pages/Playground";
 import PublicLayout from "@/layouts/PublicLayout";
-import NavBar from "@/components/common/NavBar";
+import NotFoundPage from "@/pages/NotFoundPage";
+import HomePage from "@/pages/HomePage";
 
 export const router = createBrowserRouter([
   {
     path: "/",
     element: <PublicLayout />,
-  },
-  {
-    path: "/auth",
-    element: <AuthLayout />,
     children: [
       {
         index: true,
+        element: <HomePage />,
+      },
+      {
+        path: "*",
+        element: <NotFoundPage />,
+      },
+    ],
+  },
+  {
+    path: "/",
+    element: <AuthLayout />,
+    children: [
+      {
+        path: "auth",
         element: <SignInPage />,
       },
       {
@@ -52,9 +63,4 @@ export const router = createBrowserRouter([
     path: "/playground",
     element: <Playground />,
   },
-  {
-    path: "/navbar",
-    element: <NavBar />,
-  }
 ]);
-
