@@ -13,11 +13,10 @@ import { initiateOAuth, signIn } from "@/lib/api/auth.api";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 const signInSchema = z.object({
-  email: z
+  usernameOrEmail: z
     .string()
-    .min(1, "Email address is required")
-    .refine((val) => !val.startsWith(" "), "Email cannot start with a space")
-    .refine((val) => z.string().email().safeParse(val).success, "Please enter a valid email address"),
+    .min(1, "Username or email is required")
+    .refine((val) => !val.startsWith(" "), "Username or email cannot start with a space"),
   password: z
     .string()
     .min(1, "Password is required")
@@ -38,7 +37,7 @@ export default function SignInPage() {
   } = useForm<SignInFormData>({
     resolver: zodResolver(signInSchema),
     defaultValues: {
-      email: "",
+      usernameOrEmail: "",
       password: "",
       rememberMe: true,
     },
@@ -46,12 +45,13 @@ export default function SignInPage() {
     reValidateMode: "onChange",
   });
 
-  
-
   const submitHandler = async (data: SignInFormData) => {
     const setAuth = useAuthStore.getState().setAuth;
     try {
-      const res = await signIn({ email: data.email, password: data.password });
+      const res = await signIn({
+        usernameOrEmail: data.usernameOrEmail.trim(),
+        password: data.password,
+      });
       if (res && res.success) {
         if (res.accessToken) localStorage.setItem("devspace_token", res.accessToken);
         if (res.refreshToken) localStorage.setItem("devspace_refresh", res.refreshToken);
@@ -92,13 +92,13 @@ export default function SignInPage() {
       {/* Sign-In Form */}
       <form onSubmit={handleSubmit(submitHandler)} className="flex flex-col w-full gap-2 pt-1">
         <FormInput
-          label="Email address"
-          type="email"
+          label="Username or Email"
+          type="text"
           inputSize="md"
           leftIcon={<MdOutlineEmail className="text-text/40 text-4xl" />}
-          placeholder="you@example.com"
-          {...register("email")}
-          errorMessage={errors.email?.message}
+          placeholder="Enter your username or email"
+          {...register("usernameOrEmail")}
+          errorMessage={errors.usernameOrEmail?.message}
           required
         />
 
