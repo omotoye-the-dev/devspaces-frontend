@@ -6,6 +6,7 @@ import ForgotPassword from "@/pages/auth/ForgotPassword";
 import VerifyAccount from "@/pages/auth/VerifyAccount";
 import OAuthCallbackPage from "@/pages/auth/OAuthCallbackPage";
 import Playground from "@/pages/Playground";
+import NavBar from "@/components/common/NavBar";
 
 export const router = createBrowserRouter([
   {
@@ -46,5 +47,9 @@ export const router = createBrowserRouter([
     path: "/playground",
     element: <Playground />,
   },
+  {
+    path: "/navbar",
+    element: <NavBar />,
+  }
 ]);
 
