@@ -6,10 +6,15 @@ import ForgotPassword from "@/pages/auth/ForgotPassword";
 import VerifyAccount from "@/pages/auth/VerifyAccount";
 import OAuthCallbackPage from "@/pages/auth/OAuthCallbackPage";
 import Playground from "@/pages/Playground";
+import PublicLayout from "@/layouts/PublicLayout";
 
 export const router = createBrowserRouter([
   {
     path: "/",
+    element: <PublicLayout />,
+  },
+  {
+    path: "/auth",
     element: <AuthLayout />,
     children: [
       {
