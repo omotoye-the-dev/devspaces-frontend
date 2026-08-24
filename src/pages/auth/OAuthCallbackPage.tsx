@@ -26,7 +26,7 @@ export default function OAuthCallbackPage(): JSX.Element {
       // Check if backend or provider passed an error
       if (error) {
         toast.error(`Authentication failed: ${error}`);
-        navigate("/auth/sign-in");
+        navigate("/auth/sign-up");
         return;
       }
 
@@ -41,13 +41,13 @@ export default function OAuthCallbackPage(): JSX.Element {
       if (directToken) {
         setAuth(directToken);
         toast.success("Successfully authenticated!");
-        navigate("/playground");
+        navigate("/");
         return;
       }
 
       if (!code) {
         toast.error("No authorization code returned from provider.");
-        navigate("/auth/sign-in");
+        navigate("/auth/sign-up");
         return;
       }
 
@@ -59,10 +59,10 @@ export default function OAuthCallbackPage(): JSX.Element {
         if (authToken) {
           setAuth(authToken, response.user);
           toast.success("Welcome to DevSpace!");
-          navigate("/playground");
+          navigate("/");
         } else {
           toast.success(response.message || "Successfully authenticated!");
-          navigate("/playground");
+          navigate("/");
         }
       } catch (err: unknown) {
         const message = getApiErrorMessage(
@@ -70,7 +70,7 @@ export default function OAuthCallbackPage(): JSX.Element {
           "Authentication failed. Please try again.",
         );
         toast.error(message);
-        navigate("/auth/sign-in");
+        navigate("/auth/sign-up");
       }
     }
 

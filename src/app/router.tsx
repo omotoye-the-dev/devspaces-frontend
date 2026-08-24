@@ -7,12 +7,19 @@ import VerifyAccount from "@/pages/auth/VerifyAccount";
 import OAuthCallbackPage from "@/pages/auth/OAuthCallbackPage";
 import Playground from "@/pages/Playground";
 import PublicLayout from "@/layouts/PublicLayout";
+import HomePage from "@/pages/HomePage";
 import NavBar from "@/components/common/NavBar";
 
 export const router = createBrowserRouter([
   {
     path: "/",
     element: <PublicLayout />,
+    children: [
+      {
+        index: true,
+        element: <HomePage />,
+      },
+    ],
   },
   {
     path: "/auth",
@@ -23,27 +30,27 @@ export const router = createBrowserRouter([
         element: <SignInPage />,
       },
       {
-        path: "auth/sign-in",
+        path: "sign-in",
         element: <SignInPage />,
       },
       {
-        path: "auth/sign-up",
+        path: "sign-up",
         element: <SignUpPage />,
       },
       {
-        path: "auth/forgot-password",
+        path: "forgot-password",
         element: <ForgotPassword />,
       },
       {
-        path: "auth/verify-account",
+        path: "verify-account",
         element: <VerifyAccount />,
       },
       {
-        path: "auth/callback",
+        path: "callback",
         element: <OAuthCallbackPage />,
       },
       {
-        path: "auth/callback/:provider",
+        path: "callback/:provider",
         element: <OAuthCallbackPage />,
       },
     ],

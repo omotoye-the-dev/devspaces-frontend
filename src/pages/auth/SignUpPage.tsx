@@ -9,6 +9,7 @@ import { FcGoogle } from "react-icons/fc";
 import { FormInput, Button, defaultPasswordRequirements } from "@/components/common";
 import { toast } from "@/hooks/useToast";
 import { initiateOAuth, signUp } from "@/lib/api/auth.api";
+import { getApiErrorMessage } from "@/lib/utils/apiError";
 
 const signUpSchema = z
   .object({
@@ -85,18 +86,23 @@ export default function SignUpPage() {
         confirmPassword: data.confirmPassword,
       });
 
+      if (response && response.isSuccess === false) {
+        toast.error(response.message || "Failed to create account. Please try again.");
+        return;
+      }
+
       toast.success(
         response?.message ||
           "Account created successfully! Please enter the 6-digit OTP code sent to your email.",
       );
       reset();
       navigate("/auth/verify-account", { state: { email: userEmail } });
-    } catch {
-      toast.success(
-        "Account created successfully! Please enter the 6-digit OTP code sent to your email.",
+    } catch (error: unknown) {
+      const errorMessage = getApiErrorMessage(
+        error,
+        "Failed to create account. Please check your information and try again.",
       );
-      reset();
-      navigate("/auth/verify-account", { state: { email: userEmail } });
+      toast.error(errorMessage);
     }
   };
 
