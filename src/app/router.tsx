@@ -8,7 +8,6 @@ import OAuthCallbackPage from "@/pages/auth/OAuthCallbackPage";
 import Playground from "@/pages/Playground";
 import PublicLayout from "@/layouts/PublicLayout";
 import HomePage from "@/pages/HomePage";
-import NavBar from "@/components/common/NavBar";
 
 export const router = createBrowserRouter([
   {
