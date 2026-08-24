@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import { Outlet } from "react-router-dom";
 import { Sidebar } from "@/components/shared";
-import NavBar from "@/components/common/NavBar";
+import NavBar from "@/components/shared/NavBar";
 
 const PublicLayout = (): JSX.Element => {
   return (
@@ -24,5 +24,3 @@ const PublicLayout = (): JSX.Element => {
 };
 
 export default PublicLayout;
-
-

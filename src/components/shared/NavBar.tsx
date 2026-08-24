@@ -1,11 +1,12 @@
-import { useMemo, useState, type JSX } from "react";
+import { useEffect, useMemo, useState, type JSX } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { MdOutlineSearch } from "react-icons/md";
 import { FiMenu, FiX } from "react-icons/fi";
 import { HiOutlineBell } from "react-icons/hi";
 import { LuPenLine } from "react-icons/lu";
-import { Input, Button, Avatar } from "./index";
+import { Input, Button, Avatar } from "../common/index";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { getUserProfile, type UserProfile } from "@/lib/api/user.api";
 
 const searchSuggestions = [
   "React hooks",
@@ -27,8 +28,46 @@ export function NavBar(): JSX.Element {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const userAvatar = typeof window !== "undefined" ? localStorage.getItem("devspace_avatar") : null;
-  const userName = typeof window !== "undefined" ? localStorage.getItem("devspace_user_name") : null;
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    let isSubscribed = true;
+    getUserProfile()
+      .then((data) => {
+        if (isSubscribed && data) {
+          setProfile(data);
+        }
+      })
+      .catch(() => {
+        // Handle fetch failure gracefully
+      });
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [isAuthenticated]);
+
+  const currentProfile = isAuthenticated ? profile : null;
+
+  const rawAvatarUrl =
+    (currentProfile?.avatarUrl as string | undefined | null) ??
+    (currentProfile?.avatar as string | undefined | null) ??
+    (currentProfile?.profilePictureUrl as string | undefined | null);
+
+  const avatarUrl = rawAvatarUrl && rawAvatarUrl.trim().length > 0 ? rawAvatarUrl : undefined;
+
+  const displayName =
+    (currentProfile
+      ? [currentProfile.firstName, currentProfile.lastName].filter(Boolean).join(" ") ||
+        (currentProfile.name as string | undefined) ||
+        (currentProfile.fullName as string | undefined) ||
+        (currentProfile.userName as string | undefined) ||
+        (currentProfile.username as string | undefined)
+      : null) || "User";
 
   const filteredSuggestions = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -37,9 +76,7 @@ export function NavBar(): JSX.Element {
       return searchSuggestions.slice(0, 5);
     }
 
-    return searchSuggestions.filter((item) =>
-      item.toLowerCase().includes(term),
-    );
+    return searchSuggestions.filter((item) => item.toLowerCase().includes(term));
   }, [searchTerm]);
 
   const handleProtectedNavigation = (path: string) => {
@@ -71,9 +108,7 @@ export function NavBar(): JSX.Element {
                 &lt;/&gt;
               </span>
 
-              <span className="font-bold text-3xl text-text tracking-tight">
-                DevSpace
-              </span>
+              <span className="font-bold text-3xl text-text tracking-tight">DevSpace</span>
             </Link>
           </div>
 
@@ -83,21 +118,19 @@ export function NavBar(): JSX.Element {
               className="bg-gray-100 border-gray-300 focus:ring-primary focus:border-primary"
               placeholder="Search articles, tags, resources..."
               inputSize="md"
-              leftIcon={
-                <MdOutlineSearch className="text-text/40" />
-              }
+              leftIcon={<MdOutlineSearch className="text-text/40" />}
             />
           </div>
 
           {/* Right: Links + Actions */}
           <div className="flex items-center gap-15">
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-4 shrink-0">
               <Button
                 type="button"
                 variant="ghost"
+                className="whitespace-nowrap"
                 onClick={() => handleProtectedNavigation("/articles")}
-               
               >
                 Articles
               </Button>
@@ -105,6 +138,7 @@ export function NavBar(): JSX.Element {
               <Button
                 type="button"
                 variant="ghost"
+                className="whitespace-nowrap"
                 onClick={() => handleProtectedNavigation("/resources")}
               >
                 Resources
@@ -113,6 +147,7 @@ export function NavBar(): JSX.Element {
               <Button
                 variant="ghost"
                 type="button"
+                className="whitespace-nowrap"
                 onClick={() => handleProtectedNavigation("/tags")}
               >
                 Tags
@@ -120,11 +155,11 @@ export function NavBar(): JSX.Element {
             </div>
 
             {/* Desktop Actions */}
-            <div className="hidden md:flex items-center gap-1">
+            <div className="hidden md:flex items-center gap-2 shrink-0">
               <Button
                 variant="primary"
                 size="md"
-                fullWidth={true}
+                className="whitespace-nowrap shrink-0"
                 leftIcon={isAuthenticated ? <LuPenLine className="w-4 h-4" /> : undefined}
                 onClick={handlePrimaryAction}
               >
@@ -138,7 +173,7 @@ export function NavBar(): JSX.Element {
                     variant="ghost"
                     size="icon"
                     aria-label="Notifications"
-                    className="relative inline-flex items-center justify-center p-2 rounded-md text-text/80 hover:bg-slate-100 transition-colors"
+                    className="relative inline-flex items-center justify-center p-2 rounded-md text-text/80 hover:bg-slate-100 transition-colors shrink-0"
                   >
                     <HiOutlineBell className="w-6 h-6" />
 
@@ -150,9 +185,9 @@ export function NavBar(): JSX.Element {
                   </Button>
 
                   <Avatar
-                    src={userAvatar ?? undefined}
-                    alt="User profile"
-                    name={userName ?? "User"}
+                    src={avatarUrl}
+                    alt={displayName}
+                    name={displayName}
                     size="md"
                   />
                 </>
@@ -178,15 +213,9 @@ export function NavBar(): JSX.Element {
                 onClick={() => setMobileOpen((state) => !state)}
                 className="inline-flex items-center justify-center p-2 rounded-md text-text/80 hover:bg-slate-100 transition-colors"
                 aria-expanded={mobileOpen}
-                aria-label={
-                  mobileOpen ? "Close navigation menu" : "Open navigation menu"
-                }
+                aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
               >
-                {mobileOpen ? (
-                  <FiX className="w-6 h-6" />
-                ) : (
-                  <FiMenu className="w-6 h-6" />
-                )}
+                {mobileOpen ? <FiX className="w-6 h-6" /> : <FiMenu className="w-6 h-6" />}
               </button>
             </div>
           </div>

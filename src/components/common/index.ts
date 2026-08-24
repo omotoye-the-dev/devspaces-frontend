@@ -68,5 +68,4 @@ export {
 } from "./Card";
 export { ResendOtpButton, type ResendOtpButtonProps } from "./ResendOtpButton";
 export { OtpInput, type OtpInputProps } from "./OtpInput";
-export { NavBar } from "./NavBar";
-
+export { NavBar } from "../shared/NavBar";
