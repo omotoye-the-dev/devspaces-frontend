@@ -23,7 +23,12 @@ import {
   SiPython,
 } from "react-icons/si";
 import { FaInfinity } from "react-icons/fa6";
+import { useNavigate } from "react-router-dom";
+import { FiLogOut, FiLogIn } from "react-icons/fi";
 import { cn } from "@/lib/utils/cn";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { toast } from "@/hooks/useToast";
+import { Button } from "@/components/common";
 
 export interface NavItem {
   id: string;
@@ -109,8 +114,17 @@ export function Sidebar({
   activeItem: activeItemProp,
   onSelect,
 }: SidebarProps): JSX.Element {
+  const navigate = useNavigate();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const logout = useAuthStore((state) => state.logout);
   const [internalActiveItem, setInternalActiveItem] = useState("home");
   const currentActive = activeItemProp ?? internalActiveItem;
+
+  const handleLogout = (): void => {
+    logout();
+    toast.success("Logged out successfully");
+    navigate("/auth/sign-in");
+  };
 
   const handleItemClick = (id: string) => {
     setInternalActiveItem(id);
@@ -122,7 +136,7 @@ export function Sidebar({
       {/* Desktop Sidebar (hidden on mobile) */}
       <aside
         className={cn(
-          "hidden md:flex w-60 bg-white border-r border-border flex-col justify-between h-screen max-h-screen shrink-0 p-3 overflow-y-auto overflow-x-hidden font-inter select-none",
+          "hidden md:flex w-60 bg-white border-r border-border flex-col justify-between h-full max-h-screen shrink-0 p-3 overflow-y-auto overflow-x-hidden font-inter select-none",
           className
         )}
       >
@@ -227,6 +241,31 @@ export function Sidebar({
               <HiOutlineChevronDown className="w-3.5 h-3.5 text-text/40" />
               <span>View all topics</span>
             </button>
+          </div>
+
+          {/* Sidebar Auth Footer Action */}
+          <div className="pt-3 border-t border-border mt-2">
+            {isAuthenticated ? (
+              <Button
+                variant="danger"
+                size="sm"
+                fullWidth
+                leftIcon={<FiLogOut className="w-4 h-4" />}
+                onClick={handleLogout}
+              >
+                Logout
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                size="sm"
+                fullWidth
+                leftIcon={<FiLogIn className="w-4 h-4" />}
+                onClick={() => navigate("/auth/sign-in")}
+              >
+                Login
+              </Button>
+            )}
           </div>
         </div>
       </aside>
