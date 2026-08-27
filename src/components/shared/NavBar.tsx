@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type JSX } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { MdOutlineSearch } from "react-icons/md";
 import { FiMenu, FiX } from "react-icons/fi";
+import { FaUser } from "react-icons/fa";
 import { HiOutlineBell } from "react-icons/hi";
 import { LuPenLine } from "react-icons/lu";
 import { Input, Button, Avatar } from "../common/index";
@@ -60,14 +61,14 @@ export function NavBar(): JSX.Element {
 
   const avatarUrl = rawAvatarUrl && rawAvatarUrl.trim().length > 0 ? rawAvatarUrl : undefined;
 
-  const displayName =
-    (currentProfile
-      ? [currentProfile.firstName, currentProfile.lastName].filter(Boolean).join(" ") ||
-        (currentProfile.name as string | undefined) ||
-        (currentProfile.fullName as string | undefined) ||
-        (currentProfile.userName as string | undefined) ||
-        (currentProfile.username as string | undefined)
-      : null) || "User";
+  const displayName = currentProfile
+    ? [currentProfile.firstName, currentProfile.lastName].filter(Boolean).join(" ") ||
+      (currentProfile.name as string | undefined) ||
+      (currentProfile.fullName as string | undefined) ||
+      (currentProfile.userName as string | undefined) ||
+      (currentProfile.username as string | undefined) ||
+      undefined
+    : undefined;
 
   const filteredSuggestions = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -115,7 +116,7 @@ export function NavBar(): JSX.Element {
           {/* Middle: Search */}
           <div className="w-200 px-4 hidden sm:block">
             <Input
-              className="bg-gray-100 border-gray-300 focus:ring-primary focus:border-primary"
+              className="bg-gray-100 border-gray-300 focus:ring-primary"
               placeholder="Search articles, tags, resources..."
               inputSize="md"
               leftIcon={<MdOutlineSearch className="text-text/40" />}
@@ -186,8 +187,9 @@ export function NavBar(): JSX.Element {
 
                   <Avatar
                     src={avatarUrl}
-                    alt={displayName}
+                    alt={displayName ?? "User avatar"}
                     name={displayName}
+                    fallbackIcon={!displayName ? <FaUser /> : undefined}
                     size="md"
                   />
                 </>
@@ -248,7 +250,7 @@ export function NavBar(): JSX.Element {
                   <Input
                     value={searchTerm}
                     onChange={(event) => setSearchTerm(event.target.value)}
-                    className="bg-gray-200 border-gray-300 focus:ring-primary focus:border-primary"
+                    className="bg-gray-200 border-gray-300 focus:ring-primary"
                     placeholder="Search articles, tags, resources..."
                     inputSize="md"
                     leftIcon={<MdOutlineSearch className="text-text/40" />}
