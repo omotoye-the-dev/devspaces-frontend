@@ -84,11 +84,7 @@ export default function VerifyAccount() {
         navigate("/auth/sign-in");
       }
     } catch (error: unknown) {
-      const errorMessage = getApiErrorMessage(
-        error,
-        "Verification failed. Please check your OTP code and try again.",
-      );
-      toast.error(errorMessage);
+      toast.error(getApiErrorMessage(error));
     }
   };
 
@@ -106,11 +102,7 @@ export default function VerifyAccount() {
       );
       setValue("otp", "");
     } catch (error: unknown) {
-      const errorMessage = getApiErrorMessage(
-        error,
-        "Failed to resend verification code. Please try again.",
-      );
-      toast.error(errorMessage);
+      toast.error(getApiErrorMessage(error));
       throw error;
     }
   };

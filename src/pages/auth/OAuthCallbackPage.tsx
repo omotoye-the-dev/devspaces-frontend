@@ -65,11 +65,7 @@ export default function OAuthCallbackPage(): JSX.Element {
           navigate("/");
         }
       } catch (err: unknown) {
-        const message = getApiErrorMessage(
-          err,
-          "Authentication failed. Please try again.",
-        );
-        toast.error(message);
+        toast.error(getApiErrorMessage(err));
         navigate("/auth/sign-up");
       }
     }

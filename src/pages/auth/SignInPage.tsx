@@ -53,7 +53,7 @@ export default function SignInPage() {
         usernameOrEmail: data.usernameOrEmail.trim(),
         password: data.password,
       });
-      if (res && res.success) {
+      if (res && (res.accessToken || res.success)) {
         if (res.accessToken) localStorage.setItem("devspace_token", res.accessToken);
         if (res.refreshToken) localStorage.setItem("devspace_refresh", res.refreshToken);
         setAuth(res.accessToken ?? "", {
@@ -61,16 +61,15 @@ export default function SignInPage() {
           email: res.email,
           username: res.userName,
         });
-        toast.success(res.message ?? "Welcome back to DevSpace!");
+        toast.success(res.message || "Welcome back to DevSpace!");
         reset();
         navigate("/");
       } else {
-        toast.error(res.message ?? "Sign in failed. Check your credentials.");
+        toast.error(res.message || "Authentication failed.");
       }
     } catch (error: unknown) {
       console.error(error);
-      const errorMessage = getApiErrorMessage(error, "Failed to sign in. Please try again.");
-      toast.error(errorMessage);
+      toast.error(getApiErrorMessage(error));
     }
   };
 

@@ -101,11 +101,7 @@ export default function ForgotPassword() {
       );
       setStep(2);
     } catch (error: unknown) {
-      const errorMessage = getApiErrorMessage(
-        error,
-        "Failed to send reset code. Please check your email and try again.",
-      );
-      toast.error(errorMessage);
+      toast.error(getApiErrorMessage(error));
     }
   };
 
@@ -119,11 +115,7 @@ export default function ForgotPassword() {
       );
       setResetValue("otp", "");
     } catch (error: unknown) {
-      const errorMessage = getApiErrorMessage(
-        error,
-        "Failed to resend verification code. Please try again.",
-      );
-      toast.error(errorMessage);
+      toast.error(getApiErrorMessage(error));
       throw error; // Let ResendOtpButton know it failed
     }
   };
@@ -143,11 +135,7 @@ export default function ForgotPassword() {
       );
       navigate("/auth/sign-in");
     } catch (error: unknown) {
-      const errorMessage = getApiErrorMessage(
-        error,
-        "Failed to reset password. Please verify your OTP code and try again.",
-      );
-      toast.error(errorMessage);
+      toast.error(getApiErrorMessage(error));
     }
   };
 

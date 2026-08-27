@@ -98,11 +98,7 @@ export default function SignUpPage() {
       reset();
       navigate("/auth/verify-account", { state: { email: userEmail } });
     } catch (error: unknown) {
-      const errorMessage = getApiErrorMessage(
-        error,
-        "Failed to create account. Please check your information and try again.",
-      );
-      toast.error(errorMessage);
+      toast.error(getApiErrorMessage(error));
     }
   };
 
