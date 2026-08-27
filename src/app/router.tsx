@@ -8,6 +8,7 @@ import OAuthCallbackPage from "@/pages/auth/OAuthCallbackPage";
 import Playground from "@/pages/Playground";
 import PublicLayout from "@/layouts/PublicLayout";
 import HomePage from "@/pages/HomePage";
+import NotFoundPage from "@/pages/NotFoundPage";
 
 export const router = createBrowserRouter([
   {
@@ -17,6 +18,10 @@ export const router = createBrowserRouter([
       {
         index: true,
         element: <HomePage />,
+      },
+      {
+        path: "*",
+        element: <NotFoundPage />,
       },
     ],
   },
@@ -54,4 +59,9 @@ export const router = createBrowserRouter([
     path: "/playground",
     element: <Playground />,
   },
+  {
+    path: "*",
+    element: <NotFoundPage />,
+  },
 ]);
+
