@@ -12,6 +12,8 @@ import {
   Tabs,
   useToast,
   Skeleton,
+  NavBarSkeleton,
+  SidebarSkeleton,
   EmptyState,
   ErrorState,
   Card,
@@ -1205,6 +1207,22 @@ export default function Playground(): JSX.Element {
                   </p>
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Reusable Nav & Sidebar Skeletons */}
+          <div className="space-y-4 pt-4 border-t border-border">
+            <span className="text-xs font-semibold text-text/60">
+              Reusable Layout Skeletons (NavBarSkeleton &amp; SidebarSkeleton)
+            </span>
+            <div className="rounded-lg border border-border overflow-hidden bg-background">
+              <NavBarSkeleton />
+              <div className="flex h-64 overflow-hidden">
+                <SidebarSkeleton className="h-full border-r border-border bg-white" />
+                <div className="flex-1 p-4 bg-white/50 flex flex-col justify-center items-center text-text/40 text-xs">
+                  Main Content Placeholder
+                </div>
+              </div>
             </div>
           </div>
         </section>

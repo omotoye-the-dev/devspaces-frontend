@@ -5,7 +5,7 @@ import { FiMenu, FiX } from "react-icons/fi";
 import { FaUser } from "react-icons/fa";
 import { HiOutlineBell } from "react-icons/hi";
 import { LuPenLine } from "react-icons/lu";
-import { Input, Button, Avatar } from "../common/index";
+import { Input, Button, Avatar, Skeleton } from "../common/index";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { getUserProfile, type UserProfile } from "@/lib/api/user.api";
 
@@ -22,7 +22,45 @@ const searchSuggestions = [
   "DevSpace roadmap",
 ];
 
-export function NavBar(): JSX.Element {
+export interface NavBarProps {
+  isLoading?: boolean;
+}
+
+export function NavBarSkeleton(): JSX.Element {
+  return (
+    <nav className="w-full bg-white border-b border-border" aria-label="Loading Navigation">
+      <div className="mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          {/* Left: Logo Skeleton */}
+          <div className="flex items-center gap-2 shrink-0">
+            <Skeleton variant="circular" width={28} height={28} />
+            <Skeleton variant="text" width={110} height={24} className="rounded-md" />
+          </div>
+
+          {/* Middle: Search Bar Skeleton */}
+          <div className="w-96 px-4 hidden sm:block">
+            <Skeleton variant="rounded" height={38} className="w-full rounded-md" />
+          </div>
+
+          {/* Right: Desktop Actions Skeleton */}
+          <div className="flex items-center gap-4 shrink-0">
+            <div className="hidden md:flex items-center gap-4">
+              <Skeleton variant="text" width={60} height={18} />
+              <Skeleton variant="text" width={70} height={18} />
+              <Skeleton variant="text" width={45} height={18} />
+            </div>
+            <div className="flex items-center gap-3">
+              <Skeleton variant="rounded" width={90} height={36} className="rounded-md" />
+              <Skeleton variant="circular" width={38} height={38} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Element {
   const navigate = useNavigate();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [notifications] = useState(3);
@@ -30,6 +68,7 @@ export function NavBar(): JSX.Element {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [hasFetchedProfile, setHasFetchedProfile] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -45,12 +84,19 @@ export function NavBar(): JSX.Element {
       })
       .catch(() => {
         // Handle fetch failure gracefully
+      })
+      .finally(() => {
+        if (isSubscribed) {
+          setHasFetchedProfile(true);
+        }
       });
 
     return () => {
       isSubscribed = false;
     };
   }, [isAuthenticated]);
+
+  const isProfileLoading = isAuthenticated && !hasFetchedProfile && !profile;
 
   const currentProfile = isAuthenticated ? profile : null;
 
@@ -97,6 +143,10 @@ export function NavBar(): JSX.Element {
 
     navigate("/auth/sign-in");
   };
+
+  if (isLoadingProp) {
+    return <NavBarSkeleton />;
+  }
 
   return (
     <nav className="w-full bg-white border-b border-border">
@@ -185,13 +235,17 @@ export function NavBar(): JSX.Element {
                     )}
                   </Button>
 
-                  <Avatar
-                    src={avatarUrl}
-                    alt={displayName ?? "User avatar"}
-                    name={displayName}
-                    fallbackIcon={!displayName ? <FaUser /> : undefined}
-                    size="md"
-                  />
+                  {isProfileLoading ? (
+                    <Skeleton variant="circular" width={40} height={40} />
+                  ) : (
+                    <Avatar
+                      src={avatarUrl}
+                      alt={displayName ?? "User avatar"}
+                      name={displayName}
+                      fallbackIcon={!displayName ? <FaUser /> : undefined}
+                      size="md"
+                    />
+                  )}
                 </>
               )}
             </div>
