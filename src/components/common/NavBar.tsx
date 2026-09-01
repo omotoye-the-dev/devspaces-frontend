@@ -27,8 +27,11 @@ export function NavBar(): JSX.Element {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const userAvatar = typeof window !== "undefined" ? localStorage.getItem("devspace_avatar") : null;
-  const userName = typeof window !== "undefined" ? localStorage.getItem("devspace_user_name") : null;
+  const authUser = useAuthStore((state) => state.user);
+  const userAvatar = authUser?.avatarUrl ?? (typeof window !== "undefined" ? localStorage.getItem("devspace_avatar") : null);
+  const userName = authUser
+    ? [authUser.firstName, authUser.lastName].filter(Boolean).join(" ").trim() || authUser.userName || authUser.username || authUser.email?.split("@")[0] || "User"
+    : typeof window !== "undefined" ? localStorage.getItem("devspace_user_name") : null;
 
   const filteredSuggestions = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
