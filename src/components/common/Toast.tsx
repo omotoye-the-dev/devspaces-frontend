@@ -194,7 +194,17 @@ export function ToastProvider({
       createdAt: Date.now(),
     };
 
-    setToasts((prev) => [...prev, newToast]);
+    setToasts((prev) => {
+      // Prevent duplicate toasts with the same content within 500ms
+      const isDuplicate = prev.some(
+        (t) =>
+          t.title === options.title &&
+          t.description === options.description &&
+          Date.now() - t.createdAt < 500,
+      );
+      if (isDuplicate) return prev;
+      return [...prev, newToast];
+    });
     return id;
   }, []);
 

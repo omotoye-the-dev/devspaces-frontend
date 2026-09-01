@@ -12,6 +12,7 @@ import NotFoundPage from "@/pages/NotFoundPage";
 import ArticleEditorPage from "@/pages/member/ArticleEditorPage";
 import ArticlesPage from "@/pages/member/ArticlesPage";
 import ProtectedRoute from "@/components/shared/ProtectedRoute";
+import ProfilePage from "@/pages/member/ProfilePage";
 
 export const router = createBrowserRouter([
   {
@@ -36,6 +37,14 @@ export const router = createBrowserRouter([
           {
             path: "articles/:id/edit",
             element: <ArticleEditorPage />,
+          },
+          {
+            path: "profile",
+            element: <ProfilePage />,
+          },
+          {
+            path: "profile/:id",
+            element: <ProfilePage />,
           },
         ],
       },
