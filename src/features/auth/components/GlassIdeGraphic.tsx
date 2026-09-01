@@ -26,7 +26,7 @@ export default function GlassIdeGraphic(): JSX.Element {
             <span className="w-2.5 h-2.5 rounded-full bg-background/40" />
             <span className="w-2.5 h-2.5 rounded-full bg-background/40" />
           </div>
-          <span className="text-[10px] tracking-wider text-background/50 font-sans font-medium">
+          <span className="text-[10px] tracking-wider text-background/50 font-inter font-medium">
             devspace.tsx
           </span>
         </div>

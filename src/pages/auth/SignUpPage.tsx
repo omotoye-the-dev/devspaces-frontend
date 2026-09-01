@@ -8,7 +8,7 @@ import { FcGoogle } from "react-icons/fc";
 
 import { FormInput, Button, defaultPasswordRequirements } from "@/components/common";
 import { toast } from "@/hooks/useToast";
-import { initiateOAuth, signUp } from "@/lib/api/auth.api";
+import { initiateOAuth, signUp } from "@/features/auth/api/auth.api";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
 
 const signUpSchema = z
@@ -36,7 +36,10 @@ const signUpSchema = z
       .string()
       .min(1, "Email is required")
       .refine((val) => !val.startsWith(" "), "Email cannot start with a space")
-      .refine((val) => z.string().email().safeParse(val).success, "Please enter a valid email address"),
+      .refine(
+        (val) => z.string().email().safeParse(val).success,
+        "Please enter a valid email address",
+      ),
     password: z
       .string()
       .min(1, "Please enter your password")

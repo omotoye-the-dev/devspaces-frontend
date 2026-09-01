@@ -1,5 +1,5 @@
-import { apiClient } from "./client";
-import { ENDPOINTS } from "./endpoints";
+import { apiClient } from "../../../lib/api/client";
+import { ENDPOINTS } from "../../../lib/api/endpoints";
 import type {
   OAuthCallbackPayload,
   AuthResponse,

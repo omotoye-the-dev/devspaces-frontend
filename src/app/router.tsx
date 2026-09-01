@@ -9,6 +9,9 @@ import Playground from "@/pages/Playground";
 import PublicLayout from "@/layouts/PublicLayout";
 import HomePage from "@/pages/HomePage";
 import NotFoundPage from "@/pages/NotFoundPage";
+import ArticleEditorPage from "@/pages/member/ArticleEditorPage";
+import ArticlesPage from "@/pages/member/ArticlesPage";
+import ProtectedRoute from "@/components/shared/ProtectedRoute";
 
 export const router = createBrowserRouter([
   {
@@ -20,11 +23,29 @@ export const router = createBrowserRouter([
         element: <HomePage />,
       },
       {
+        element: <ProtectedRoute />,
+        children: [
+          {
+            path: "articles",
+            element: <ArticlesPage />,
+          },
+          {
+            path: "articles/new",
+            element: <ArticleEditorPage />,
+          },
+          {
+            path: "articles/:id/edit",
+            element: <ArticleEditorPage />,
+          },
+        ],
+      },
+      {
         path: "*",
         element: <NotFoundPage />,
       },
     ],
   },
+
   {
     path: "/auth",
     element: <AuthLayout />,
