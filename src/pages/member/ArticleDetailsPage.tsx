@@ -12,6 +12,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button, Avatar, Skeleton, Tag } from "@/components/common";
 import { toast } from "@/hooks/useToast";
+import { cn } from "@/lib/utils/cn";
 import { getArticleById, likeArticle, deleteArticle, saveArticle, type Article } from "@/features/articles/api/articleApi";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -58,15 +59,40 @@ export function ArticleDetailsPage(): JSX.Element {
         if (isSubscribed) {
           // Add display properties to article
           const dataRecord = data as unknown as Record<string, unknown>;
+          const initialLikes =
+            (data.likeCount as number | undefined) ??
+            (data.likes as number | undefined) ??
+            (dataRecord.likes as number | undefined) ??
+            (dataRecord.likeCount as number | undefined) ??
+            0;
+
+          const initialLiked = Boolean(
+            data.liked ??
+            data.isLiked ??
+            (dataRecord.liked as boolean | undefined) ??
+            (dataRecord.isLiked as boolean | undefined) ??
+            false,
+          );
+
+          const initialSaved = Boolean(
+            (dataRecord.isBookmarked as boolean | undefined) ??
+            (dataRecord.isSaved as boolean | undefined) ??
+            (dataRecord.saved as boolean | undefined) ??
+            false,
+          );
+
           const displayArticle: DisplayArticle = {
             ...data,
             authorName: (dataRecord.authorName as string | undefined) || "DevSpace Author",
             authorAvatar: dataRecord.authorAvatar as string | undefined,
-            likes: (dataRecord.likes as number | undefined) || (dataRecord.likeCount as number | undefined) || 0,
-            comments: (dataRecord.comments as number | undefined) || 0,
+            likes: initialLikes,
+            comments: (dataRecord.comments as number | undefined) || (data.commentCount as number | undefined) || 0,
           };
+
           setArticle(displayArticle);
-          setLikeCount(displayArticle.likes || 0);
+          setIsLiked(initialLiked);
+          setIsBookmarked(initialSaved);
+          setLikeCount(initialLikes);
           setCommentCount(displayArticle.comments || 0);
         }
       } catch (err: unknown) {
@@ -87,37 +113,50 @@ export function ArticleDetailsPage(): JSX.Element {
     };
   }, [id, navigate]);
 
-  const handleLike = async () => {
+  const handleLike = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (isLiking || !article) return;
 
     const wasLiked = isLiked;
-    const previousCount = likeCount;
+    const offsetDelta = wasLiked ? -1 : 1;
+
+    // Optimistic toggle
+    setIsLiked(!wasLiked);
+    setLikeCount((prev) => Math.max(0, prev + offsetDelta));
+    setIsLiking(true);
 
     try {
-      setIsLiking(true);
-      setIsLiked(!wasLiked);
-      setLikeCount(wasLiked ? previousCount - 1 : previousCount + 1);
-
       await likeArticle(article.id);
+      if (!wasLiked) {
+        toast.success("Liked article");
+      } else {
+        toast.info("Removed like");
+      }
     } catch (error: unknown) {
       // Revert optimistic update
       setIsLiked(wasLiked);
-      setLikeCount(previousCount);
-      toast.error(getApiErrorMessage(error) || "Failed to like article");
+      setLikeCount((prev) => Math.max(0, prev - offsetDelta));
+      toast.error(getApiErrorMessage(error) || "Failed to update like status");
     } finally {
       setIsLiking(false);
     }
   };
 
-  const handleBookmark = async () => {
+  const handleBookmark = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (isSaving || !article) return;
 
     const wasBookmarked = isBookmarked;
+    setIsSaving(true);
+    setIsBookmarked(!wasBookmarked);
 
     try {
-      setIsSaving(true);
-      setIsBookmarked(!wasBookmarked);
-
       await saveArticle(article.id);
       toast.success(!wasBookmarked ? "Saved to bookmarks" : "Removed from bookmarks");
     } catch (error: unknown) {
@@ -225,24 +264,35 @@ export function ArticleDetailsPage(): JSX.Element {
           <div className="hidden lg:flex lg:col-span-1 bg-white flex-col items-center gap-2 sticky top-8 h-fit rounded-lg shadow-sm">
             {/* Like button */}
             <button
+              type="button"
               onClick={handleLike}
               disabled={isLiking}
-              className="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-gray-100 transition-all duration-200 disabled:opacity-50 group"
+              className={cn(
+                "flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 disabled:opacity-50 group cursor-pointer",
+                isLiked
+                  ? "text-red-500 bg-red-50 hover:bg-red-100"
+                  : "text-gray-400 hover:text-red-500 hover:bg-gray-100",
+              )}
               title={isLiked ? "Unlike" : "Like"}
+              aria-label={isLiked ? "Unlike article" : "Like article"}
             >
               {isLiked ? (
-                <AiFillHeart className="w-6 h-6 text-red-500 animate-pulse" />
+                <AiFillHeart className="w-6 h-6 text-red-500 transition-transform active:scale-125" />
               ) : (
-                <AiOutlineHeart className="w-6 h-6 text-gray-400 group-hover:text-red-500 transition-colors" />
+                <AiOutlineHeart className="w-6 h-6 transition-colors group-hover:text-red-500" />
               )}
-              <span className="text-xs font-bold text-gray-600">{likeCount}</span>
+              <span className={cn("text-xs font-bold", isLiked ? "text-red-600" : "text-gray-600")}>
+                {likeCount}
+              </span>
             </button>
 
             {/* Comment button */}
             <button
+              type="button"
               onClick={() => document.getElementById("comments-section")?.scrollIntoView({ behavior: "smooth" })}
-              className="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-gray-100 transition-all duration-200 group"
+              className="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-gray-100 transition-all duration-200 group cursor-pointer"
               title="Comments"
+              aria-label="Jump to comments"
             >
               <AiOutlineComment className="w-6 h-6 text-gray-400 group-hover:text-primary transition-colors" />
               <span className="text-xs font-bold text-gray-600">{commentCount}</span>
@@ -250,15 +300,22 @@ export function ArticleDetailsPage(): JSX.Element {
 
             {/* Bookmark button */}
             <button
+              type="button"
               onClick={handleBookmark}
               disabled={isSaving}
-              className="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-gray-100 transition-all duration-200 group disabled:opacity-50"
+              className={cn(
+                "flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 group disabled:opacity-50 cursor-pointer",
+                isBookmarked
+                  ? "text-primary bg-primary/10 hover:bg-primary/15"
+                  : "text-gray-400 hover:text-primary hover:bg-gray-100",
+              )}
               title={isBookmarked ? "Remove bookmark" : "Bookmark"}
+              aria-label={isBookmarked ? "Remove bookmark" : "Bookmark"}
             >
               {isBookmarked ? (
                 <LuBookmarkCheck className="w-6 h-6 text-primary" />
               ) : (
-                <LuBookmark className="w-6 h-6 text-gray-400 group-hover:text-primary transition-colors" />
+                <LuBookmark className="w-6 h-6 group-hover:text-primary transition-colors" />
               )}
             </button>
 
@@ -400,27 +457,41 @@ export function ArticleDetailsPage(): JSX.Element {
             {/* Mobile action buttons */}
             <div className="lg:hidden flex items-center gap-2 py-4 border-t border-gray-200 overflow-x-auto">
               <button
+                type="button"
                 onClick={handleLike}
                 disabled={isLiking}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-50 whitespace-nowrap"
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors disabled:opacity-50 whitespace-nowrap cursor-pointer",
+                  isLiked
+                    ? "border-red-200 bg-red-50 text-red-500 hover:bg-red-100"
+                    : "border-gray-200 text-gray-700 hover:bg-gray-50",
+                )}
+                aria-label={isLiked ? "Unlike article" : "Like article"}
               >
                 {isLiked ? (
                   <AiFillHeart className="w-5 h-5 text-red-500" />
                 ) : (
-                  <AiOutlineHeart className="w-5 h-5" />
+                  <AiOutlineHeart className="w-5 h-5 text-gray-500" />
                 )}
-                <span className="text-sm font-semibold">{likeCount}</span>
+                <span className={cn("text-sm font-semibold", isLiked && "text-red-600")}>{likeCount}</span>
               </button>
 
               <button
+                type="button"
                 onClick={handleBookmark}
                 disabled={isSaving}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-50 whitespace-nowrap"
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors disabled:opacity-50 whitespace-nowrap cursor-pointer",
+                  isBookmarked
+                    ? "border-primary/40 bg-primary/10 text-primary hover:bg-primary/15"
+                    : "border-gray-200 text-gray-700 hover:bg-gray-50",
+                )}
+                aria-label={isBookmarked ? "Remove bookmark" : "Bookmark"}
               >
                 {isBookmarked ? (
                   <LuBookmarkCheck className="w-5 h-5 text-primary" />
                 ) : (
-                  <LuBookmark className="w-5 h-5" />
+                  <LuBookmark className="w-5 h-5 text-gray-500" />
                 )}
               </button>
 
@@ -437,7 +508,7 @@ export function ArticleDetailsPage(): JSX.Element {
           <div className="hidden lg:flex lg:col-span-5 flex-col gap-8 sticky top-8 h-fit">
             {/* Author Card */}
             <AuthorCard
-            //   authorId={article.authorId}
+              authorId={article.authorId}
               authorName={article.authorName}
               authorAvatar={article.authorAvatar}
               isAuthor={isAuthor}
