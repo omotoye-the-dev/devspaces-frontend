@@ -59,12 +59,19 @@ export default function SignInPage() {
       if (res && (res.accessToken || res.success)) {
         if (res.accessToken) localStorage.setItem("devspace_token", res.accessToken);
         if (res.refreshToken) localStorage.setItem("devspace_refresh", res.refreshToken);
-        setAuth(res.accessToken ?? "", {
+
+        const userFromApi = res.user ?? {
           id: res.userId,
           email: res.email,
+          userName: res.userName,
           username: res.userName,
-        });
-        toast.success(res.message || "Welcome back to DevSpace!");
+          firstName: res.firstName,
+          lastName: res.lastName,
+          avatarUrl: res.avatarUrl ?? null,
+        };
+
+        setAuth(res.accessToken ?? "", userFromApi);
+        toast.success(res.message ?? "Welcome back to DevSpace!");
         reset();
         navigate(redirectPath, { replace: true });
       } else {

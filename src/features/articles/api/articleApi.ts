@@ -27,6 +27,16 @@ export interface Article extends Partial<ArticleFormData> {
   updatedAt?: string;
 }
 
+export interface Comment {
+  id: string;
+  postId: string;
+  userId: string;
+  message: string;
+  parentId: string | null;
+  createdAt: string;
+  replies: Comment[];
+}
+
 /** GET /api/posts/feed — fetch the post feed */
 export async function getArticles(): Promise<Article[]> {
   const response = await apiClient.get<Article[] | { data?: Article[] }>(ENDPOINTS.POSTS.FEED);
@@ -65,4 +75,24 @@ export async function deleteArticle(id: string): Promise<void> {
 /** POST /api/posts/{id}/like — like or unlike a post */
 export async function likeArticle(id: string): Promise<void> {
   await apiClient.post(ENDPOINTS.POSTS.LIKE(id));
+}
+
+/** POST /api/posts/{id}/save — save or unsave a post */
+export async function saveArticle(id: string): Promise<void> {
+  await apiClient.post(`/api/posts/${id}/save`);
+}
+
+/** GET /api/posts/{id}/comments — fetch comments for a post */
+export async function getArticleComments(id: string): Promise<Comment[]> {
+  const response = await apiClient.get<Comment[]>(`/api/posts/${id}/comments`);
+  return response.data;
+}
+
+/** POST /api/posts/{id}/comment — create a comment on a post */
+export async function createComment(id: string, message: string, parentId?: string): Promise<Comment> {
+  const response = await apiClient.post<Comment>(`/api/posts/${id}/comment`, {
+    message,
+    parentId: parentId || null,
+  });
+  return response.data;
 }

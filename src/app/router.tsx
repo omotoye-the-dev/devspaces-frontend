@@ -10,6 +10,7 @@ import PublicLayout from "@/layouts/PublicLayout";
 import HomePage from "@/pages/HomePage";
 import NotFoundPage from "@/pages/NotFoundPage";
 import ArticleEditorPage from "@/pages/member/ArticleEditorPage";
+import ArticleDetailsPage from "@/pages/member/ArticleDetailsPage";
 import ArticlesPage from "@/pages/member/ArticlesPage";
 import ProtectedRoute from "@/components/shared/ProtectedRoute";
 import ProfilePage from "@/pages/member/ProfilePage";
@@ -45,6 +46,10 @@ export const router = createBrowserRouter([
           {
             path: "profile/:id",
             element: <ProfilePage />,
+          },
+          {
+            path: "articles/:id",
+            element: <ArticleDetailsPage />,
           },
         ],
       },
