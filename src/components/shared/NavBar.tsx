@@ -1,13 +1,11 @@
-import { useEffect, useMemo, useState, type JSX } from "react";
+import { useMemo, useState, type JSX } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { MdOutlineSearch } from "react-icons/md";
 import { FiMenu, FiX } from "react-icons/fi";
-import { FaUser } from "react-icons/fa";
 import { HiOutlineBell } from "react-icons/hi";
 import { LuPenLine } from "react-icons/lu";
-import { Input, Button, Avatar, Skeleton } from "../common/index";
+import { Input, Button, Avatar } from "./index";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { getUserProfile, type UserProfile } from "@/lib/api/user.api";
 
 const searchSuggestions = [
   "React hooks",
@@ -22,99 +20,18 @@ const searchSuggestions = [
   "DevSpace roadmap",
 ];
 
-export interface NavBarProps {
-  isLoading?: boolean;
-}
-
-export function NavBarSkeleton(): JSX.Element {
-  return (
-    <nav className="w-full bg-white border-b border-border" aria-label="Loading Navigation">
-      <div className="mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Left: Logo Skeleton */}
-          <div className="flex items-center gap-2 shrink-0">
-            <Skeleton variant="circular" width={28} height={28} />
-            <Skeleton variant="text" width={110} height={24} className="rounded-md" />
-          </div>
-
-          {/* Middle: Search Bar Skeleton */}
-          <div className="w-96 px-4 hidden sm:block">
-            <Skeleton variant="rounded" height={38} className="w-full rounded-md" />
-          </div>
-
-          {/* Right: Desktop Actions Skeleton */}
-          <div className="flex items-center gap-4 shrink-0">
-            <div className="hidden md:flex items-center gap-4">
-              <Skeleton variant="text" width={60} height={18} />
-              <Skeleton variant="text" width={70} height={18} />
-              <Skeleton variant="text" width={45} height={18} />
-            </div>
-            <div className="flex items-center gap-3">
-              <Skeleton variant="rounded" width={90} height={36} className="rounded-md" />
-              <Skeleton variant="circular" width={38} height={38} />
-            </div>
-          </div>
-        </div>
-      </div>
-    </nav>
-  );
-}
-
-export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Element {
+export function NavBar(): JSX.Element {
   const navigate = useNavigate();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [notifications] = useState(3);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [hasFetchedProfile, setHasFetchedProfile] = useState(false);
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      return;
-    }
-
-    let isSubscribed = true;
-    getUserProfile()
-      .then((data) => {
-        if (isSubscribed && data) {
-          setProfile(data);
-        }
-      })
-      .catch(() => {
-        // Handle fetch failure gracefully
-      })
-      .finally(() => {
-        if (isSubscribed) {
-          setHasFetchedProfile(true);
-        }
-      });
-
-    return () => {
-      isSubscribed = false;
-    };
-  }, [isAuthenticated]);
-
-  const isProfileLoading = isAuthenticated && !hasFetchedProfile && !profile;
-
-  const currentProfile = isAuthenticated ? profile : null;
-
-  const rawAvatarUrl =
-    (currentProfile?.avatarUrl as string | undefined | null) ??
-    (currentProfile?.avatar as string | undefined | null) ??
-    (currentProfile?.profilePictureUrl as string | undefined | null);
-
-  const avatarUrl = rawAvatarUrl && rawAvatarUrl.trim().length > 0 ? rawAvatarUrl : undefined;
-
-  const displayName = currentProfile
-    ? [currentProfile.firstName, currentProfile.lastName].filter(Boolean).join(" ") ||
-      (currentProfile.name as string | undefined) ||
-      (currentProfile.fullName as string | undefined) ||
-      (currentProfile.userName as string | undefined) ||
-      (currentProfile.username as string | undefined) ||
-      undefined
-    : undefined;
+  const authUser = useAuthStore((state) => state.user);
+  const userAvatar = authUser?.avatarUrl ?? (typeof window !== "undefined" ? localStorage.getItem("devspace_avatar") : null);
+  const userName = authUser
+    ? [authUser.firstName, authUser.lastName].filter(Boolean).join(" ").trim() || authUser.userName || authUser.username || authUser.email?.split("@")[0] || "User"
+    : typeof window !== "undefined" ? localStorage.getItem("devspace_user_name") : null;
 
   const filteredSuggestions = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -123,7 +40,9 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
       return searchSuggestions.slice(0, 5);
     }
 
-    return searchSuggestions.filter((item) => item.toLowerCase().includes(term));
+    return searchSuggestions.filter((item) =>
+      item.toLowerCase().includes(term),
+    );
   }, [searchTerm]);
 
   const handleProtectedNavigation = (path: string) => {
@@ -144,10 +63,6 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
     navigate("/auth/sign-in");
   };
 
-  if (isLoadingProp) {
-    return <NavBarSkeleton />;
-  }
-
   return (
     <nav className="w-full bg-white border-b border-border">
       <div className="mx-auto px-4 sm:px-6 lg:px-8">
@@ -159,29 +74,33 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
                 &lt;/&gt;
               </span>
 
-              <span className="font-bold text-3xl text-text tracking-tight">DevSpace</span>
+              <span className="font-bold text-3xl text-text tracking-tight">
+                DevSpace
+              </span>
             </Link>
           </div>
 
           {/* Middle: Search */}
           <div className="w-200 px-4 hidden sm:block">
             <Input
-              className="bg-gray-100 border-gray-300 focus:ring-primary"
+              className="bg-gray-100 border-gray-300 focus:ring-primary focus:border-primary"
               placeholder="Search articles, tags, resources..."
               inputSize="md"
-              leftIcon={<MdOutlineSearch className="text-text/40" />}
+              leftIcon={
+                <MdOutlineSearch className="text-text/40" />
+              }
             />
           </div>
 
           {/* Right: Links + Actions */}
           <div className="flex items-center gap-15">
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-4 shrink-0">
+            <div className="hidden md:flex items-center gap-4">
               <Button
                 type="button"
                 variant="ghost"
-                className="whitespace-nowrap"
                 onClick={() => handleProtectedNavigation("/articles")}
+               
               >
                 Articles
               </Button>
@@ -189,7 +108,6 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
               <Button
                 type="button"
                 variant="ghost"
-                className="whitespace-nowrap"
                 onClick={() => handleProtectedNavigation("/resources")}
               >
                 Resources
@@ -198,7 +116,6 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
               <Button
                 variant="ghost"
                 type="button"
-                className="whitespace-nowrap"
                 onClick={() => handleProtectedNavigation("/tags")}
               >
                 Tags
@@ -206,13 +123,13 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
             </div>
 
             {/* Desktop Actions */}
-            <div className="hidden md:flex items-center gap-2 shrink-0">
+            <div className="hidden md:flex items-center gap-1">
               <Button
                 variant="primary"
                 size="md"
-                className="whitespace-nowrap shrink-0"
+                fullWidth={true}
                 leftIcon={isAuthenticated ? <LuPenLine className="w-4 h-4" /> : undefined}
-                href="/articles/new"
+                onClick={handlePrimaryAction}
               >
                 {isAuthenticated ? "Write Article" : "Sign in"}
               </Button>
@@ -224,7 +141,7 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
                     variant="ghost"
                     size="icon"
                     aria-label="Notifications"
-                    className="relative inline-flex items-center justify-center p-2 rounded-md text-text/80 hover:bg-slate-100 transition-colors shrink-0"
+                    className="relative inline-flex items-center justify-center p-2 rounded-md text-text/80 hover:bg-slate-100 transition-colors"
                   >
                     <HiOutlineBell className="w-6 h-6" />
 
@@ -235,17 +152,12 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
                     )}
                   </Button>
 
-                  {isProfileLoading ? (
-                    <Skeleton variant="circular" width={40} height={40} />
-                  ) : (
-                    <Avatar
-                      src={avatarUrl}
-                      alt={displayName ?? "User avatar"}
-                      name={displayName}
-                      fallbackIcon={!displayName ? <FaUser /> : undefined}
-                      size="md"
-                    />
-                  )}
+                  <Avatar
+                    src={userAvatar ?? undefined}
+                    alt="User profile"
+                    name={userName ?? "User"}
+                    size="md"
+                  />
                 </>
               )}
             </div>
@@ -269,9 +181,15 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
                 onClick={() => setMobileOpen((state) => !state)}
                 className="inline-flex items-center justify-center p-2 rounded-md text-text/80 hover:bg-slate-100 transition-colors"
                 aria-expanded={mobileOpen}
-                aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
+                aria-label={
+                  mobileOpen ? "Close navigation menu" : "Open navigation menu"
+                }
               >
-                {mobileOpen ? <FiX className="w-6 h-6" /> : <FiMenu className="w-6 h-6" />}
+                {mobileOpen ? (
+                  <FiX className="w-6 h-6" />
+                ) : (
+                  <FiMenu className="w-6 h-6" />
+                )}
               </button>
             </div>
           </div>
@@ -304,7 +222,7 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
                   <Input
                     value={searchTerm}
                     onChange={(event) => setSearchTerm(event.target.value)}
-                    className="bg-gray-200 border-gray-300 focus:ring-primary"
+                    className="bg-gray-200 border-gray-300 focus:ring-primary focus:border-primary"
                     placeholder="Search articles, tags, resources..."
                     inputSize="md"
                     leftIcon={<MdOutlineSearch className="text-text/40" />}
