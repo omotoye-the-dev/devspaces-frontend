@@ -23,19 +23,27 @@ export interface SignInResponse {
   userId?: string;
   email?: string;
   userName?: string;
+  firstName?: string;
+  lastName?: string;
+  avatarUrl?: string | null;
   expiresAt?: string;
   success?: boolean;
   message?: string;
+  user?: AuthUser;
 }
 
 export interface AuthUser {
   id?: string;
   email?: string;
   username?: string;
+  userName?: string;
   firstName?: string;
   lastName?: string;
-  avatarUrl?: string;
+  avatarUrl?: string | null;
   role?: string;
+  authProvider?: string;
+  isEmailVerified?: boolean;
+  createdAt?: string;
 }
 
 export interface AuthResponse {
