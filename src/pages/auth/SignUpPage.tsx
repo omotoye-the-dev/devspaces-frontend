@@ -8,7 +8,8 @@ import { FcGoogle } from "react-icons/fc";
 
 import { FormInput, Button, defaultPasswordRequirements } from "@/components/common";
 import { toast } from "@/hooks/useToast";
-import { initiateOAuth, signUp } from "@/lib/api/auth.api";
+import { initiateOAuth, signUp } from "@/features/auth/api/auth.api";
+import { getApiErrorMessage } from "@/lib/utils/apiError";
 
 const signUpSchema = z
   .object({
@@ -35,7 +36,10 @@ const signUpSchema = z
       .string()
       .min(1, "Email is required")
       .refine((val) => !val.startsWith(" "), "Email cannot start with a space")
-      .refine((val) => z.string().email().safeParse(val).success, "Please enter a valid email address"),
+      .refine(
+        (val) => z.string().email().safeParse(val).success,
+        "Please enter a valid email address",
+      ),
     password: z
       .string()
       .min(1, "Please enter your password")
@@ -85,18 +89,19 @@ export default function SignUpPage() {
         confirmPassword: data.confirmPassword,
       });
 
+      if (response && response.isSuccess === false) {
+        toast.error(response.message || "Failed to create account. Please try again.");
+        return;
+      }
+
       toast.success(
         response?.message ||
           "Account created successfully! Please enter the 6-digit OTP code sent to your email.",
       );
       reset();
       navigate("/auth/verify-account", { state: { email: userEmail } });
-    } catch {
-      toast.success(
-        "Account created successfully! Please enter the 6-digit OTP code sent to your email.",
-      );
-      reset();
-      navigate("/auth/verify-account", { state: { email: userEmail } });
+    } catch (error: unknown) {
+      toast.error(getApiErrorMessage(error));
     }
   };
 

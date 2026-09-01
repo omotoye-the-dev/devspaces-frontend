@@ -14,6 +14,8 @@ import {
   HiOutlineCircleStack,
   HiOutlinePencilSquare,
   HiOutlineUser,
+  HiOutlineChevronLeft,
+  HiOutlineChevronRight,
 } from "react-icons/hi2";
 import {
   SiJavascript,
@@ -23,7 +25,12 @@ import {
   SiPython,
 } from "react-icons/si";
 import { FaInfinity } from "react-icons/fa6";
+import { useNavigate } from "react-router-dom";
+import { FiLogOut, FiLogIn } from "react-icons/fi";
 import { cn } from "@/lib/utils/cn";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { toast } from "@/hooks/useToast";
+import { Button, Skeleton } from "@/components/common";
 
 export interface NavItem {
   id: string;
@@ -41,6 +48,78 @@ export interface SidebarProps {
   className?: string;
   activeItem?: string;
   onSelect?: (itemId: string) => void;
+  isLoading?: boolean;
+  defaultCollapsed?: boolean;
+}
+
+export function SidebarSkeleton({ className }: { className?: string }): JSX.Element {
+  return (
+    <>
+      <aside
+        className={cn(
+          "hidden md:flex w-60 bg-white border-r border-border flex-col justify-between h-full max-h-screen shrink-0 p-3 overflow-y-auto overflow-x-hidden font-inter select-none",
+          className,
+        )}
+        aria-label="Loading Sidebar"
+      >
+        <div className="flex flex-col min-h-full justify-between space-y-4">
+          {/* Main Nav Items Skeleton */}
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 px-3 py-1.5">
+                <Skeleton variant="circular" width={18} height={18} />
+                <Skeleton variant="text" width={`${65 + (i % 3) * 10}%`} height={16} />
+              </div>
+            ))}
+          </div>
+
+          <div className="my-2 border-t border-border" />
+
+          {/* Community Section Skeleton */}
+          <div className="space-y-2">
+            <Skeleton variant="text" width={70} height={12} className="px-3 mb-1" />
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 px-3 py-1.5">
+                <Skeleton variant="circular" width={18} height={18} />
+                <Skeleton variant="text" width={`${55 + (i % 3) * 15}%`} height={16} />
+              </div>
+            ))}
+          </div>
+
+          <div className="my-2 border-t border-border" />
+
+          {/* Topics Section Skeleton */}
+          <div className="space-y-2 flex-1">
+            <Skeleton variant="text" width={55} height={12} className="px-3 mb-1" />
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 px-3 py-1">
+                <Skeleton variant="circular" width={14} height={14} />
+                <Skeleton variant="text" width={`${50 + (i % 4) * 10}%`} height={14} />
+              </div>
+            ))}
+          </div>
+
+          {/* Footer Skeleton */}
+          <div className="pt-3 border-t border-border">
+            <Skeleton variant="rounded" height={36} className="w-full rounded-md" />
+          </div>
+        </div>
+      </aside>
+
+      {/* Mobile Bottom Navigation Skeleton */}
+      <nav
+        aria-label="Loading Mobile Navigation"
+        className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-border flex items-center justify-around py-2 px-3 md:hidden font-inter shadow-md"
+      >
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="flex flex-col items-center gap-1.5 min-w-14">
+            <Skeleton variant="circular" width={20} height={20} />
+            <Skeleton variant="text" width={32} height={10} />
+          </div>
+        ))}
+      </nav>
+    </>
+  );
 }
 
 const MAIN_NAV_ITEMS: NavItem[] = [
@@ -108,9 +187,26 @@ export function Sidebar({
   className,
   activeItem: activeItemProp,
   onSelect,
+  isLoading = false,
+  defaultCollapsed = false,
 }: SidebarProps): JSX.Element {
+  const navigate = useNavigate();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const logout = useAuthStore((state) => state.logout);
   const [internalActiveItem, setInternalActiveItem] = useState("home");
+  const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
+
   const currentActive = activeItemProp ?? internalActiveItem;
+
+  if (isLoading) {
+    return <SidebarSkeleton className={className} />;
+  }
+
+  const handleLogout = (): void => {
+    logout();
+    toast.success("Logged out successfully");
+    navigate("/auth/sign-in");
+  };
 
   const handleItemClick = (id: string) => {
     setInternalActiveItem(id);
@@ -122,44 +218,76 @@ export function Sidebar({
       {/* Desktop Sidebar (hidden on mobile) */}
       <aside
         className={cn(
-          "hidden md:flex w-60 bg-white border-r border-border flex-col justify-between h-screen max-h-screen shrink-0 p-3 overflow-y-auto overflow-x-hidden font-inter select-none",
-          className
+          "hidden md:flex bg-white border-r border-border flex-col justify-between h-full max-h-screen shrink-0 overflow-y-auto overflow-x-hidden font-inter select-none transition-all duration-200 ease-in-out",
+          isCollapsed ? "w-16 p-2 items-center" : "w-60 p-3",
+          className,
         )}
       >
-        <div className="flex flex-col min-h-full justify-between">
+        <div className="flex flex-col min-h-full justify-between w-full">
+          {/* Header with Collapse / Expand Toggle Button */}
+          <div
+            className={cn(
+              "flex items-center pb-2 mb-1 border-b border-border/60",
+              isCollapsed ? "justify-center w-full" : "justify-between px-1",
+            )}
+          >
+            {!isCollapsed && (
+              <span className="text-[11px] font-extrabold text-text/40 uppercase tracking-wider">
+                Menu
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => setIsCollapsed((prev) => !prev)}
+              aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              className="p-1.5 rounded-lg text-text/60 hover:text-text hover:bg-border/50 transition-colors cursor-pointer"
+            >
+              {isCollapsed ? (
+                <HiOutlineChevronRight className="w-4 h-4" />
+              ) : (
+                <HiOutlineChevronLeft className="w-4 h-4" />
+              )}
+            </button>
+          </div>
+
           {/* Main Navigation */}
-          <nav aria-label="Main Navigation" className="space-y-0.5">
+          <nav aria-label="Main Navigation" className="space-y-0.5 w-full">
             {MAIN_NAV_ITEMS.map((item) => {
               const isActive = currentActive === item.id;
               return (
                 <button
                   key={item.id}
                   type="button"
+                  title={isCollapsed ? item.label : undefined}
                   onClick={() => handleItemClick(item.id)}
                   className={cn(
-                    "w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[13px] transition-colors duration-150 cursor-pointer",
+                    "flex items-center rounded-lg text-[13px] transition-colors duration-150 cursor-pointer",
+                    isCollapsed ? "justify-center p-2.5 w-full" : "w-full gap-2.5 px-3 py-1.5",
                     isActive
                       ? "bg-primary/10 text-primary font-semibold"
-                      : "text-text/70 hover:bg-border/40 hover:text-text font-medium"
+                      : "text-text/70 hover:bg-border/40 hover:text-text font-medium",
                   )}
                 >
                   <span className={isActive ? "text-primary" : "text-text/50"}>
                     {item.icon}
                   </span>
-                  <span>{item.label}</span>
+                  {!isCollapsed && <span>{item.label}</span>}
                 </button>
               );
             })}
           </nav>
 
           {/* Divider */}
-          <div className="my-2 border-t border-border" />
+          <div className="my-2 border-t border-border w-full" />
 
           {/* Community Section */}
-          <div className="space-y-0.5">
-            <span className="px-3 text-[10px] font-bold tracking-wider text-text/40 uppercase block mb-1">
-              Community
-            </span>
+          <div className="space-y-0.5 w-full">
+            {!isCollapsed && (
+              <span className="px-3 text-[10px] font-bold tracking-wider text-text/40 uppercase block mb-1">
+                Community
+              </span>
+            )}
             <nav aria-label="Community Navigation" className="space-y-0.5">
               {COMMUNITY_NAV_ITEMS.map((item) => {
                 const isActive = currentActive === item.id;
@@ -167,18 +295,20 @@ export function Sidebar({
                   <button
                     key={item.id}
                     type="button"
+                    title={isCollapsed ? item.label : undefined}
                     onClick={() => handleItemClick(item.id)}
                     className={cn(
-                      "w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[13px] transition-colors duration-150 cursor-pointer",
+                      "flex items-center rounded-lg text-[13px] transition-colors duration-150 cursor-pointer",
+                      isCollapsed ? "justify-center p-2.5 w-full" : "w-full gap-2.5 px-3 py-1.5",
                       isActive
                         ? "bg-primary/10 text-primary font-semibold"
-                        : "text-text/70 hover:bg-border/40 hover:text-text font-medium"
+                        : "text-text/70 hover:bg-border/40 hover:text-text font-medium",
                     )}
                   >
                     <span className={isActive ? "text-primary" : "text-text/50"}>
                       {item.icon}
                     </span>
-                    <span>{item.label}</span>
+                    {!isCollapsed && <span>{item.label}</span>}
                   </button>
                 );
               })}
@@ -186,14 +316,16 @@ export function Sidebar({
           </div>
 
           {/* Divider */}
-          <div className="my-2 border-t border-border" />
+          <div className="my-2 border-t border-border w-full" />
 
           {/* Topics Section */}
-          <div className="space-y-0.5 flex-1 flex flex-col justify-between">
+          <div className="space-y-0.5 flex-1 flex flex-col justify-between w-full">
             <div>
-              <span className="px-3 text-[10px] font-bold tracking-wider text-text/40 uppercase block mb-1">
-                Topics
-              </span>
+              {!isCollapsed && (
+                <span className="px-3 text-[10px] font-bold tracking-wider text-text/40 uppercase block mb-1">
+                  Topics
+                </span>
+              )}
               <nav aria-label="Topics Navigation" className="space-y-0.5">
                 {TOPIC_ITEMS.map((topic) => {
                   const isActive = currentActive === topic.id;
@@ -201,32 +333,63 @@ export function Sidebar({
                     <button
                       key={topic.id}
                       type="button"
+                      title={isCollapsed ? topic.label : undefined}
                       onClick={() => handleItemClick(topic.id)}
                       className={cn(
-                        "w-full flex items-center gap-2.5 px-3 py-1 rounded-lg text-[13px] transition-colors duration-150 cursor-pointer",
+                        "flex items-center rounded-lg text-[13px] transition-colors duration-150 cursor-pointer",
+                        isCollapsed ? "justify-center p-2.5 w-full" : "w-full gap-2.5 px-3 py-1",
                         isActive
                           ? "bg-primary/10 text-primary font-semibold"
-                          : "text-text/70 hover:bg-border/40 hover:text-text font-medium"
+                          : "text-text/70 hover:bg-border/40 hover:text-text font-medium",
                       )}
                     >
                       <span className="flex items-center justify-center w-4 h-4 shrink-0">
                         {topic.icon}
                       </span>
-                      <span>{topic.label}</span>
+                      {!isCollapsed && <span>{topic.label}</span>}
                     </button>
                   );
                 })}
               </nav>
             </div>
 
-            <button
-              type="button"
-              onClick={() => handleItemClick("view-all-topics")}
-              className="w-full flex items-center gap-2.5 px-3 py-1 rounded-lg text-[13px] text-text/60 hover:bg-border/40 hover:text-text font-medium transition-colors duration-150 cursor-pointer mt-0.5"
-            >
-              <HiOutlineChevronDown className="w-3.5 h-3.5 text-text/40" />
-              <span>View all topics</span>
-            </button>
+            {!isCollapsed && (
+              <button
+                type="button"
+                onClick={() => handleItemClick("view-all-topics")}
+                className="w-full flex items-center gap-2.5 px-3 py-1 rounded-lg text-[13px] text-text/60 hover:bg-border/40 hover:text-text font-medium transition-colors duration-150 cursor-pointer mt-0.5"
+              >
+                <HiOutlineChevronDown className="w-3.5 h-3.5 text-text/40" />
+                <span>View all topics</span>
+              </button>
+            )}
+          </div>
+
+          {/* Sidebar Auth Footer Action */}
+          <div className="pt-3 border-t border-border mt-2 w-full">
+            {isAuthenticated ? (
+              <Button
+                variant="danger"
+                size="sm"
+                fullWidth
+                leftIcon={<FiLogOut className="w-4 h-4" />}
+                onClick={handleLogout}
+                title={isCollapsed ? "Logout" : undefined}
+              >
+                {!isCollapsed && "Logout"}
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                size="sm"
+                fullWidth
+                leftIcon={<FiLogIn className="w-4 h-4" />}
+                onClick={() => navigate("/auth/sign-in")}
+                title={isCollapsed ? "Login" : undefined}
+              >
+                {!isCollapsed && "Login"}
+              </Button>
+            )}
           </div>
         </div>
       </aside>
@@ -246,13 +409,13 @@ export function Sidebar({
               onClick={() => handleItemClick(item.id)}
               className={cn(
                 "flex flex-col items-center justify-center gap-1 min-w-14 py-1 rounded-lg text-[11px] font-medium transition-colors cursor-pointer",
-                isActive ? "text-primary font-semibold" : "text-text/70 hover:text-text"
+                isActive ? "text-primary font-semibold" : "text-text/70 hover:text-text",
               )}
             >
               <span
                 className={cn(
                   "flex items-center justify-center",
-                  isWrite && "p-1 rounded-lg border border-border/80 bg-background text-text/80"
+                  isWrite && "p-1 rounded-lg border border-border/80 bg-background text-text/80",
                 )}
               >
                 {item.icon}

@@ -7,8 +7,11 @@ import VerifyAccount from "@/pages/auth/VerifyAccount";
 import OAuthCallbackPage from "@/pages/auth/OAuthCallbackPage";
 import Playground from "@/pages/Playground";
 import PublicLayout from "@/layouts/PublicLayout";
-import NotFoundPage from "@/pages/NotFoundPage";
 import HomePage from "@/pages/HomePage";
+import NotFoundPage from "@/pages/NotFoundPage";
+import ArticleEditorPage from "@/pages/member/ArticleEditorPage";
+import ArticlesPage from "@/pages/member/ArticlesPage";
+import ProtectedRoute from "@/components/shared/ProtectedRoute";
 
 export const router = createBrowserRouter([
   {
@@ -20,41 +23,55 @@ export const router = createBrowserRouter([
         element: <HomePage />,
       },
       {
+        element: <ProtectedRoute />,
+        children: [
+          {
+            path: "articles",
+            element: <ArticlesPage />,
+          },
+          {
+            path: "articles/new",
+            element: <ArticleEditorPage />,
+          },
+          {
+            path: "articles/:id/edit",
+            element: <ArticleEditorPage />,
+          },
+        ],
+      },
+      {
         path: "*",
         element: <NotFoundPage />,
       },
     ],
   },
+
   {
-    path: "/",
+    path: "/auth",
     element: <AuthLayout />,
     children: [
       {
-        path: "auth",
+        path: "sign-in",
         element: <SignInPage />,
       },
       {
-        path: "auth/sign-in",
-        element: <SignInPage />,
-      },
-      {
-        path: "auth/sign-up",
+        path: "sign-up",
         element: <SignUpPage />,
       },
       {
-        path: "auth/forgot-password",
+        path: "forgot-password",
         element: <ForgotPassword />,
       },
       {
-        path: "auth/verify-account",
+        path: "verify-account",
         element: <VerifyAccount />,
       },
       {
-        path: "auth/callback",
+        path: "callback",
         element: <OAuthCallbackPage />,
       },
       {
-        path: "auth/callback/:provider",
+        path: "callback/:provider",
         element: <OAuthCallbackPage />,
       },
     ],
@@ -63,4 +80,9 @@ export const router = createBrowserRouter([
     path: "/playground",
     element: <Playground />,
   },
+  {
+    path: "*",
+    element: <NotFoundPage />,
+  },
 ]);
+

@@ -14,7 +14,7 @@ import {
   ResendOtpButton,
 } from "@/components/common";
 import { toast } from "@/hooks/useToast";
-import { requestPasswordReset, resetPassword } from "@/lib/api/auth.api";
+import { requestPasswordReset, resetPassword } from "@/features/auth/api/auth.api";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
 
 // Step 1: Email Request Schema
@@ -37,12 +37,9 @@ const resetStepSchema = z
     newPassword: z
       .string()
       .min(1, "Please enter a new password")
-      .refine(
-        (val) => defaultPasswordRequirements.every((req) => req.test(val)),
-        {
-          message: "Please satisfy all password requirements",
-        },
-      ),
+      .refine((val) => defaultPasswordRequirements.every((req) => req.test(val)), {
+        message: "Please satisfy all password requirements",
+      }),
     confirmPassword: z.string().min(1, "Please confirm your new password"),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
@@ -101,11 +98,7 @@ export default function ForgotPassword() {
       );
       setStep(2);
     } catch (error: unknown) {
-      const errorMessage = getApiErrorMessage(
-        error,
-        "Failed to send reset code. Please check your email and try again.",
-      );
-      toast.error(errorMessage);
+      toast.error(getApiErrorMessage(error));
     }
   };
 
@@ -114,16 +107,10 @@ export default function ForgotPassword() {
     if (!submittedEmail) return;
     try {
       const response = await requestPasswordReset({ email: submittedEmail });
-      toast.success(
-        response.message || "A new 6-digit OTP code has been sent to your email.",
-      );
+      toast.success(response.message || "A new 6-digit OTP code has been sent to your email.");
       setResetValue("otp", "");
     } catch (error: unknown) {
-      const errorMessage = getApiErrorMessage(
-        error,
-        "Failed to resend verification code. Please try again.",
-      );
-      toast.error(errorMessage);
+      toast.error(getApiErrorMessage(error));
       throw error; // Let ResendOtpButton know it failed
     }
   };
@@ -143,11 +130,7 @@ export default function ForgotPassword() {
       );
       navigate("/auth/sign-in");
     } catch (error: unknown) {
-      const errorMessage = getApiErrorMessage(
-        error,
-        "Failed to reset password. Please verify your OTP code and try again.",
-      );
-      toast.error(errorMessage);
+      toast.error(getApiErrorMessage(error));
     }
   };
 
@@ -185,7 +168,10 @@ export default function ForgotPassword() {
 
       {/* STEP 1: EMAIL REQUEST FORM */}
       {step === 1 && (
-        <form onSubmit={handleSubmitEmail(handleEmailSubmit)} className="flex flex-col w-full gap-3 pt-1">
+        <form
+          onSubmit={handleSubmitEmail(handleEmailSubmit)}
+          className="flex flex-col w-full gap-3 pt-1"
+        >
           <FormInput
             label="Email address"
             type="email"
@@ -222,7 +208,10 @@ export default function ForgotPassword() {
 
       {/* STEP 2: OTP & NEW PASSWORD FORM */}
       {step === 2 && (
-        <form onSubmit={handleSubmitReset(handleResetSubmit)} className="flex flex-col w-full gap-3.5 pt-1">
+        <form
+          onSubmit={handleSubmitReset(handleResetSubmit)}
+          className="flex flex-col w-full gap-3.5 pt-1"
+        >
           {/* Email recap & Change email button */}
           <div className="flex items-center justify-between bg-background p-2.5 rounded-md border border-border text-xs">
             <div className="flex items-center gap-2 overflow-hidden pr-2">
@@ -254,11 +243,7 @@ export default function ForgotPassword() {
           />
 
           {/* Reusable Resend OTP Button */}
-          <ResendOtpButton
-            onResend={handleResendOtp}
-            cooldownSeconds={60}
-            initialTimer={60}
-          />
+          <ResendOtpButton onResend={handleResendOtp} cooldownSeconds={60} initialTimer={60} />
 
           {/* New Password Field */}
           <FormInput

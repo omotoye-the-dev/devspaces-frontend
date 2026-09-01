@@ -5,14 +5,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { FaRegEnvelope, FaArrowLeft, FaCheckCircle } from "react-icons/fa";
 
-import {
-  FormInput,
-  Button,
-  OtpInput,
-  ResendOtpButton,
-} from "@/components/common";
+import { FormInput, Button, OtpInput, ResendOtpButton } from "@/components/common";
 import { toast } from "@/hooks/useToast";
-import { verifyAccount, resendOtp } from "@/lib/api/auth.api";
+import { verifyAccount, resendOtp } from "@/features/auth/api/auth.api";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
 
@@ -73,9 +68,7 @@ export default function VerifyAccount() {
       const authToken = response.token || response.accessToken;
       if (authToken) {
         setAuth(authToken, response.user);
-        toast.success(
-          response.message || "Account verified successfully! Welcome to DevSpace.",
-        );
+        toast.success(response.message || "Account verified successfully! Welcome to DevSpace.");
         navigate("/playground");
       } else {
         toast.success(
@@ -84,11 +77,7 @@ export default function VerifyAccount() {
         navigate("/auth/sign-in");
       }
     } catch (error: unknown) {
-      const errorMessage = getApiErrorMessage(
-        error,
-        "Verification failed. Please check your OTP code and try again.",
-      );
-      toast.error(errorMessage);
+      toast.error(getApiErrorMessage(error));
     }
   };
 
@@ -106,11 +95,7 @@ export default function VerifyAccount() {
       );
       setValue("otp", "");
     } catch (error: unknown) {
-      const errorMessage = getApiErrorMessage(
-        error,
-        "Failed to resend verification code. Please try again.",
-      );
-      toast.error(errorMessage);
+      toast.error(getApiErrorMessage(error));
       throw error;
     }
   };
@@ -134,7 +119,10 @@ export default function VerifyAccount() {
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit(handleVerifySubmit)} className="flex flex-col w-full gap-3.5 pt-1">
+      <form
+        onSubmit={handleSubmit(handleVerifySubmit)}
+        className="flex flex-col w-full gap-3.5 pt-1"
+      >
         {/* Email Field or Email Display */}
         {isEditingEmail ? (
           <FormInput
@@ -179,11 +167,7 @@ export default function VerifyAccount() {
         />
 
         {/* Reusable Resend OTP Button */}
-        <ResendOtpButton
-          onResend={handleResendOtp}
-          cooldownSeconds={60}
-          initialTimer={60}
-        />
+        <ResendOtpButton onResend={handleResendOtp} cooldownSeconds={60} initialTimer={60} />
 
         {/* Submit Verification Button */}
         <Button

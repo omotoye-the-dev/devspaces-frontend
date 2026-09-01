@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type JSX } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { handleOAuthCallback } from "@/lib/api/auth.api";
+import { handleOAuthCallback } from "@/features/auth/api/auth.api";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { toast } from "@/hooks/useToast";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
@@ -26,28 +26,27 @@ export default function OAuthCallbackPage(): JSX.Element {
       // Check if backend or provider passed an error
       if (error) {
         toast.error(`Authentication failed: ${error}`);
-        navigate("/auth/sign-in");
+        navigate("/auth/sign-up");
         return;
       }
 
       // Determine provider from route param or search params
       const providerStr =
         paramProvider?.toLowerCase() || searchParams.get("provider")?.toLowerCase() || "";
-      const provider: "google" | "github" =
-        providerStr.includes("github") ? "github" : "google";
+      const provider: "google" | "github" = providerStr.includes("github") ? "github" : "google";
 
       // If no code was provided in URL query, check if token was returned directly
       const directToken = searchParams.get("token") || searchParams.get("accessToken");
       if (directToken) {
         setAuth(directToken);
         toast.success("Successfully authenticated!");
-        navigate("/playground");
+        navigate("/");
         return;
       }
 
       if (!code) {
         toast.error("No authorization code returned from provider.");
-        navigate("/auth/sign-in");
+        navigate("/auth/sign-up");
         return;
       }
 
@@ -59,18 +58,14 @@ export default function OAuthCallbackPage(): JSX.Element {
         if (authToken) {
           setAuth(authToken, response.user);
           toast.success("Welcome to DevSpace!");
-          navigate("/playground");
+          navigate("/");
         } else {
           toast.success(response.message || "Successfully authenticated!");
-          navigate("/playground");
+          navigate("/");
         }
       } catch (err: unknown) {
-        const message = getApiErrorMessage(
-          err,
-          "Authentication failed. Please try again.",
-        );
-        toast.error(message);
-        navigate("/auth/sign-in");
+        toast.error(getApiErrorMessage(err));
+        navigate("/auth/sign-up");
       }
     }
 

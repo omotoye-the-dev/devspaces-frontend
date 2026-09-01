@@ -14,4 +14,16 @@ export const ENDPOINTS = {
     RESEND_OTP: `${API_BASE_URL}/api/Auth/resend-otp`,
     LOGOUT: `${API_BASE_URL}/api/Auth/logout`,
   },
+  USER: {
+    PROFILE: `${API_BASE_URL}/api/User/profile`,
+  },
+  POSTS: {
+    FEED: `${API_BASE_URL}/api/posts/feed`,
+    CREATE: `${API_BASE_URL}/api/posts`,
+    DETAIL: (id: string) => `${API_BASE_URL}/api/posts/${id}`,
+    LIKE: (id: string) => `${API_BASE_URL}/api/posts/${id}/like`,
+  },
+  TAGS: {
+    LIST: `${API_BASE_URL}/api/tags`,
+  },
 } as const;
