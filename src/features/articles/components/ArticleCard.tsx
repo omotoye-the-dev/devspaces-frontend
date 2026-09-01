@@ -1,14 +1,22 @@
-import { useState, type JSX } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect, type JSX } from "react";
+import { useNavigate } from "react-router-dom";
 import { AiOutlineHeart, AiFillHeart } from "react-icons/ai";
 import { FiMessageCircle, FiMoreHorizontal } from "react-icons/fi";
 import { LuBookmark, LuBookmarkCheck, LuClock } from "react-icons/lu";
 import { Avatar } from "@/components/common";
 import { toast } from "@/hooks/useToast";
 import articlePlaceholder from "@/assets/images/article-placeholder.jpg";
+import {
+  getUserProfileById,
+  formatProfileName,
+  getProfileAvatar,
+  getProfileRole,
+  type UserProfile,
+} from "@/lib/api/user.api";
 
 export interface ArticleCardProps {
   id: string;
+  authorId?: string;
   title: string;
   excerpt: string;
   tagNames: string[];
@@ -16,6 +24,10 @@ export interface ArticleCardProps {
   authorName?: string;
   authorAvatar?: string;
   authorRole?: string;
+  /** When true, turns the author avatar into a clickable link */
+  isAvatarLink?: boolean;
+  /** Optional custom URL for the avatar link (defaults to /profile/:authorId or /profile) */
+  authorLink?: string;
   createdAt: string;
   readTimeMinutes?: number;
   likes?: number;
@@ -69,6 +81,7 @@ function CoverImage({
 
 export function ArticleCard({
   id,
+  authorId,
   title,
   excerpt,
   tagNames,
@@ -76,6 +89,8 @@ export function ArticleCard({
   authorName = "DevSpace Author",
   authorAvatar,
   authorRole,
+  isAvatarLink = false,
+  authorLink,
   createdAt,
   readTimeMinutes = 4,
   likes = 0,
@@ -86,61 +101,138 @@ export function ArticleCard({
   onBookmark,
   variant = "horizontal",
 }: ArticleCardProps): JSX.Element {
-  const [localLikes, setLocalLikes] = useState(likes);
-  const [hasLiked, setHasLiked] = useState(isLiked);
-  const [isLiking, setIsLiking] = useState(false);
+  const navigate = useNavigate();
+  const [likedOverride, setLikedOverride] = useState<boolean | null>(null);
+  const [likeOffset, setLikeOffset] = useState<number>(0);
+  const [isLiking, setIsLiking] = useState<boolean>(false);
+  const [fetchedProfile, setFetchedProfile] = useState<UserProfile | null>(null);
+
+  const isAvatarLinkEnabled = Boolean(isAvatarLink || authorLink);
+  const targetAuthorHref = authorLink || (authorId ? `/profile/${authorId}` : "/profile");
+
+  const hasLiked = likedOverride !== null ? likedOverride : isLiked;
+  const localLikes = Math.max(0, likes + likeOffset);
+
+  useEffect(() => {
+    if (!authorId || (authorName && authorName !== "DevSpace Author")) {
+      return;
+    }
+    let cancelled = false;
+
+    async function loadAuthorProfile(): Promise<void> {
+      try {
+        const profile = await getUserProfileById(authorId as string);
+        if (!cancelled) {
+          setFetchedProfile(profile);
+        }
+      } catch {
+        // Keep fallback values gracefully on network failure
+      }
+    }
+
+    void loadAuthorProfile();
+    return () => {
+      cancelled = true;
+    };
+  }, [authorId, authorName]);
+
+  const displayAuthorName =
+    authorName && authorName !== "DevSpace Author"
+      ? authorName
+      : formatProfileName(fetchedProfile, authorName || "DevSpace Author");
+
+  const displayAuthorAvatar = authorAvatar ?? getProfileAvatar(fetchedProfile);
+  const displayAuthorRole = authorRole ?? getProfileRole(fetchedProfile);
 
   const formattedDate = new Date(createdAt).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
   });
-  const authorMeta = [authorRole, formattedDate].filter(Boolean).join(" · ");
+  const authorMeta = [displayAuthorRole, formattedDate].filter(Boolean).join(" · ");
 
-  const handleLike = async () => {
+  const handleCardClick = (e: React.MouseEvent<HTMLElement>): void => {
+    const target = e.target as HTMLElement;
+    if (target.closest("button, a, input, textarea, select")) {
+      return;
+    }
+    navigate(`/articles/${id}`);
+  };
+
+  const handleCardKeyDown = (e: React.KeyboardEvent<HTMLElement>): void => {
+    if (e.key === "Enter" || e.key === " ") {
+      const target = e.target as HTMLElement;
+      if (target.closest("button, a, input, textarea, select")) {
+        return;
+      }
+      e.preventDefault();
+      navigate(`/articles/${id}`);
+    }
+  };
+
+  const handleLike = async (e: React.MouseEvent<HTMLButtonElement>): Promise<void> => {
+    e.preventDefault();
+    e.stopPropagation();
     if (isLiking) return;
     const wasLiked = hasLiked;
-    // Optimistic update
-    setHasLiked(!wasLiked);
-    setLocalLikes((prev) => (wasLiked ? prev - 1 : prev + 1));
+    const offsetDelta = wasLiked ? -1 : 1;
+    // Optimistic toggle
+    setLikedOverride(!wasLiked);
+    setLikeOffset((prev) => prev + offsetDelta);
     setIsLiking(true);
     try {
       if (onLike) await onLike(id);
     } catch {
       // Revert on failure
-      setHasLiked(wasLiked);
-      setLocalLikes((prev) => (wasLiked ? prev + 1 : prev - 1));
-      toast.error("Failed to like article");
+      setLikedOverride(wasLiked);
+      setLikeOffset((prev) => prev - offsetDelta);
+      toast.error("Failed to update like status");
     } finally {
       setIsLiking(false);
     }
   };
 
+  const handleBookmark = (e: React.MouseEvent<HTMLButtonElement>): void => {
+    e.preventDefault();
+    e.stopPropagation();
+    onBookmark?.();
+  };
+
   /* ── Vertical (grid) variant ──────────────────────────────────────── */
   if (variant === "vertical") {
     return (
-      <article className="bg-white border border-border rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-all duration-200 flex flex-col group">
+      <article
+        onClick={handleCardClick}
+        onKeyDown={handleCardKeyDown}
+        tabIndex={0}
+        role="article"
+        aria-label={title}
+        className="bg-white border border-border rounded-2xl overflow-hidden shadow-xs hover:shadow-md hover:border-border/80 transition-all duration-200 flex flex-col group cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      >
         {/* Cover */}
-        <Link to={`/articles/${id}`} tabIndex={-1} aria-hidden="true">
-          <CoverImage
-            src={coverImage}
-            alt={title}
-            className="w-full aspect-video group-hover:opacity-90 transition-opacity"
-          />
-        </Link>
+        <CoverImage
+          src={coverImage}
+          alt={title}
+          className="w-full aspect-video group-hover:opacity-90 transition-opacity"
+        />
 
         <div className="p-4 flex flex-col flex-1 gap-3">
           {/* Author */}
           <div className="flex items-center gap-2">
-            <Avatar src={authorAvatar} name={authorName} size="xs" />
+            <Avatar
+              src={displayAuthorAvatar}
+              name={displayAuthorName}
+              size="xs"
+              href={isAvatarLinkEnabled ? targetAuthorHref : undefined}
+            />
             <div className="leading-tight">
-              <p className="text-xs font-semibold text-text">{authorName}</p>
+              <p className="text-xs font-semibold text-text">{displayAuthorName}</p>
               <p className="text-[11px] text-text/50">{authorMeta || formattedDate}</p>
             </div>
           </div>
 
           {/* Title */}
-          <h2 className="text-sm font-bold text-text line-clamp-2 hover:text-primary transition-colors leading-snug">
-            <Link to={`/articles/${id}`}>{title}</Link>
+          <h2 className="text-sm font-bold text-text line-clamp-2 group-hover:text-primary transition-colors leading-snug">
+            {title}
           </h2>
 
           {/* Excerpt */}
@@ -152,7 +244,7 @@ export function ArticleCard({
               {tagNames.slice(0, 3).map((tag) => (
                 <span
                   key={tag}
-                  className="px-2 py-0.5 rounded-full text-[11px] border border-border text-text/60 hover:border-primary hover:text-primary transition-colors cursor-pointer"
+                  className="px-2 py-0.5 rounded-full text-[11px] border border-border text-text/60 hover:border-primary hover:text-primary transition-colors"
                 >
                   {tag}
                 </span>
@@ -194,7 +286,7 @@ export function ArticleCard({
               {/* Bookmark */}
               <button
                 type="button"
-                onClick={onBookmark}
+                onClick={handleBookmark}
                 className={`flex items-center gap-1 transition-colors ${
                   isBookmarked ? "text-primary" : "hover:text-primary"
                 }`}
@@ -221,18 +313,34 @@ export function ArticleCard({
 
   /* ── Horizontal (feed) variant ─────────────────────────────────────── */
   return (
-    <article className="bg-white border border-border rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-md transition-all duration-200">
+    <article
+      onClick={handleCardClick}
+      onKeyDown={handleCardKeyDown}
+      tabIndex={0}
+      role="article"
+      aria-label={title}
+      className="bg-white border border-border rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-md hover:border-border/80 transition-all duration-200 group cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+    >
       {/* Author row */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2.5">
-          <Avatar src={authorAvatar} name={authorName} size="sm" />
+          <Avatar
+            src={displayAuthorAvatar}
+            name={displayAuthorName}
+            size="sm"
+            href={isAvatarLinkEnabled ? targetAuthorHref : undefined}
+          />
           <div className="leading-tight">
-            <p className="text-sm font-semibold text-text">{authorName}</p>
+            <p className="text-sm font-semibold text-text">{displayAuthorName}</p>
             <p className="text-xs text-text/50">{authorMeta || formattedDate}</p>
           </div>
         </div>
         <button
           type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
           className="p-1.5 rounded-lg text-text/40 hover:text-text hover:bg-slate-100 transition-colors"
           aria-label="More options"
         >
@@ -244,8 +352,8 @@ export function ArticleCard({
       <div className="flex items-start gap-4 sm:gap-5">
         <div className="flex-1 min-w-0 space-y-2">
           {/* Title */}
-          <h2 className="text-sm sm:text-base font-bold text-text line-clamp-2 hover:text-primary transition-colors leading-snug">
-            <Link to={`/articles/${id}`}>{title}</Link>
+          <h2 className="text-sm sm:text-base font-bold text-text line-clamp-2 group-hover:text-primary transition-colors leading-snug">
+            {title}
           </h2>
 
           {/* Excerpt */}
@@ -259,7 +367,7 @@ export function ArticleCard({
               {tagNames.map((tag) => (
                 <span
                   key={tag}
-                  className="px-2.5 py-0.5 rounded-full text-xs border border-border text-text/70 hover:border-primary hover:text-primary transition-colors cursor-pointer"
+                  className="px-2.5 py-0.5 rounded-full text-xs border border-border text-text/70 hover:border-primary hover:text-primary transition-colors"
                 >
                   {tag}
                 </span>
@@ -269,13 +377,13 @@ export function ArticleCard({
         </div>
 
         {/* Cover — hidden on mobile, shown sm+ */}
-        <Link to={`/articles/${id}`} className="shrink-0 hidden sm:block" tabIndex={-1} aria-hidden="true">
+        <div className="shrink-0 hidden sm:block">
           <CoverImage
             src={coverImage}
             alt={title}
-            className="w-36 h-24 sm:w-44 sm:h-28 rounded-xl hover:opacity-90 transition-opacity"
+            className="w-36 h-24 sm:w-44 sm:h-28 rounded-xl group-hover:opacity-90 transition-opacity"
           />
-        </Link>
+        </div>
       </div>
 
       {/* Footer */}
@@ -312,7 +420,7 @@ export function ArticleCard({
           {/* Bookmark */}
           <button
             type="button"
-            onClick={onBookmark}
+            onClick={handleBookmark}
             className={`flex items-center gap-1.5 transition-colors ${
               isBookmarked ? "text-primary" : "hover:text-primary"
             }`}

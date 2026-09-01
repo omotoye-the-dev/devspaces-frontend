@@ -1,7 +1,8 @@
 import { useState, type ReactNode, type JSX } from "react";
 import { cn } from "@/lib/utils/cn";
+import { Link } from "react-router-dom";
 
-export type AvatarSize = "xs" | "sm" | "md" | "lg" | "xl";
+export type AvatarSize = "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
 export type AvatarStatus = "online" | "busy" | "away" | "offline";
 export type AvatarShape = "circle" | "rounded" | "square";
 
@@ -10,6 +11,8 @@ export interface AvatarProps {
   alt?: string;
   name?: string;
   size?: AvatarSize;
+  /** Link destination. Defaults to "/profile". Pass null, false, or "" to disable linking. */
+  href?: string | null | false;
   status?: AvatarStatus;
   shape?: AvatarShape;
   className?: string;
@@ -42,6 +45,11 @@ const sizeStyles: Record<AvatarSize, { container: string; text: string; status: 
     text: "text-lg font-bold",
     status: "w-4 h-4 ring-2",
   },
+  "2xl": {
+    container: "w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32",
+    text: "text-2xl font-bold",
+    status: "w-4.5 h-4.5 sm:w-5 sm:h-5 ring-3 ring-white",
+  },
 };
 
 const shapeStyles: Record<AvatarShape, string> = {
@@ -72,6 +80,7 @@ export function Avatar({
   name,
   size = "md",
   status,
+  href = "/profile",
   shape = "circle",
   className,
   fallbackIcon,
@@ -81,14 +90,20 @@ export function Avatar({
   const initials = getInitials(name);
   const showImage = Boolean(src && !hasError);
 
-  return (
-    <div
-      className={cn(
-        "relative inline-flex items-center justify-center select-none shrink-0 font-inter",
-        sizeConfig.container,
-        className,
-      )}
-    >
+  const isLink = Boolean(href);
+  const targetHref = typeof href === "string" ? href : "/profile";
+
+  const containerClasses = cn(
+    "relative inline-flex items-center justify-center select-none shrink-0 font-inter",
+    sizeConfig.container,
+    isLink &&
+      "transition-opacity hover:opacity-85 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+    shapeStyles[shape],
+    className,
+  );
+
+  const innerContent = (
+    <>
       <div
         className={cn(
           "w-full h-full flex items-center justify-center overflow-hidden border border-border/80 bg-primary/10 text-primary shadow-xs",
@@ -120,6 +135,37 @@ export function Avatar({
           aria-label={statusStyles[status].label}
         />
       )}
-    </div>
+    </>
   );
+
+  if (isLink) {
+    const isExternal = /^https?:\/\//.test(targetHref);
+    if (isExternal) {
+      return (
+        <a
+          href={targetHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className={containerClasses}
+          aria-label={alt ?? name ?? "Avatar"}
+        >
+          {innerContent}
+        </a>
+      );
+    }
+
+    return (
+      <Link
+        to={targetHref}
+        onClick={(e) => e.stopPropagation()}
+        className={containerClasses}
+        aria-label={alt ?? name ?? "Avatar"}
+      >
+        {innerContent}
+      </Link>
+    );
+  }
+
+  return <div className={containerClasses}>{innerContent}</div>;
 }

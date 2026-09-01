@@ -2,17 +2,41 @@ import { apiClient } from "@/lib/api/client";
 import { ENDPOINTS } from "@/lib/api/endpoints";
 import type { ArticleFormData } from "../schemas/articleSchema";
 
-export interface Article extends ArticleFormData {
+export interface Article extends Partial<ArticleFormData> {
   id: string;
   authorId: string;
+  title: string;
+  content: string;
+  slug?: string;
+  excerpt?: string;
+  tags?: string[];
+  tagNames?: string[];
+  coverImageUrl?: string | null;
+  coverImage?: string;
+  readingTimeMinutes?: number;
+  readingTime?: number;
+  likeCount?: number;
+  likes?: number;
+  liked?: boolean;
+  isLiked?: boolean;
+  viewCount?: number;
+  commentCount?: number;
+  comments?: number;
+  status?: "draft" | "published" | "scheduled" | "archived";
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
 }
 
 /** GET /api/posts/feed — fetch the post feed */
 export async function getArticles(): Promise<Article[]> {
-  const response = await apiClient.get<Article[]>(ENDPOINTS.POSTS.FEED);
-  return response.data;
+  const response = await apiClient.get<Article[] | { data?: Article[] }>(ENDPOINTS.POSTS.FEED);
+  if (Array.isArray(response.data)) {
+    return response.data;
+  }
+  if (response.data && Array.isArray((response.data as { data?: Article[] }).data)) {
+    return (response.data as { data: Article[] }).data;
+  }
+  return [];
 }
 
 /** GET /api/posts/{id} — fetch a single post */
@@ -28,10 +52,7 @@ export async function createArticle(data: ArticleFormData): Promise<Article> {
 }
 
 /** PUT /api/posts/{id} — update an existing post */
-export async function updateArticle(
-  id: string,
-  data: Partial<ArticleFormData>,
-): Promise<Article> {
+export async function updateArticle(id: string, data: Partial<ArticleFormData>): Promise<Article> {
   const response = await apiClient.put<Article>(ENDPOINTS.POSTS.DETAIL(id), data);
   return response.data;
 }
