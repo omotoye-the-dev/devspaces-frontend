@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type JSX } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { handleOAuthCallback } from "@/lib/api/auth.api";
+import { handleOAuthCallback } from "@/features/auth/api/auth.api";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { toast } from "@/hooks/useToast";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
@@ -33,8 +33,7 @@ export default function OAuthCallbackPage(): JSX.Element {
       // Determine provider from route param or search params
       const providerStr =
         paramProvider?.toLowerCase() || searchParams.get("provider")?.toLowerCase() || "";
-      const provider: "google" | "github" =
-        providerStr.includes("github") ? "github" : "google";
+      const provider: "google" | "github" = providerStr.includes("github") ? "github" : "google";
 
       // If no code was provided in URL query, check if token was returned directly
       const directToken = searchParams.get("token") || searchParams.get("accessToken");

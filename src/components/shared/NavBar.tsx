@@ -212,7 +212,7 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
                 size="md"
                 className="whitespace-nowrap shrink-0"
                 leftIcon={isAuthenticated ? <LuPenLine className="w-4 h-4" /> : undefined}
-                onClick={handlePrimaryAction}
+                href="/articles/new"
               >
                 {isAuthenticated ? "Write Article" : "Sign in"}
               </Button>

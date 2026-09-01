@@ -1,18 +1,32 @@
-import type { ButtonHTMLAttributes, ReactNode, JSX } from "react";
+import type {
+  AnchorHTMLAttributes,
+  ButtonHTMLAttributes,
+  JSX,
+  MouseEvent,
+  ReactNode,
+} from "react";
+import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils/cn";
 
 export type ButtonVariant = "primary" | "secondary" | "outline" | "ghost" | "teal" | "danger";
 
 export type ButtonSize = "sm" | "md" | "lg" | "icon";
 
-export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+type BaseHTMLAttributes = Omit<
+  ButtonHTMLAttributes<HTMLButtonElement> & AnchorHTMLAttributes<HTMLAnchorElement>,
+  "onClick"
+>;
+
+export interface ButtonProps extends BaseHTMLAttributes {
   variant?: ButtonVariant;
   size?: ButtonSize;
   isLoading?: boolean;
   leftIcon?: ReactNode;
   rightIcon?: ReactNode;
   fullWidth?: boolean;
+  href?: string;
   children?: ReactNode;
+  onClick?: (event: MouseEvent<HTMLButtonElement | HTMLAnchorElement>) => void;
 }
 
 const variantStyles: Record<ButtonVariant, string> = {
@@ -47,27 +61,28 @@ export function Button({
   className,
   children,
   type = "button",
+  href,
+  target,
+  rel,
+  onClick,
   ...restProps
 }: ButtonProps): JSX.Element {
   const isButtonDisabled = disabled || isLoading;
 
-  return (
-    <button
-      type={type}
-      disabled={isButtonDisabled}
-      aria-busy={isLoading}
-      className={cn(
-        "inline-flex items-center justify-center font-medium font-inter select-none transition-all duration-150 ease-in-out cursor-pointer",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
-        "active:scale-[0.98]",
-        "disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none disabled:active:scale-100",
-        fullWidth ? "w-full" : "w-auto",
-        variantStyles[variant],
-        sizeStyles[size],
-        className,
-      )}
-      {...restProps}
-    >
+  const buttonClasses = cn(
+    "inline-flex items-center justify-center font-medium font-inter select-none transition-all duration-150 ease-in-out cursor-pointer",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+    "active:scale-[0.98]",
+    "disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none disabled:active:scale-100",
+    isButtonDisabled && "opacity-50 cursor-not-allowed pointer-events-none active:scale-100",
+    fullWidth ? "w-full" : "w-auto",
+    variantStyles[variant],
+    sizeStyles[size],
+    className,
+  );
+
+  const content = (
+    <>
       {isLoading ? (
         <svg
           className="animate-spin h-4 w-4 text-current"
@@ -101,6 +116,64 @@ export function Button({
       {!isLoading && rightIcon && (
         <span className="inline-flex shrink-0 items-center justify-center">{rightIcon}</span>
       )}
+    </>
+  );
+
+  const handleClick = (e: MouseEvent<HTMLButtonElement | HTMLAnchorElement>) => {
+    if (isButtonDisabled) {
+      e.preventDefault();
+      return;
+    }
+    onClick?.(e);
+  };
+
+  if (href) {
+    const isInternal = href.startsWith("/") && !href.startsWith("//") && target !== "_blank";
+
+    if (isInternal) {
+      return (
+        <Link
+          to={href}
+          className={buttonClasses}
+          aria-busy={isLoading}
+          aria-disabled={isButtonDisabled || undefined}
+          tabIndex={isButtonDisabled ? -1 : undefined}
+          onClick={handleClick}
+          {...(restProps as Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href" | "onClick">)}
+        >
+          {content}
+        </Link>
+      );
+    }
+
+    return (
+      <a
+        href={href}
+        target={target}
+        rel={target === "_blank" ? (rel ?? "noopener noreferrer") : rel}
+        className={buttonClasses}
+        aria-busy={isLoading}
+        aria-disabled={isButtonDisabled || undefined}
+        tabIndex={isButtonDisabled ? -1 : undefined}
+        onClick={handleClick}
+        {...(restProps as Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href" | "onClick">)}
+      >
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <button
+      type={type}
+      disabled={isButtonDisabled}
+      aria-busy={isLoading}
+      className={buttonClasses}
+      onClick={handleClick}
+      {...(restProps as ButtonHTMLAttributes<HTMLButtonElement>)}
+    >
+      {content}
     </button>
   );
 }
+

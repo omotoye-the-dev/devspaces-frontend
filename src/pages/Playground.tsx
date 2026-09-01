@@ -25,7 +25,7 @@ import {
   CardSkeleton,
   type ModalSize,
 } from "@/components/common";
-import { logoutUser } from "@/lib/api/auth.api";
+import { logoutUser } from "@/features/auth/api/auth.api";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 export default function Playground(): JSX.Element {

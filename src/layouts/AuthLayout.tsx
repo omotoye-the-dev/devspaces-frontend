@@ -1,4 +1,4 @@
-import Authleftimage from "@/components/features/Auth/Authleftimage";
+import Authleftimage from "@/features/auth/components/Authleftimage";
 import { Outlet } from "react-router-dom";
 
 const AuthLayout = () => {
