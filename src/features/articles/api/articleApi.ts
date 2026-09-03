@@ -57,13 +57,21 @@ export async function getArticleById(id: string): Promise<Article> {
 
 /** POST /api/posts — create a new post */
 export async function createArticle(data: ArticleFormData): Promise<Article> {
-  const response = await apiClient.post<Article>(ENDPOINTS.POSTS.CREATE, data);
+  const payload: Partial<ArticleFormData> = { ...data };
+  if (payload.status !== "scheduled") {
+    delete payload.scheduledFor;
+  }
+  const response = await apiClient.post<Article>(ENDPOINTS.POSTS.CREATE, payload);
   return response.data;
 }
 
 /** PUT /api/posts/{id} — update an existing post */
 export async function updateArticle(id: string, data: Partial<ArticleFormData>): Promise<Article> {
-  const response = await apiClient.put<Article>(ENDPOINTS.POSTS.DETAIL(id), data);
+  const payload: Partial<ArticleFormData> = { ...data };
+  if (payload.status !== "scheduled") {
+    delete payload.scheduledFor;
+  }
+  const response = await apiClient.put<Article>(ENDPOINTS.POSTS.DETAIL(id), payload);
   return response.data;
 }
 
