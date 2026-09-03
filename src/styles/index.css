@@ -34,3 +34,11 @@
   --radius-md: 10px;
   --radius-lg: 12px;
 }
+
+@utility no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

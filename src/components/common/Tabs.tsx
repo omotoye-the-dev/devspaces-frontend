@@ -177,7 +177,7 @@ export function TabList({ fullWidth = false, className, children }: TabListProps
       role="tablist"
       onKeyDown={handleKeyDown}
       className={cn(
-        "flex items-center overflow-x-auto no-scrollbar select-none",
+        "flex items-center overflow-x-auto sm:overflow-visible overflow-y-hidden no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden select-none",
         fullWidth && "w-full justify-between",
         listVariantStyles[variant],
         className,
@@ -222,8 +222,8 @@ export function Tab({
   const getVariantStyles = (): string => {
     if (variant === "line") {
       return isSelected
-        ? "text-primary font-semibold border-b-2 border-primary -mb-px"
-        : "text-text/60 font-medium hover:text-text border-b-2 border-transparent -mb-px";
+        ? "text-primary font-semibold border-b-2 border-primary"
+        : "text-text/60 font-medium hover:text-text border-b-2 border-transparent";
     }
     if (variant === "pills") {
       return isSelected
@@ -232,8 +232,8 @@ export function Tab({
     }
     if (variant === "enclosed") {
       return isSelected
-        ? "bg-white text-primary font-semibold border-t border-x border-border rounded-t-md -mb-px"
-        : "text-text/60 font-medium hover:text-text border-t border-x border-transparent rounded-t-md -mb-px";
+        ? "bg-white text-primary font-semibold border-t border-x border-border rounded-t-md"
+        : "text-text/60 font-medium hover:text-text border-t border-x border-transparent rounded-t-md";
     }
     return "";
   };

@@ -8,11 +8,19 @@ import { getArticles, likeArticle } from "@/features/articles/api/articleApi";
 import type { Article } from "@/features/articles/api/articleApi";
 import { getTags } from "@/features/articles/api/tagApi";
 import { ArticleCard } from "@/features/articles/components/ArticleCard";
+import {
+  getUserProfileById,
+  formatProfileName,
+  getProfileAvatar,
+  getProfileRole,
+  type UserProfile,
+} from "@/lib/api/user.api";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { toast } from "@/hooks/useToast";
 
 interface DisplayArticle {
   id: string;
+  authorId?: string;
   title: string;
   excerpt: string;
   tagNames: string[];
@@ -21,23 +29,41 @@ interface DisplayArticle {
   status?: "draft" | "published" | "scheduled" | "archived";
   authorName?: string;
   authorAvatar?: string;
+  authorRole?: string;
   createdAt: string;
   readTimeMinutes?: number;
+  likes?: number;
+  comments?: number;
+  isLiked?: boolean;
 }
 
-function mapArticle(art: Article, fallbackAuthor: string): DisplayArticle {
+function mapArticle(
+  art: Article,
+  fallbackAuthor: string,
+  profileMap?: Map<string, UserProfile>,
+): DisplayArticle {
+  const profile = art.authorId && profileMap ? profileMap.get(art.authorId) : undefined;
+
   return {
     id: art.id,
+    authorId: art.authorId,
     title: art.title || "Untitled Article",
     excerpt: art.excerpt || art.content || "",
-    tagNames: art.tagNames || [],
+    tagNames: art.tags && art.tags.length > 0 ? art.tags : (art.tagNames || []),
     category: art.series || "General",
-    coverImage: art.coverImage,
-    status: art.status,
-    authorName: fallbackAuthor,
+    coverImage: art.coverImageUrl || art.coverImage,
+    status: art.status as DisplayArticle["status"],
+    authorName: profile ? formatProfileName(profile, fallbackAuthor) : fallbackAuthor,
+    authorAvatar: profile ? getProfileAvatar(profile) : undefined,
+    authorRole: profile ? getProfileRole(profile) : undefined,
     createdAt: art.createdAt || new Date().toISOString(),
     readTimeMinutes:
-      art.readingTime ?? Math.max(1, Math.ceil((art.content?.length || 0) / 500)),
+      art.readingTimeMinutes ??
+      art.readingTime ??
+      Math.max(1, Math.ceil((art.content?.length || 0) / 500)),
+    likes: art.likeCount ?? art.likes ?? 0,
+    comments: art.commentCount ?? art.comments ?? 0,
+    isLiked: Boolean(art.liked ?? art.isLiked),
   };
 }
 
@@ -53,18 +79,50 @@ export function ArticlesPage(): JSX.Element {
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());
   const [layout, setLayout] = useState<"list" | "grid">("list");
 
-  // Fetch articles
+  // Fetch articles and resolve author profiles
   useEffect(() => {
     let isSubscribed = true;
 
-    async function loadFeed() {
+    async function loadFeed(): Promise<void> {
       try {
         setIsLoading(true);
         const data = await getArticles();
-        if (isSubscribed) {
-          setArticles(
-            data.map((art) => mapArticle(art, user?.username || "DevSpace Author")),
+        if (!isSubscribed) return;
+
+        const fallbackAuthor = user?.username || "DevSpace Author";
+        // Render immediate post data
+        setArticles(data.map((art) => mapArticle(art, fallbackAuthor)));
+
+        // Extract unique author IDs and fetch profiles concurrently
+        const uniqueAuthorIds = Array.from(
+          new Set(
+            data
+              .map((art) => art.authorId)
+              .filter(
+                (authorId): authorId is string =>
+                  typeof authorId === "string" && authorId.trim().length > 0,
+              ),
+          ),
+        );
+
+        if (uniqueAuthorIds.length > 0) {
+          const profileMap = new Map<string, UserProfile>();
+          const results = await Promise.allSettled(
+            uniqueAuthorIds.map(async (authorId) => {
+              const profile = await getUserProfileById(authorId);
+              return { authorId, profile };
+            }),
           );
+
+          if (!isSubscribed) return;
+
+          results.forEach((res) => {
+            if (res.status === "fulfilled") {
+              profileMap.set(res.value.authorId, res.value.profile);
+            }
+          });
+
+          setArticles(data.map((art) => mapArticle(art, fallbackAuthor, profileMap)));
         }
       } catch {
         if (isSubscribed) {
@@ -76,8 +134,10 @@ export function ArticlesPage(): JSX.Element {
       }
     }
 
-    loadFeed();
-    return () => { isSubscribed = false; };
+    void loadFeed();
+    return () => {
+      isSubscribed = false;
+    };
   }, [user]);
 
   // Fetch tags for filter pills
@@ -96,21 +156,39 @@ export function ArticlesPage(): JSX.Element {
   }, []);
 
   const toggleBookmark = (id: string) => {
+    const isCurrentlyBookmarked = bookmarkedIds.has(id);
     setBookmarkedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) {
+      if (isCurrentlyBookmarked) {
         next.delete(id);
-        toast.success("Removed from bookmarks");
       } else {
         next.add(id);
-        toast.success("Saved to bookmarks");
       }
       return next;
     });
+
+    if (isCurrentlyBookmarked) {
+      toast.success("Removed from bookmarks");
+    } else {
+      toast.success("Saved to bookmarks");
+    }
   };
 
   const handleLike = async (articleId: string): Promise<void> => {
     await likeArticle(articleId);
+    setArticles((prev) =>
+      prev.map((art) => {
+        if (art.id === articleId) {
+          const wasLiked = Boolean(art.isLiked);
+          return {
+            ...art,
+            isLiked: !wasLiked,
+            likes: Math.max(0, (art.likes ?? 0) + (wasLiked ? -1 : 1)),
+          };
+        }
+        return art;
+      }),
+    );
   };
 
   const filteredArticles = useMemo(() => {
@@ -241,7 +319,12 @@ export function ArticlesPage(): JSX.Element {
                       <Skeleton variant="rounded" width={60} height={22} />
                     </div>
                   </div>
-                  <Skeleton variant="rounded" width={176} height={112} className="hidden sm:block shrink-0" />
+                  <Skeleton
+                    variant="rounded"
+                    width={176}
+                    height={112}
+                    className="hidden sm:block shrink-0"
+                  />
                 </div>
               </div>
             ))}
@@ -311,13 +394,19 @@ export function ArticlesPage(): JSX.Element {
             <ArticleCard
               key={article.id}
               id={article.id}
+              authorId={article.authorId}
               title={article.title}
               excerpt={article.excerpt}
               tagNames={article.tagNames}
               coverImage={article.coverImage}
               authorName={article.authorName}
+              authorAvatar={article.authorAvatar}
+              authorRole={article.authorRole}
               createdAt={article.createdAt}
               readTimeMinutes={article.readTimeMinutes}
+              likes={article.likes}
+              comments={article.comments}
+              isLiked={article.isLiked}
               isBookmarked={bookmarkedIds.has(article.id)}
               onBookmark={() => toggleBookmark(article.id)}
               onLike={handleLike}
@@ -332,13 +421,19 @@ export function ArticlesPage(): JSX.Element {
             <ArticleCard
               key={article.id}
               id={article.id}
+              authorId={article.authorId}
               title={article.title}
               excerpt={article.excerpt}
               tagNames={article.tagNames}
               coverImage={article.coverImage}
               authorName={article.authorName}
+              authorAvatar={article.authorAvatar}
+              authorRole={article.authorRole}
               createdAt={article.createdAt}
               readTimeMinutes={article.readTimeMinutes}
+              likes={article.likes}
+              comments={article.comments}
+              isLiked={article.isLiked}
               isBookmarked={bookmarkedIds.has(article.id)}
               onBookmark={() => toggleBookmark(article.id)}
               onLike={handleLike}

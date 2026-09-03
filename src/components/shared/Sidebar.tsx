@@ -1,5 +1,4 @@
-import type { JSX } from "react";
-import { useState } from "react";
+import { useState, type JSX } from "react";
 import {
   HiHome,
   HiOutlineNewspaper,
@@ -25,7 +24,7 @@ import {
   SiPython,
 } from "react-icons/si";
 import { FaInfinity } from "react-icons/fa6";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { FiLogOut, FiLogIn } from "react-icons/fi";
 import { cn } from "@/lib/utils/cn";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -191,12 +190,22 @@ export function Sidebar({
   defaultCollapsed = false,
 }: SidebarProps): JSX.Element {
   const navigate = useNavigate();
+  const location = useLocation();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const logout = useAuthStore((state) => state.logout);
   const [internalActiveItem, setInternalActiveItem] = useState("home");
   const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
 
-  const currentActive = activeItemProp ?? internalActiveItem;
+  const routeActiveItem =
+    location.pathname === "/"
+      ? "home"
+      : location.pathname.startsWith("/articles")
+        ? "my-feed"
+        : location.pathname.startsWith("/profile")
+          ? "profile"
+          : undefined;
+
+  const currentActive = activeItemProp ?? routeActiveItem ?? internalActiveItem;
 
   if (isLoading) {
     return <SidebarSkeleton className={className} />;
@@ -211,6 +220,12 @@ export function Sidebar({
   const handleItemClick = (id: string) => {
     setInternalActiveItem(id);
     onSelect?.(id);
+    if (!onSelect) {
+      if (id === "home") navigate("/");
+      else if (id === "my-feed") navigate("/articles");
+      else if (id === "write") navigate("/articles/new");
+      else if (id === "profile") navigate("/profile");
+    }
   };
 
   return (
@@ -366,7 +381,7 @@ export function Sidebar({
           </div>
 
           {/* Sidebar Auth Footer Action */}
-          <div className="pt-3 border-t border-border mt-2 w-full">
+          <div className="p-3  border-t border-border mt-2 w-full">
             {isAuthenticated ? (
               <Button
                 variant="danger"

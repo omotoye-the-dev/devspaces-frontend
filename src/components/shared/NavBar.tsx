@@ -149,15 +149,30 @@ export function NavBar(): JSX.Element {
                       <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white bg-blue-500 rounded-full">
                         {notifications}
                       </span>
-                    )}
+                    )} 
                   </Button>
 
+<<<<<<< HEAD
                   <Avatar
                     src={userAvatar ?? undefined}
                     alt="User profile"
                     name={userName ?? "User"}
                     size="md"
                   />
+=======
+                  {isProfileLoading ? (
+                    <Skeleton variant="circular" width={40} height={40} />
+                  ) : (
+                    <Avatar
+                      src={avatarUrl}
+                      alt={displayName ?? "User avatar"}
+                      name={displayName}
+                      href="/profile"
+                      fallbackIcon={!displayName ? <FaUser /> : undefined}
+                      size="md"
+                    />
+                  )}
+>>>>>>> b12f7de1a85b9b9bcbeddefec8454413fb1bc47a
                 </>
               )}
             </div>
