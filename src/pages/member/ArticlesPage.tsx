@@ -211,7 +211,7 @@ export function ArticlesPage(): JSX.Element {
       } else {
         next.add(id);
       }
-      return next;
+      return next; 
     });
 
     try {

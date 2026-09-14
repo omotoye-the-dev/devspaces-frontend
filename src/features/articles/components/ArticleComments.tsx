@@ -37,40 +37,18 @@ interface CommentUser {
   name?: string;
   avatarUrl?: string | null;
 }
-
-/**
- * We extend Comment locally so the component can support
- * optional user information from the API without breaking
- * the existing Comment interface.
- */
 type DisplayComment = Comment & {
   user?: CommentUser | null;
   userName?: string;
   userAvatar?: string | null;
   avatarUrl?: string | null;
 };
-
-/**
- * Recursively adds a reply to the correct comment.
- *
- * Example:
- *
- * Comment A
- *   └── Reply B
- *        └── Reply C
- *
- * If Reply C is created, this function finds Reply B
- * anywhere in the tree and adds Reply C to its replies.
- */
 function addReplyToComment(
   comments: DisplayComment[],
   parentId: string,
   newReply: DisplayComment,
 ): DisplayComment[] {
   return comments.map((comment) => {
-    /**
-     * The parent comment was found.
-     */
     if (comment.id === parentId) {
       return {
         ...comment,
@@ -81,9 +59,6 @@ function addReplyToComment(
       };
     }
 
-    /**
-     * The parent may be nested deeper in the tree.
-     */
     if (
       comment.replies &&
       comment.replies.length > 0
@@ -101,10 +76,6 @@ function addReplyToComment(
     return comment;
   });
 }
-
-/**
- * Counts all comments including nested replies.
- */
 function countAllComments(
   comments: DisplayComment[],
 ): number {
@@ -118,17 +89,13 @@ function countAllComments(
     return total + 1 + repliesCount;
   }, 0);
 }
-
-/**
- * Recursively renders a single comment and its replies.
- */
 interface CommentItemProps {
   comment: DisplayComment;
   depth: number;
   replyingTo: string | null;
   replyText: string;
   isReplying: boolean;
-  currentUserId?: string;
+  userName?: string;
   onReplyClick: (comment: DisplayComment) => void;
   onReplyTextChange: (value: string) => void;
   onCancelReply: () => void;
@@ -146,7 +113,7 @@ function CommentItem({
   replyingTo,
   replyText,
   isReplying,
-  currentUserId,
+  userName,
   onReplyClick,
   onReplyTextChange,
   onCancelReply,
@@ -154,28 +121,8 @@ function CommentItem({
   formatTimeAgo,
   onLike,
 }: CommentItemProps): JSX.Element {
-  /**
-   * Limit indentation so deeply nested replies do not
-   * make the comment content too narrow on mobile.
-   */
   const indentation =
     Math.min(depth, 4) * 16;
-
-  /**
-   * Resolve user information.
-   *
-   * The preferred API shape is:
-   *
-   * comment.user.userName
-   * comment.user.avatarUrl
-   *
-   * But the fallback also supports:
-   *
-   * comment.userName
-   * comment.avatarUrl
-   *
-   * Finally we use userId when nothing else exists.
-   */
   const displayName =
     comment.user?.userName?.trim() ||
     comment.user?.name?.trim() ||
@@ -190,7 +137,7 @@ function CommentItem({
     undefined;
 
   const isOwnComment =
-    currentUserId === comment.userId;
+    userName === comment.userName;
 
   return (
     <div
@@ -202,9 +149,7 @@ function CommentItem({
             : undefined,
       }}
     >
-      {/* ============================================================ */}
-      {/* COMMENT                                                       */}
-      {/* ============================================================ */}
+      {/* COMMENT  */}
 
       <div className="flex gap-3">
         {/* Avatar */}
@@ -347,10 +292,7 @@ function CommentItem({
               Reply
             </button>
           </div>
-
-          {/* ======================================================== */}
-          {/* REPLY INPUT                                               */}
-          {/* ======================================================== */}
+          {/* REPLY INPUT */}
 
           {replyingTo === comment.id && (
             <form
@@ -465,10 +407,7 @@ function CommentItem({
           )}
         </div>
       </div>
-
-      {/* ============================================================ */}
-      {/* NESTED REPLIES                                               */}
-      {/* ============================================================ */}
+      {/* NESTED REPLIES */}
 
       {comment.replies &&
         comment.replies.length > 0 && (
@@ -496,8 +435,8 @@ function CommentItem({
                   isReplying={
                     isReplying
                   }
-                  currentUserId={
-                    currentUserId
+                  userName={
+                    userName
                   }
                   onReplyClick={
                     onReplyClick
@@ -541,17 +480,9 @@ export function ArticleComments({
   const [isSubmitting, setIsSubmitting] =
     useState(false);
 
-  /**
-   * ID of the comment currently being replied to.
-   *
-   * null = no reply box open.
-   */
   const [replyingTo, setReplyingTo] =
     useState<string | null>(null);
 
-  /**
-   * Text inside the currently active reply box.
-   */
   const [replyText, setReplyText] =
     useState("");
 
@@ -562,9 +493,6 @@ export function ArticleComments({
     (state) => state.user,
   );
 
-  // ================================================================
-  // LOAD COMMENTS
-  // ================================================================
 
   useEffect(() => {
     let isMounted = true;
@@ -587,9 +515,7 @@ export function ArticleComments({
 
         setComments(displayComments);
 
-        /**
-         * Count nested replies as comments too.
-         */
+       
         onCommentCountChange?.(
           countAllComments(
             displayComments,
@@ -624,9 +550,6 @@ export function ArticleComments({
     onCommentCountChange,
   ]);
 
-  // ================================================================
-  // CREATE TOP-LEVEL COMMENT
-  // ================================================================
 
   const handleSubmitComment = async (
     event: React.FormEvent,
@@ -652,10 +575,6 @@ export function ArticleComments({
     try {
       setIsSubmitting(true);
 
-      /**
-       * No parentId means this is a top-level
-       * comment.
-       */
       const createdComment =
         await createComment(
           articleId,
@@ -670,11 +589,6 @@ export function ArticleComments({
 
       setNewComment("");
 
-      /**
-       * Calculate the new count from the
-       * current state instead of relying on
-       * a potentially stale `comments.length`.
-       */
       setComments((previous) => {
         const updated = [
           createdComment as DisplayComment,
@@ -706,9 +620,6 @@ export function ArticleComments({
     }
   };
 
-  // ================================================================
-  // OPEN REPLY BOX
-  // ================================================================
 
   const handleReplyClick = (
     comment: DisplayComment,
@@ -720,10 +631,6 @@ export function ArticleComments({
       return;
     }
 
-    /**
-     * Clicking Reply on the currently open
-     * comment closes the reply box.
-     */
     if (replyingTo === comment.id) {
       setReplyingTo(null);
       setReplyText("");
@@ -733,10 +640,6 @@ export function ArticleComments({
     setReplyingTo(comment.id);
     setReplyText("");
   };
-
-  // ================================================================
-  // SUBMIT REPLY
-  // ================================================================
 
   const handleSubmitReply = async (
     event: React.FormEvent,
@@ -763,12 +666,6 @@ export function ArticleComments({
     try {
       setIsReplying(true);
 
-      /**
-       * THIS is the important part.
-       *
-       * parentId is the ID of the comment
-       * being replied to.
-       */
       const createdReply =
         await createComment(
           articleId,
@@ -776,10 +673,6 @@ export function ArticleComments({
           parentId,
         );
 
-      /**
-       * Add the reply to the correct comment,
-       * even if that comment is already nested.
-       */
       setComments((previous) => {
         const updated =
           addReplyToComment(
@@ -816,20 +709,11 @@ export function ArticleComments({
     }
   };
 
-  // ================================================================
-  // LIKE COMMENT
-  // ================================================================
 
   const handleLikeComment = (
     commentId: string,
   ) => {
-    /**
-     * Your current API does not have a
-     * comment-like endpoint.
-     *
-     * Keep this function here so the UI
-     * can be connected later.
-     */
+    
     setComments((previous) =>
       previous.map((comment) => {
         if (comment.id === commentId) {
@@ -857,9 +741,6 @@ export function ArticleComments({
     );
   };
 
-  // ================================================================
-  // FORMAT TIME
-  // ================================================================
 
   const formatTimeAgo = (
     dateString: string,
@@ -915,9 +796,6 @@ export function ArticleComments({
     );
   };
 
-  // ================================================================
-  // RENDER
-  // ================================================================
 
   return (
     <div
@@ -931,9 +809,6 @@ export function ArticleComments({
         p-4
       "
     >
-      {/* ============================================================ */}
-      {/* HEADER                                                        */}
-      {/* ============================================================ */}
 
       <div className="flex items-center justify-between">
         <h2
@@ -950,9 +825,6 @@ export function ArticleComments({
         </h2>
       </div>
 
-      {/* ============================================================ */}
-      {/* NEW COMMENT INPUT                                             */}
-      {/* ============================================================ */}
 
       {user ? (
         <form
@@ -1094,9 +966,6 @@ export function ArticleComments({
         </div>
       )}
 
-      {/* ============================================================ */}
-      {/* COMMENTS LIST                                                 */}
-      {/* ============================================================ */}
 
       <div className="space-y-5">
         {isLoading ? (
@@ -1150,7 +1019,7 @@ export function ArticleComments({
               replyingTo={replyingTo}
               replyText={replyText}
               isReplying={isReplying}
-              currentUserId={user?.id}
+              userName={user?.id}
               onReplyClick={
                 handleReplyClick
               }
@@ -1177,16 +1046,6 @@ export function ArticleComments({
     </div>
   );
 }
-
-/**
- * Recursively finds a comment and returns
- * an updated comment tree.
- *
- * Currently this is just a placeholder for
- * the comment-like UI because your provided
- * API does not yet expose a like-comment
- * endpoint.
- */
 function updateCommentLike(
   comments: DisplayComment[],
   commentId: string,

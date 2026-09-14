@@ -523,9 +523,6 @@ export function ArticleDetailsPage(): JSX.Element {
         <div className="mb-8 h-1 rounded-full bg-linear-to-r from-primary to-blue-500" />
 
         <div className="flex w-full justify-between gap-8 lg:gap-12">
-          {/* ================================================================ */}
-          {/* LEFT ACTION SIDEBAR                                              */}
-          {/* ================================================================ */}
 
           <aside className="hidden shrink-0 lg:flex">
             <div className="sticky top-8 flex h-fit flex-col items-center gap-1 rounded-xl border border-gray-100 bg-white p-2 shadow-sm">
@@ -712,9 +709,6 @@ export function ArticleDetailsPage(): JSX.Element {
             </div>
           </aside>
 
-          {/* ================================================================ */}
-          {/* MAIN ARTICLE                                                     */}
-          {/* ================================================================ */}
 
           <main className="min-w-0 flex-1">
             {/* Article header */}
@@ -824,47 +818,7 @@ export function ArticleDetailsPage(): JSX.Element {
 
             {/* Article content */}
             <article
-              className="
-                w-full
-                max-w-none
-                wrap-break-word
-                prose
-                prose-sm
-                sm:prose-base
-                prose-headings:font-bold
-                prose-headings:text-gray-900
-                prose-headings:tracking-tight
-                prose-headings:break-words
-                prose-headings:mt-8
-                prose-headings:mb-4
-                prose-p:text-gray-700
-                prose-p:leading-7
-                prose-p:break-words
-                prose-a:text-primary
-                prose-a:no-underline
-                prose-a:break-words
-                hover:prose-a:underline
-                prose-strong:text-gray-900
-                prose-blockquote:border-primary
-                prose-blockquote:text-gray-600
-                prose-code:rounded
-                prose-code:bg-gray-100
-                prose-code:px-1.5
-                prose-code:py-0.5
-                prose-code:text-sm
-                prose-code:text-gray-800
-                prose-code:break-words
-                prose-pre:max-w-full
-                prose-pre:overflow-x-auto
-                prose-pre:rounded-xl
-                prose-pre:bg-gray-900
-                prose-pre:p-5
-                prose-li:text-gray-700
-                prose-li:break-words
-                prose-img:max-w-full
-                prose-img:h-auto
-                prose-img:rounded-xl
-                prose-img:shadow-sm
+              className="w-full max-w-none wrap-break-word prose prose-sm sm:prose-base prose-headings:font-bold prose-headings:text-gray-900 prose-headings:tracking-tight prose-headings:break-words prose-headings:mt-8 prose-headings:mb-4 prose-p:text-gray-700 prose-p:leading-7 prose-p:break-words prose-a:text-primary prose-a:no-underline prose-a:break-words hover:prose-a:underline prose-strong:text-gray-900 prose-blockquote:border-primary prose-blockquote:text-gray-600 prose-code:rounded prose-code:bg-gray-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:text-sm prose-code:text-gray-800 prose-code:break-words prose-pre:max-w-full prose-pre:overflow-x-auto prose-pre:rounded-xl prose-pre:bg-gray-900 prose-pre:p-5 prose-li:text-gray-700 prose-li:break-words prose-img:max-w-full prose-img:h-auto  prose-img:rounded-xl prose-img:shadow-sm
               "
             >
               <ReactMarkdown
@@ -874,9 +828,6 @@ export function ArticleDetailsPage(): JSX.Element {
               </ReactMarkdown>
             </article>
 
-            {/* ============================================================ */}
-            {/* MOBILE ACTIONS                                               */}
-            {/* ============================================================ */}
 
             <div className="mt-8 flex items-center gap-2 overflow-x-auto border-t border-gray-200 py-4 lg:hidden">
               {/* Like */}
@@ -949,10 +900,6 @@ export function ArticleDetailsPage(): JSX.Element {
               </button>
             </div>
 
-            {/* ============================================================ */}
-            {/* MOBILE COMMENTS                                               */}
-            {/* ============================================================ */}
-
             {showComments && (
               <div
                 id="comments-section"
@@ -967,10 +914,6 @@ export function ArticleDetailsPage(): JSX.Element {
               </div>
             )}
           </main>
-
-          {/* ================================================================ */}
-          {/* RIGHT SIDEBAR                                                    */}
-          {/* ================================================================ */}
 
           <aside className="hidden lg:flex lg:w-80 lg:shrink-0 lg:flex-col lg:gap-8 xl:w-96">
             <div className="sticky top-8 flex flex-col gap-8">
