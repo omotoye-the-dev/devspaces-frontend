@@ -1,21 +1,12 @@
 import { useState, useEffect, useMemo, type JSX } from "react";
 import { useNavigate } from "react-router-dom";
 import { MdOutlineSearch } from "react-icons/md";
-import { LuPenLine, LuLayoutGrid, LuLayoutList } from "react-icons/lu";
-import { FiFilter } from "react-icons/fi";
+import { LuPenLine, LuLayoutGrid, LuLayoutList, LuX } from "react-icons/lu";
 import { Button, Input, Skeleton } from "@/components/common";
-import { getArticles, likeArticle } from "@/features/articles/api/articleApi";
+import { getArticles, likeArticle, saveArticle, getPostInteraction } from "@/features/articles/api/articleApi";
 import type { Article } from "@/features/articles/api/articleApi";
-import { getTags } from "@/features/articles/api/tagApi";
 import { ArticleCard } from "@/features/articles/components/ArticleCard";
-import {
-  getUserProfileById,
-  formatProfileName,
-  getProfileAvatar,
-  getProfileRole,
-  type UserProfile,
-} from "@/lib/api/user.api";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { ArticleSearchDropdown } from "@/features/articles/components/ArticleSearchDropdown";
 import { toast } from "@/hooks/useToast";
 
 interface DisplayArticle {
@@ -27,7 +18,9 @@ interface DisplayArticle {
   category?: string;
   coverImage?: string;
   status?: "draft" | "published" | "scheduled" | "archived";
+  authorInfo?: string[];
   authorName?: string;
+  authoruserName?: string;
   authorAvatar?: string;
   authorRole?: string;
   createdAt: string;
@@ -37,49 +30,107 @@ interface DisplayArticle {
   isLiked?: boolean;
 }
 
-function mapArticle(
-  art: Article,
-  fallbackAuthor: string,
-  profileMap?: Map<string, UserProfile>,
-): DisplayArticle {
-  const profile = art.authorId && profileMap ? profileMap.get(art.authorId) : undefined;
+function getArticleAuthor(art: Article): { name: string; userName: string; avatar?: string } {
+  if (art.author && typeof art.author === "object") {
+    const a = art.author;
+    const name =(a.userName && a.userName.trim()) || (a.name && a.name.trim());
+    if (name) {
+      return {
+        name,
+        avatar: a.avatarUrl || undefined,
+        userName: a.userName as string
+      };
+    }
+  }
+  if (typeof art.authorName === "string" && art.authorName.trim()) {
+    return {
+      name: art.authorName.trim(),
+      avatar: undefined,
+      userName: "" as string
+    };
+  }
+  return { name: "DevSpace Author", userName: "devspace", avatar: undefined };
+}
+
+function mapArticle(art: Article): DisplayArticle {
+  const { name: authoruserName, avatar: authorAvatar } = getArticleAuthor(art);
+  const raw = art as unknown as Record<string, unknown>;
+
+  const likeCount =
+    typeof raw.likeCount === "number"
+      ? raw.likeCount
+      : typeof raw.likes === "number"
+        ? raw.likes
+        : typeof art.likeCount === "number"
+          ? art.likeCount
+          : typeof art.likes === "number"
+            ? art.likes
+            : 0;
+
+  const isLiked =
+    typeof raw.liked === "boolean"
+      ? raw.liked
+      : typeof raw.isLiked === "boolean"
+        ? raw.isLiked
+        : Boolean(art.liked ?? art.isLiked);
+
+  const commentCount =
+    typeof raw.commentCount === "number"
+      ? raw.commentCount
+      : typeof raw.comments === "number"
+        ? raw.comments
+        : typeof art.commentCount === "number"
+          ? art.commentCount
+          : typeof art.comments === "number"
+            ? art.comments
+            : 0;
 
   return {
     id: art.id,
-    authorId: art.authorId,
+    authorId: art.author?.id || art.authorId,
     title: art.title || "Untitled Article",
     excerpt: art.excerpt || art.content || "",
-    tagNames: art.tags && art.tags.length > 0 ? art.tags : (art.tagNames || []),
+    tagNames: (() => {
+      const rawTags = (art.tags && art.tags.length > 0 ? art.tags : art.tagNames) || [];
+      return rawTags
+        .map((t: unknown) =>
+          typeof t === "string"
+            ? t
+            : t && typeof t === "object" && "name" in t
+              ? String((t as { name: unknown }).name)
+              : "",
+        )
+        .filter(Boolean);
+    })(),
     category: art.series || "General",
     coverImage: art.coverImageUrl || art.coverImage,
     status: art.status as DisplayArticle["status"],
-    authorName: profile ? formatProfileName(profile, fallbackAuthor) : fallbackAuthor,
-    authorAvatar: profile ? getProfileAvatar(profile) : undefined,
-    authorRole: profile ? getProfileRole(profile) : undefined,
+    authoruserName,
+    authorAvatar: authorAvatar || (art as unknown as { authorAvatar?: string }).authorAvatar,
+    authorRole: undefined,
     createdAt: art.createdAt || new Date().toISOString(),
     readTimeMinutes:
       art.readingTimeMinutes ??
       art.readingTime ??
       Math.max(1, Math.ceil((art.content?.length || 0) / 500)),
-    likes: art.likeCount ?? art.likes ?? 0,
-    comments: art.commentCount ?? art.comments ?? 0,
-    isLiked: Boolean(art.liked ?? art.isLiked),
+    likes: likeCount,
+    comments: commentCount,
+    isLiked,
   };
 }
 
 export function ArticlesPage(): JSX.Element {
   const navigate = useNavigate();
-  const user = useAuthStore((state) => state.user);
 
   const [articles, setArticles] = useState<DisplayArticle[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
-  const [categories, setCategories] = useState<string[]>(["All"]);
+  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());
   const [layout, setLayout] = useState<"list" | "grid">("list");
 
-  // Fetch articles and resolve author profiles
+  // Fetch articles and map directly with author from feed
   useEffect(() => {
     let isSubscribed = true;
 
@@ -89,40 +140,46 @@ export function ArticlesPage(): JSX.Element {
         const data = await getArticles();
         if (!isSubscribed) return;
 
-        const fallbackAuthor = user?.username || "DevSpace Author";
-        // Render immediate post data
-        setArticles(data.map((art) => mapArticle(art, fallbackAuthor)));
+        // Sort feed by most recent first
+        const sortedData = [...data].sort((a, b) => {
+          const dateA = new Date(a.createdAt || 0).getTime();
+          const dateB = new Date(b.createdAt || 0).getTime();
+          return dateB - dateA;
+        });
 
-        // Extract unique author IDs and fetch profiles concurrently
-        const uniqueAuthorIds = Array.from(
-          new Set(
-            data
-              .map((art) => art.authorId)
-              .filter(
-                (authorId): authorId is string =>
-                  typeof authorId === "string" && authorId.trim().length > 0,
-              ),
-          ),
-        );
+        // Set initial articles immediately from feed response
+        const initialArticles = sortedData.map(mapArticle);
+        setArticles(initialArticles);
 
-        if (uniqueAuthorIds.length > 0) {
-          const profileMap = new Map<string, UserProfile>();
-          const results = await Promise.allSettled(
-            uniqueAuthorIds.map(async (authorId) => {
-              const profile = await getUserProfileById(authorId);
-              return { authorId, profile };
-            }),
+        // Check user post interactions (liked, saved) concurrently
+        const token = typeof window !== "undefined" ? localStorage.getItem("devspace_token") : null;
+        if (token && sortedData.length > 0) {
+          const interactionResults = await Promise.allSettled(
+            sortedData.map((art) => getPostInteraction(art.id)),
           );
 
           if (!isSubscribed) return;
 
-          results.forEach((res) => {
-            if (res.status === "fulfilled") {
-              profileMap.set(res.value.authorId, res.value.profile);
+          const updatedBookmarked = new Set<string>();
+          const updatedArticles = sortedData.map((art, idx) => {
+            const mapped = mapArticle(art);
+            const interactionRes = interactionResults[idx];
+            if (interactionRes && interactionRes.status === "fulfilled" && interactionRes.value) {
+              const inter = interactionRes.value;
+              if (typeof inter.liked === "boolean") {
+                mapped.isLiked = inter.liked;
+              }
+              if (inter.saved) {
+                updatedBookmarked.add(art.id);
+              }
             }
+            return mapped;
           });
 
-          setArticles(data.map((art) => mapArticle(art, fallbackAuthor, profileMap)));
+          setArticles(updatedArticles);
+          if (updatedBookmarked.size > 0) {
+            setBookmarkedIds(updatedBookmarked);
+          }
         }
       } catch {
         if (isSubscribed) {
@@ -138,24 +195,9 @@ export function ArticlesPage(): JSX.Element {
     return () => {
       isSubscribed = false;
     };
-  }, [user]);
-
-  // Fetch tags for filter pills
-  useEffect(() => {
-    async function loadTags() {
-      try {
-        const tags = await getTags();
-        if (tags.length > 0) {
-          setCategories(["All", ...tags.map((t) => t.name)]);
-        }
-      } catch {
-        // Silently fall back — "All" is always present
-      }
-    }
-    loadTags();
   }, []);
 
-  const toggleBookmark = (id: string) => {
+  const toggleBookmark = async (id: string) => {
     const isCurrentlyBookmarked = bookmarkedIds.has(id);
     setBookmarkedIds((prev) => {
       const next = new Set(prev);
@@ -164,31 +206,69 @@ export function ArticlesPage(): JSX.Element {
       } else {
         next.add(id);
       }
-      return next;
+      return next; 
     });
 
-    if (isCurrentlyBookmarked) {
-      toast.success("Removed from bookmarks");
-    } else {
-      toast.success("Saved to bookmarks");
+    try {
+      await saveArticle(id);
+      if (isCurrentlyBookmarked) {
+        toast.success("Removed from bookmarks");
+      } else {
+        toast.success("Saved to bookmarks");
+      }
+    } catch {
+      // Revert on failure
+      setBookmarkedIds((prev) => {
+        const next = new Set(prev);
+        if (isCurrentlyBookmarked) {
+          next.add(id);
+        } else {
+          next.delete(id);
+        }
+        return next;
+      });
+      toast.error("Failed to update bookmark");
     }
   };
 
   const handleLike = async (articleId: string): Promise<void> => {
-    await likeArticle(articleId);
+    const target = articles.find((a) => a.id === articleId);
+    if (!target) return;
+
+    const wasLiked = Boolean(target.isLiked);
+    const prevLikes = target.likes ?? 0;
+    const newLikes = Math.max(0, prevLikes + (wasLiked ? -1 : 1));
+
+    // Immediate optimistic update
     setArticles((prev) =>
-      prev.map((art) => {
-        if (art.id === articleId) {
-          const wasLiked = Boolean(art.isLiked);
-          return {
-            ...art,
-            isLiked: !wasLiked,
-            likes: Math.max(0, (art.likes ?? 0) + (wasLiked ? -1 : 1)),
-          };
-        }
-        return art;
-      }),
+      prev.map((art) =>
+        art.id === articleId
+          ? {
+              ...art,
+              isLiked: !wasLiked,
+              likes: newLikes,
+            }
+          : art,
+      ),
     );
+
+    try {
+      await likeArticle(articleId);
+    } catch {
+      // Revert on failure
+      setArticles((prev) =>
+        prev.map((art) =>
+          art.id === articleId
+            ? {
+                ...art,
+                isLiked: wasLiked,
+                likes: prevLikes,
+              }
+            : art,
+        ),
+      );
+      toast.error("Failed to update like status");
+    }
   };
 
   const filteredArticles = useMemo(() => {
@@ -231,44 +311,62 @@ export function ArticlesPage(): JSX.Element {
         </Button>
       </div>
 
-      {/* Filter bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <div className="w-full sm:w-72">
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by keyword or tag..."
-            inputSize="md"
-            leftIcon={<MdOutlineSearch className="text-text/40 text-lg" />}
-            className="bg-white border-border"
-          />
-        </div>
+      {/* Filter & Search Bar */}
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+          {/* Search container with 2-column dropdown */}
+          <div className="relative flex-1 max-w-xl">
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setIsDropdownOpen(true)}
+              onClick={() => setIsDropdownOpen(true)}
+              placeholder="Search by keyword, tag, or topic..."
+              inputSize="md"
+              leftIcon={<MdOutlineSearch className="text-text/40 text-lg" />}
+              rightIcon={
+                searchQuery ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSearchQuery("");
+                    }}
+                    className="p-1 text-text/40 hover:text-text cursor-pointer transition-colors"
+                    title="Clear search"
+                  >
+                    <LuX className="w-4 h-4" />
+                  </button>
+                ) : undefined
+              }
+              className="bg-white border-border shadow-2xs"
+            />
 
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-          <FiFilter className="w-4 h-4 text-text/40 shrink-0 hidden sm:block" />
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
-                selectedCategory === cat
-                  ? "bg-primary text-white shadow-xs"
-                  : "bg-white border border-border text-text/70 hover:bg-slate-50 hover:text-text"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
+            <ArticleSearchDropdown
+              isOpen={isDropdownOpen}
+              onClose={() => setIsDropdownOpen(false)}
+              searchQuery={searchQuery}
+              selectedTag={selectedCategory}
+              onSelectTag={(tagName) => {
+                setSelectedCategory(tagName);
+                setSearchQuery("");
+                setIsDropdownOpen(false);
+              }}
+              onSelectTopic={(topic) => {
+                setIsDropdownOpen(false);
+                navigate(`/articles/${topic.id}`);
+              }}
+            />
+          </div>
 
           {/* Layout toggle */}
-          <div className="flex items-center bg-white border border-border rounded-lg overflow-hidden shrink-0 ml-1">
+          <div className="flex items-center bg-white border border-border rounded-lg overflow-hidden shrink-0 self-end sm:self-auto shadow-2xs">
             <button
               type="button"
               id="layout-list"
               onClick={() => setLayout("list")}
               title="List view"
-              className={`p-2 transition-colors ${
+              className={`p-2 transition-colors cursor-pointer ${
                 layout === "list"
                   ? "bg-primary text-white"
                   : "text-text/50 hover:bg-slate-50 hover:text-text"
@@ -281,7 +379,7 @@ export function ArticlesPage(): JSX.Element {
               id="layout-grid"
               onClick={() => setLayout("grid")}
               title="Grid view"
-              className={`p-2 transition-colors ${
+              className={`p-2 transition-colors cursor-pointer ${
                 layout === "grid"
                   ? "bg-primary text-white"
                   : "text-text/50 hover:bg-slate-50 hover:text-text"
@@ -291,6 +389,31 @@ export function ArticlesPage(): JSX.Element {
             </button>
           </div>
         </div>
+
+        {/* Active tag filter indicator */}
+        {selectedCategory !== "All" && (
+          <div className="flex items-center gap-2 pt-0.5">
+            <span className="text-xs text-text/50 font-medium">Filtered by tag:</span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-primary text-white shadow-[0_0_12px_rgba(99,102,241,0.6)]">
+              #{selectedCategory}
+              <button
+                type="button"
+                onClick={() => setSelectedCategory("All")}
+                className="hover:text-white/80 p-0.5 rounded-full cursor-pointer ml-0.5"
+                title="Clear tag filter"
+              >
+                <LuX className="w-3.5 h-3.5" />
+              </button>
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectedCategory("All")}
+              className="text-xs text-text/50 hover:text-primary transition-colors cursor-pointer underline"
+            >
+              Clear filter
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Loading skeletons */}
@@ -398,8 +521,14 @@ export function ArticlesPage(): JSX.Element {
               title={article.title}
               excerpt={article.excerpt}
               tagNames={article.tagNames}
+              selectedTag={selectedCategory}
+              onTagClick={(tag) =>
+                setSelectedCategory((prev) =>
+                  prev.toLowerCase() === tag.toLowerCase() ? "All" : tag,
+                )
+              }
               coverImage={article.coverImage}
-              authorName={article.authorName}
+              authorName={article.authoruserName}
               authorAvatar={article.authorAvatar}
               authorRole={article.authorRole}
               createdAt={article.createdAt}
@@ -425,8 +554,14 @@ export function ArticlesPage(): JSX.Element {
               title={article.title}
               excerpt={article.excerpt}
               tagNames={article.tagNames}
+              selectedTag={selectedCategory}
+              onTagClick={(tag) =>
+                setSelectedCategory((prev) =>
+                  prev.toLowerCase() === tag.toLowerCase() ? "All" : tag,
+                )
+              }
               coverImage={article.coverImage}
-              authorName={article.authorName}
+              authorName={article.authoruserName}
               authorAvatar={article.authorAvatar}
               authorRole={article.authorRole}
               createdAt={article.createdAt}

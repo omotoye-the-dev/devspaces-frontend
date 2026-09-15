@@ -37,8 +37,8 @@ import { articleSchema, type ArticleFormData } from "../schemas/articleSchema";
 export interface ArticleEditorProps {
   initialData?: Partial<ArticleFormData>;
   isEditing?: boolean;
-  onSaveDraft?: (data: ArticleFormData) => Promise<void>;
-  onPublish?: (data: ArticleFormData) => Promise<void>;
+  onSaveDraft?: (data: ArticleFormData, coverImageFile?: File | null) => Promise<void>;
+  onPublish?: (data: ArticleFormData, coverImageFile?: File | null) => Promise<void>;
 }
 
 export function ArticleEditor({
@@ -48,14 +48,32 @@ export function ArticleEditor({
   onPublish,
 }: ArticleEditorProps): JSX.Element {
   const [tagInput, setTagInput] = useState("");
-  const [showUploadInput, setShowUploadInput] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [headingMenuOpen, setHeadingMenuOpen] = useState(false);
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
+  const [coverImagePreview, setCoverImagePreview] = useState<string>(initialData?.coverImage ?? "");
 
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (coverImagePreview && coverImagePreview.startsWith("blob:")) {
+        URL.revokeObjectURL(coverImagePreview);
+      }
+    };
+  }, [coverImagePreview]);
+
+  const [prevInitialCover, setPrevInitialCover] = useState(initialData?.coverImage);
+  if (initialData?.coverImage !== prevInitialCover) {
+    setPrevInitialCover(initialData?.coverImage);
+    if (!coverImageFile) {
+      setCoverImagePreview(initialData?.coverImage ?? "");
+    }
+  }
 
   const {
     register,
@@ -74,7 +92,7 @@ export function ArticleEditor({
       coverImageAlt: initialData?.coverImageAlt ?? "",
       tagNames: initialData?.tagNames ?? [],
       status: initialData?.status ?? "draft",
-      scheduledFor: initialData?.scheduledFor ?? "",
+      // scheduledFor: initialData?.scheduledFor ?? "",
       visibility: initialData?.visibility ?? "public",
       series: initialData?.series ?? "",
       readingTime: initialData?.readingTime ?? 0,
@@ -171,13 +189,50 @@ export function ArticleEditor({
     );
   };
 
-  const handleSaveDraftHandler = async (data: ArticleFormData) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select a valid image file (PNG, JPG, WEBP, etc.)");
+      return;
+    }
+
+    const maxMb = 10;
+    if (file.size > maxMb * 1024 * 1024) {
+      toast.error(`Image size must be less than ${maxMb}MB`);
+      return;
+    }
+
+    if (coverImagePreview && coverImagePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(coverImagePreview);
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+    setCoverImageFile(file);
+    setCoverImagePreview(previewUrl);
+    setValue("coverImage", file.name, { shouldValidate: true });
+    e.target.value = "";
+  };
+
+  const handleRemoveCoverImage = (): void => {
+    if (coverImagePreview && coverImagePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(coverImagePreview);
+    }
+    setCoverImageFile(null);
+    setCoverImagePreview("");
+    setValue("coverImage", "", { shouldValidate: true });
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleSaveDraftHandler = async (data: ArticleFormData): Promise<void> => {
     setIsSaving(true);
     try {
       if (onSaveDraft) {
-        await onSaveDraft({ ...data, status: "draft" });
+        await onSaveDraft({ ...data, status: "draft" }, coverImageFile);
       }
-      toast.success("Draft saved successfully!");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to save draft");
     } finally {
@@ -185,17 +240,16 @@ export function ArticleEditor({
     }
   };
 
-  const handlePublishHandler = async (data: ArticleFormData) => {
+  const handlePublishHandler = async (data: ArticleFormData): Promise<void> => {
+    if (data.status === "draft") {
+      await handleSaveDraftHandler(data);
+      return;
+    }
     setIsPublishing(true);
     try {
       if (onPublish) {
-        await onPublish(data);
+        await onPublish(data, coverImageFile);
       }
-      toast.success(
-        data.status === "scheduled"
-          ? "Article scheduled successfully!"
-          : "Article published successfully!",
-      );
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to publish article");
     } finally {
@@ -227,44 +281,59 @@ export function ArticleEditor({
           </div>
 
           <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-            <div className="hidden md:flex items-center gap-1.5 text-xs text-emerald-600 font-medium mr-2 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
-              <span className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px]">
+            {/* <div
+              className={`hidden md:flex items-center gap-1.5 text-xs font-medium mr-2 px-2.5 py-1 rounded-full border ${
+                statusValue === "published"
+                  ? "text-blue-600 bg-blue-50 border-blue-100"
+                  : "text-emerald-600 bg-emerald-50 border-emerald-100"
+              }`}
+            >
+               <span
+                className={`w-4 h-4 rounded-full text-white flex items-center justify-center text-[10px] ${
+                  statusValue === "published" ? "bg-blue-500" : "bg-emerald-500"
+                }`}
+              >
                 <HiOutlineCheck className="w-3 h-3 stroke-3" />
-              </span>
-              <span>Draft saved just now</span>
-            </div>
+              </span> 
+            </div> */}
 
-            <Button
+            {/* <Button
               type="button"
               variant="secondary"
               size="sm"
               className="bg-white border-border hover:bg-slate-50 text-text/80 font-medium"
             >
               Preview
-            </Button>
+            </Button> */}
 
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              isLoading={isSaving}
-              onClick={handleSubmit(handleSaveDraftHandler)}
-              className="border-primary/40 text-primary hover:bg-primary/5 font-medium"
-            >
-              Save Draft
-            </Button>
+            {statusValue !== "draft" && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                isLoading={isSaving}
+                onClick={handleSubmit(handleSaveDraftHandler)}
+                className="border-primary/40 text-primary hover:bg-primary/5 font-medium"
+              >
+                Save Draft
+              </Button>
+            )}
 
             <div className="relative inline-flex">
               <Button
                 type="button"
                 variant="primary"
                 size="sm"
-                isLoading={isPublishing}
-                onClick={handleSubmit(handlePublishHandler)}
-                rightIcon={<HiOutlineChevronDown className="w-3.5 h-3.5 ml-0.5" />}
+                isLoading={statusValue === "draft" ? isSaving : isPublishing}
+                onClick={
+                  statusValue === "draft"
+                    ? handleSubmit(handleSaveDraftHandler)
+                    : handleSubmit(handlePublishHandler)
+                }
+                // rightIcon={<HiOutlineChevronDown className="w-3.5 h-3.5 ml-0.5" />}
                 className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium"
               >
-                {statusValue === "scheduled" ? "Schedule" : "Publish"}
+                {statusValue === "draft" ? "Save Draft" : "Publish"}
               </Button>
             </div>
           </div>
@@ -287,42 +356,63 @@ export function ArticleEditor({
                   </div>
                 </div>
 
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setShowUploadInput((prev) => !prev)}
+                  onClick={() => fileInputRef.current?.click()}
                   className="text-xs font-semibold text-indigo-600 border-indigo-200 hover:bg-indigo-50"
                 >
-                  Upload Image
+                  {coverImagePreview ? "Change Image" : "Upload Image"}
                 </Button>
               </div>
 
-              {(showUploadInput || coverImageValue) && (
-                <div className="space-y-2 pt-1 border-t border-border/50">
-                  <input
-                    type="url"
-                    placeholder="Paste image URL (e.g. https://images.unsplash.com/...)"
-                    {...register("coverImage")}
-                    className="w-full text-xs p-2.5 rounded-lg border border-border bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary/40 text-text"
-                  />
-                  {coverImageValue && (
-                    <div className="relative rounded-lg overflow-hidden border border-border aspect-video bg-slate-100 group">
-                      <img
-                        src={coverImageValue}
-                        alt="Cover preview"
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = "none";
-                        }}
-                      />
+              {coverImagePreview && (
+                <div className="space-y-2 pt-2 border-t border-border/50">
+                  <div className="relative rounded-xl overflow-hidden border border-border aspect-video bg-slate-100 group shadow-2xs">
+                    <img
+                      src={coverImagePreview}
+                      alt="Cover preview"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="bg-white/95 hover:bg-white text-text text-xs shadow-sm"
+                      >
+                        Change
+                      </Button>
                       <button
                         type="button"
-                        onClick={() => setValue("coverImage", "", { shouldValidate: true })}
-                        className="absolute top-2 right-2 p-1 rounded-full bg-black/60 text-white hover:bg-red-600 transition-colors"
+                        onClick={handleRemoveCoverImage}
+                        aria-label="Remove cover image"
+                        title="Remove cover image"
+                        className="p-2 rounded-lg bg-red-600/90 text-white hover:bg-red-600 transition-colors cursor-pointer shadow-sm"
                       >
                         <HiOutlineXMark className="w-4 h-4" />
                       </button>
+                    </div>
+                  </div>
+                  {coverImageFile && (
+                    <div className="flex items-center justify-between text-[11px] text-text/50 px-1">
+                      <span className="truncate max-w-60 font-medium text-text/70">
+                        {coverImageFile.name}
+                      </span>
+                      <span>{(coverImageFile.size / (1024 * 1024)).toFixed(2)} MB</span>
                     </div>
                   )}
                 </div>
@@ -728,13 +818,17 @@ export function ArticleEditor({
               </div>
 
               {/* Formatted Content Body */}
-              <div className="prose prose-slate max-w-none text-xs sm:text-sm text-text/80 space-y-3">
+              <div
+                className="prose prose-slate  w-full
+                max-w-none overflow-y-auto max-h-175
+                wrap-break-word text-xs sm:text-sm text-text/80 space-y-3"
+              >
                 {contentValue.trim() ? (
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{
                       blockquote: ({ children }) => (
-                        <blockquote className="border-l-3 border-indigo-500 bg-indigo-50/40 px-3 py-2 italic text-indigo-950 my-2 rounded-r">
+                        <blockquote className="border-l-3 border-indigo-500 bg-indigo-50/40 px-3 py-2 italic text-indigo-950 my-2 overflow rounded-r">
                           {children}
                         </blockquote>
                       ),
@@ -862,15 +956,15 @@ export function ArticleEditor({
                   >
                     <option value="draft">• Draft</option>
                     <option value="published">• Published</option>
-                    <option value="scheduled">• Scheduled</option>
-                    <option value="archived">• Archived</option>
+                    {/* <option value="scheduled">• Scheduled</option> */}
+                    {/* <option value="archived">• Archived</option> */}
                   </select>
                   <HiOutlineChevronDown className="w-3.5 h-3.5 text-text/50 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
               </div>
 
               {/* Scheduled For — shown only when status is "scheduled" */}
-              {statusValue === "scheduled" && (
+              {/* {statusValue === "scheduled" && (
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-text">Scheduled for</label>
                   <input
@@ -882,7 +976,7 @@ export function ArticleEditor({
                     <p className="text-xs text-red-500 font-medium">{errors.scheduledFor.message}</p>
                   )}
                 </div>
-              )}
+              )} */}
 
               {/* Publish To Radio Options */}
               <div className="space-y-2 pt-1">

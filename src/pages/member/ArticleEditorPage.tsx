@@ -1,7 +1,12 @@
 import { useState, useEffect, type JSX } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArticleEditor } from "@/features/articles/components/ArticleEditor";
-import { getArticleById, createArticle, updateArticle } from "@/features/articles/api/articleApi";
+import {
+  getArticleById,
+  createArticle,
+  updateArticle,
+  uploadArticleCoverImage,
+} from "@/features/articles/api/articleApi";
 import type { ArticleFormData } from "@/features/articles/schemas/articleSchema";
 import { toast } from "@/hooks/useToast";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
@@ -20,7 +25,22 @@ export function ArticleEditorPage(): JSX.Element {
       try {
         setIsLoading(true);
         const article = await getArticleById(id as string);
-        setInitialData(article);
+        setInitialData({
+          title: article.title,
+          slug: article.slug || "",
+          excerpt: article.excerpt || "",
+          content: article.content,
+          coverImage: article.coverImageUrl || article.coverImage || "",
+          tagNames: article.tags || article.tagNames || [],
+          status: (
+            typeof article.status === "string"
+              ? article.status.trim().toLowerCase() === "published"
+              : article.status === 1
+          )
+            ? "published"
+            : "draft",
+          readingTime: article.readingTimeMinutes ?? article.readingTime ?? 0,
+        });
       } catch (err: unknown) {
         toast.error(getApiErrorMessage(err) || "Failed to load article");
         navigate("/playground");
@@ -31,16 +51,36 @@ export function ArticleEditorPage(): JSX.Element {
     loadArticle();
   }, [id, navigate]);
 
-  const handleSaveDraft = async (data: ArticleFormData) => {
+  const handleSaveDraft = async (
+    data: ArticleFormData,
+    coverImageFile?: File | null,
+  ): Promise<void> => {
     try {
       if (isEditing && id) {
-        await updateArticle(id, { ...data, status: "draft" });
+        if (coverImageFile) {
+          await uploadArticleCoverImage(id, coverImageFile);
+        }
+        await updateArticle(id, {
+          ...data,
+          status: "draft",
+          coverImage: coverImageFile ? undefined : data.coverImage,
+        });
         toast.success("Draft updated successfully!");
       } else {
         const created = await createArticle({ ...data, status: "draft" });
+        const targetId = created.id || (created as unknown as { _id?: string })._id;
+        if (targetId && coverImageFile) {
+          try {
+            await uploadArticleCoverImage(targetId, coverImageFile);
+          } catch (uploadErr: unknown) {
+            toast.error(
+              getApiErrorMessage(uploadErr) || "Draft saved, but failed to upload cover image.",
+            );
+          }
+        }
         toast.success("Draft saved!");
-        if (created.id) {
-          navigate(`/articles/${created.id}/edit`, { replace: true });
+        if (targetId) {
+          navigate(`/articles/${targetId}/edit`, { replace: true });
         }
       }
     } catch (err: unknown) {
@@ -49,26 +89,36 @@ export function ArticleEditorPage(): JSX.Element {
     }
   };
 
-  const handlePublish = async (data: ArticleFormData) => {
+  const handlePublish = async (
+    data: ArticleFormData,
+    coverImageFile?: File | null,
+  ): Promise<void> => {
     try {
       if (isEditing && id) {
-        await updateArticle(id, data);
-        toast.success(
-          data.status === "scheduled"
-            ? "Article scheduled successfully!"
-            : "Article updated and published!",
-        );
+        if (coverImageFile) {
+          await uploadArticleCoverImage(id, coverImageFile);
+        }
+        await updateArticle(id, {
+          ...data,
+          coverImage: coverImageFile ? undefined : data.coverImage,
+        });
+        toast.success("Article updated and published!");
       } else {
         const created = await createArticle(data);
-        toast.success(
-          data.status === "scheduled"
-            ? "Article scheduled successfully!"
-            : "Article published successfully!",
-        );
-        if (created.id) {
-          navigate(`/articles/${created.id}/edit`, { replace: true });
+        const targetId = created.id || (created as unknown as { _id?: string })._id;
+        if (targetId && coverImageFile) {
+          try {
+            await uploadArticleCoverImage(targetId, coverImageFile);
+          } catch (uploadErr: unknown) {
+            toast.error(
+              getApiErrorMessage(uploadErr) ||
+                "Article published, but failed to upload cover image.",
+            );
+          }
         }
+        toast.success("Article published successfully!");
       }
+      navigate("/articles");
     } catch (err: unknown) {
       toast.error(getApiErrorMessage(err) || "Failed to publish article");
       throw err;

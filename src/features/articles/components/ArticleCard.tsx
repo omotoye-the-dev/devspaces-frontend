@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { AiOutlineHeart, AiFillHeart } from "react-icons/ai";
 import { FiMessageCircle, FiMoreHorizontal } from "react-icons/fi";
 import { LuBookmark, LuBookmarkCheck, LuClock } from "react-icons/lu";
+import { clsx } from "clsx";
 import { Avatar } from "@/components/common";
 import { toast } from "@/hooks/useToast";
 import articlePlaceholder from "@/assets/images/article-placeholder.jpg";
@@ -28,6 +29,11 @@ export interface ArticleCardProps {
   isAvatarLink?: boolean;
   /** Optional custom URL for the avatar link (defaults to /profile/:authorId or /profile) */
   authorLink?: string;
+  /** Custom navigation destination URL when card is clicked (defaults to /articles/:id or /articles/:id/edit if isEditable) */
+  targetHref?: string;
+  /** When true, clicking card navigates to edit mode /articles/:id/edit */
+  isEditable?: boolean;
+  status?: "draft" | "published" | 0 | 1 | string | number;
   createdAt: string;
   readTimeMinutes?: number;
   likes?: number;
@@ -36,9 +42,26 @@ export interface ArticleCardProps {
   isBookmarked?: boolean;
   onLike?: (id: string) => Promise<void>;
   onBookmark?: () => void;
+  /** Currently selected tag to highlight with a glow effect */
+  selectedTag?: string;
+  /** Callback when a tag is clicked */
+  onTagClick?: (tag: string) => void;
   /** "horizontal" = feed list row · "vertical" = grid card */
   variant?: "horizontal" | "vertical";
 }
+
+const getStatusLabel = (
+  status?: "draft" | "published" | 0 | 1 | string | number,
+): "published" | "draft" | null => {
+  if (typeof status === "string") {
+    const normalized = status.trim().toLowerCase();
+    if (normalized === "published" || normalized === "1") return "published";
+    if (normalized === "draft" || normalized === "0") return "draft";
+  }
+  if (status === 1) return "published";
+  if (status === 0) return "draft";
+  return null;
+};
 
 function DifficultyDots({ readingTime = 0 }: { readingTime?: number }): JSX.Element {
   const filled = readingTime <= 3 ? 1 : readingTime <= 6 ? 2 : readingTime <= 10 ? 3 : 4;
@@ -61,19 +84,20 @@ function CoverImage({
   alt,
   className,
 }: {
-  src?: string;
+  src?: string | null;
   alt: string;
   className: string;
 }): JSX.Element {
+  const [hasError, setHasError] = useState(false);
+
   return (
     <div className={`overflow-hidden bg-slate-900 ${className}`}>
       <img
-        src={src || articlePlaceholder}
+        key={src ?? "placeholder"}
+        src={hasError || !src ? articlePlaceholder : src}
         alt={alt}
         className="w-full h-full object-cover"
-        onError={(e) => {
-          (e.target as HTMLImageElement).src = articlePlaceholder;
-        }}
+        onError={() => setHasError(true)}
       />
     </div>
   );
@@ -91,6 +115,9 @@ export function ArticleCard({
   authorRole,
   isAvatarLink = false,
   authorLink,
+  targetHref,
+  isEditable = false,
+  status,
   createdAt,
   readTimeMinutes = 4,
   likes = 0,
@@ -99,6 +126,8 @@ export function ArticleCard({
   isBookmarked = false,
   onLike,
   onBookmark,
+  selectedTag,
+  onTagClick,
   variant = "horizontal",
 }: ArticleCardProps): JSX.Element {
   const navigate = useNavigate();
@@ -107,8 +136,11 @@ export function ArticleCard({
   const [isLiking, setIsLiking] = useState<boolean>(false);
   const [fetchedProfile, setFetchedProfile] = useState<UserProfile | null>(null);
 
+  const statusLabel = getStatusLabel(status);
+
   const isAvatarLinkEnabled = Boolean(isAvatarLink || authorLink);
   const targetAuthorHref = authorLink || (authorId ? `/profile/${authorId}` : "/profile");
+  const destinationHref = targetHref || (isEditable ? `/articles/${id}/edit` : `/articles/${id}`);
 
   const hasLiked = likedOverride !== null ? likedOverride : isLiked;
   const localLikes = Math.max(0, likes + likeOffset);
@@ -155,7 +187,7 @@ export function ArticleCard({
     if (target.closest("button, a, input, textarea, select")) {
       return;
     }
-    navigate(`/articles/${id}`);
+    navigate(destinationHref);
   };
 
   const handleCardKeyDown = (e: React.KeyboardEvent<HTMLElement>): void => {
@@ -165,7 +197,7 @@ export function ArticleCard({
         return;
       }
       e.preventDefault();
-      navigate(`/articles/${id}`);
+      navigate(destinationHref);
     }
   };
 
@@ -216,18 +248,37 @@ export function ArticleCard({
         />
 
         <div className="p-4 flex flex-col flex-1 gap-3">
-          {/* Author */}
-          <div className="flex items-center gap-2">
-            <Avatar
-              src={displayAuthorAvatar}
-              name={displayAuthorName}
-              size="xs"
-              href={isAvatarLinkEnabled ? targetAuthorHref : undefined}
-            />
-            <div className="leading-tight">
-              <p className="text-xs font-semibold text-text">{displayAuthorName}</p>
-              <p className="text-[11px] text-text/50">{authorMeta || formattedDate}</p>
+          {/* Author & Status */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <Avatar
+                src={displayAuthorAvatar}
+                name={displayAuthorName}
+                size="xs"
+                href={isAvatarLinkEnabled ? targetAuthorHref : undefined}
+              />
+              <div className="leading-tight min-w-0">
+                <p className="text-xs font-semibold text-text truncate">{displayAuthorName}</p>
+                <p className="text-[11px] text-text/50 truncate">{authorMeta || formattedDate}</p>
+              </div>
             </div>
+
+            {statusLabel && (
+              <span
+                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border shrink-0 ${
+                  statusLabel === "published"
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                    : "bg-amber-50 text-amber-700 border-amber-200"
+                }`}
+              >
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    statusLabel === "published" ? "bg-emerald-500" : "bg-amber-500"
+                  }`}
+                />
+                {statusLabel === "published" ? "Published" : "Draft"}
+              </span>
+            )}
           </div>
 
           {/* Title */}
@@ -241,14 +292,36 @@ export function ArticleCard({
           {/* Tags */}
           {tagNames.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
-              {tagNames.slice(0, 3).map((tag) => (
-                <span
-                  key={tag}
-                  className="px-2 py-0.5 rounded-full text-[11px] border border-border text-text/60 hover:border-primary hover:text-primary transition-colors"
-                >
-                  {tag}
-                </span>
-              ))}
+              {tagNames.slice(0, 3).map((tag) => {
+                const isSelected = Boolean(
+                  selectedTag &&
+                    selectedTag.trim().toLowerCase() !== "all" &&
+                    tag.trim().toLowerCase() === selectedTag.trim().toLowerCase(),
+                );
+                return (
+                  <span
+                    key={tag}
+                    onClick={
+                      onTagClick
+                        ? (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onTagClick(tag);
+                          }
+                        : undefined
+                    }
+                    className={clsx(
+                      "px-2 py-0.5 rounded-full text-[11px] transition-all duration-300",
+                      isSelected
+                        ? "bg-primary text-white border border-primary shadow-[0_0_16px_rgba(99,102,241,0.85),0_0_28px_rgba(99,102,241,0.45)] ring-2 ring-primary/60 scale-105 font-semibold"
+                        : "border border-border text-text/60 hover:border-primary hover:text-primary",
+                      onTagClick && "cursor-pointer",
+                    )}
+                  >
+                    {tag}
+                  </span>
+                );
+              })}
             </div>
           )}
 
@@ -335,17 +408,37 @@ export function ArticleCard({
             <p className="text-xs text-text/50">{authorMeta || formattedDate}</p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-          }}
-          className="p-1.5 rounded-lg text-text/40 hover:text-text hover:bg-slate-100 transition-colors"
-          aria-label="More options"
-        >
-          <FiMoreHorizontal className="w-4 h-4" />
-        </button>
+
+        <div className="flex items-center gap-2">
+          {statusLabel && (
+            <span
+              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                statusLabel === "published"
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : "bg-amber-50 text-amber-700 border-amber-200"
+              }`}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  statusLabel === "published" ? "bg-emerald-500" : "bg-amber-500"
+                }`}
+              />
+              {statusLabel === "published" ? "Published" : "Draft"}
+            </span>
+          )}
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            className="p-1.5 rounded-lg text-text/40 hover:text-text hover:bg-slate-100 transition-colors"
+            aria-label="More options"
+          >
+            <FiMoreHorizontal className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Body: text + image (image hidden on mobile) */}
@@ -364,14 +457,36 @@ export function ArticleCard({
           {/* Tags */}
           {tagNames.length > 0 && (
             <div className="flex flex-wrap gap-1.5 pt-1">
-              {tagNames.map((tag) => (
-                <span
-                  key={tag}
-                  className="px-2.5 py-0.5 rounded-full text-xs border border-border text-text/70 hover:border-primary hover:text-primary transition-colors"
-                >
-                  {tag}
-                </span>
-              ))}
+              {tagNames.map((tag) => {
+                const isSelected = Boolean(
+                  selectedTag &&
+                    selectedTag.trim().toLowerCase() !== "all" &&
+                    tag.trim().toLowerCase() === selectedTag.trim().toLowerCase(),
+                );
+                return (
+                  <span
+                    key={tag}
+                    onClick={
+                      onTagClick
+                        ? (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onTagClick(tag);
+                          }
+                        : undefined
+                    }
+                    className={clsx(
+                      "px-2.5 py-0.5 rounded-full text-xs transition-all duration-300",
+                      isSelected
+                        ? "bg-primary text-white border border-primary shadow-[0_0_16px_rgba(99,102,241,0.85),0_0_28px_rgba(99,102,241,0.45)] ring-2 ring-primary/60 scale-105 font-semibold"
+                        : "border border-border text-text/70 hover:border-primary hover:text-primary",
+                      onTagClick && "cursor-pointer",
+                    )}
+                  >
+                    {tag}
+                  </span>
+                );
+              })}
             </div>
           )}
         </div>
