@@ -281,31 +281,30 @@ export function ArticleEditor({
           </div>
 
           <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-            <div
+            {/* <div
               className={`hidden md:flex items-center gap-1.5 text-xs font-medium mr-2 px-2.5 py-1 rounded-full border ${
                 statusValue === "published"
                   ? "text-blue-600 bg-blue-50 border-blue-100"
                   : "text-emerald-600 bg-emerald-50 border-emerald-100"
               }`}
             >
-              <span
+               <span
                 className={`w-4 h-4 rounded-full text-white flex items-center justify-center text-[10px] ${
                   statusValue === "published" ? "bg-blue-500" : "bg-emerald-500"
                 }`}
               >
                 <HiOutlineCheck className="w-3 h-3 stroke-3" />
-              </span>
-              <span>{statusValue === "published" ? "Published" : "Draft saved just now"}</span>
-            </div>
+              </span> 
+            </div> */}
 
-            <Button
+            {/* <Button
               type="button"
               variant="secondary"
               size="sm"
               className="bg-white border-border hover:bg-slate-50 text-text/80 font-medium"
             >
               Preview
-            </Button>
+            </Button> */}
 
             {statusValue !== "draft" && (
               <Button
@@ -331,7 +330,7 @@ export function ArticleEditor({
                     ? handleSubmit(handleSaveDraftHandler)
                     : handleSubmit(handlePublishHandler)
                 }
-                rightIcon={<HiOutlineChevronDown className="w-3.5 h-3.5 ml-0.5" />}
+                // rightIcon={<HiOutlineChevronDown className="w-3.5 h-3.5 ml-0.5" />}
                 className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium"
               >
                 {statusValue === "draft" ? "Save Draft" : "Publish"}
@@ -410,7 +409,7 @@ export function ArticleEditor({
                   </div>
                   {coverImageFile && (
                     <div className="flex items-center justify-between text-[11px] text-text/50 px-1">
-                      <span className="truncate max-w-[240px] font-medium text-text/70">
+                      <span className="truncate max-w-60 font-medium text-text/70">
                         {coverImageFile.name}
                       </span>
                       <span>{(coverImageFile.size / (1024 * 1024)).toFixed(2)} MB</span>

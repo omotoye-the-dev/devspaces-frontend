@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { AiOutlineHeart, AiFillHeart } from "react-icons/ai";
 import { FiMessageCircle, FiMoreHorizontal } from "react-icons/fi";
 import { LuBookmark, LuBookmarkCheck, LuClock } from "react-icons/lu";
+import { clsx } from "clsx";
 import { Avatar } from "@/components/common";
 import { toast } from "@/hooks/useToast";
 import articlePlaceholder from "@/assets/images/article-placeholder.jpg";
@@ -41,6 +42,10 @@ export interface ArticleCardProps {
   isBookmarked?: boolean;
   onLike?: (id: string) => Promise<void>;
   onBookmark?: () => void;
+  /** Currently selected tag to highlight with a glow effect */
+  selectedTag?: string;
+  /** Callback when a tag is clicked */
+  onTagClick?: (tag: string) => void;
   /** "horizontal" = feed list row · "vertical" = grid card */
   variant?: "horizontal" | "vertical";
 }
@@ -121,6 +126,8 @@ export function ArticleCard({
   isBookmarked = false,
   onLike,
   onBookmark,
+  selectedTag,
+  onTagClick,
   variant = "horizontal",
 }: ArticleCardProps): JSX.Element {
   const navigate = useNavigate();
@@ -285,14 +292,36 @@ export function ArticleCard({
           {/* Tags */}
           {tagNames.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
-              {tagNames.slice(0, 3).map((tag) => (
-                <span
-                  key={tag}
-                  className="px-2 py-0.5 rounded-full text-[11px] border border-border text-text/60 hover:border-primary hover:text-primary transition-colors"
-                >
-                  {tag}
-                </span>
-              ))}
+              {tagNames.slice(0, 3).map((tag) => {
+                const isSelected = Boolean(
+                  selectedTag &&
+                    selectedTag.trim().toLowerCase() !== "all" &&
+                    tag.trim().toLowerCase() === selectedTag.trim().toLowerCase(),
+                );
+                return (
+                  <span
+                    key={tag}
+                    onClick={
+                      onTagClick
+                        ? (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onTagClick(tag);
+                          }
+                        : undefined
+                    }
+                    className={clsx(
+                      "px-2 py-0.5 rounded-full text-[11px] transition-all duration-300",
+                      isSelected
+                        ? "bg-primary text-white border border-primary shadow-[0_0_16px_rgba(99,102,241,0.85),0_0_28px_rgba(99,102,241,0.45)] ring-2 ring-primary/60 scale-105 font-semibold"
+                        : "border border-border text-text/60 hover:border-primary hover:text-primary",
+                      onTagClick && "cursor-pointer",
+                    )}
+                  >
+                    {tag}
+                  </span>
+                );
+              })}
             </div>
           )}
 
@@ -428,14 +457,36 @@ export function ArticleCard({
           {/* Tags */}
           {tagNames.length > 0 && (
             <div className="flex flex-wrap gap-1.5 pt-1">
-              {tagNames.map((tag) => (
-                <span
-                  key={tag}
-                  className="px-2.5 py-0.5 rounded-full text-xs border border-border text-text/70 hover:border-primary hover:text-primary transition-colors"
-                >
-                  {tag}
-                </span>
-              ))}
+              {tagNames.map((tag) => {
+                const isSelected = Boolean(
+                  selectedTag &&
+                    selectedTag.trim().toLowerCase() !== "all" &&
+                    tag.trim().toLowerCase() === selectedTag.trim().toLowerCase(),
+                );
+                return (
+                  <span
+                    key={tag}
+                    onClick={
+                      onTagClick
+                        ? (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onTagClick(tag);
+                          }
+                        : undefined
+                    }
+                    className={clsx(
+                      "px-2.5 py-0.5 rounded-full text-xs transition-all duration-300",
+                      isSelected
+                        ? "bg-primary text-white border border-primary shadow-[0_0_16px_rgba(99,102,241,0.85),0_0_28px_rgba(99,102,241,0.45)] ring-2 ring-primary/60 scale-105 font-semibold"
+                        : "border border-border text-text/70 hover:border-primary hover:text-primary",
+                      onTagClick && "cursor-pointer",
+                    )}
+                  >
+                    {tag}
+                  </span>
+                );
+              })}
             </div>
           )}
         </div>

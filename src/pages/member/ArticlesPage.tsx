@@ -1,13 +1,12 @@
 import { useState, useEffect, useMemo, type JSX } from "react";
 import { useNavigate } from "react-router-dom";
 import { MdOutlineSearch } from "react-icons/md";
-import { LuPenLine, LuLayoutGrid, LuLayoutList } from "react-icons/lu";
-import { FiFilter } from "react-icons/fi";
+import { LuPenLine, LuLayoutGrid, LuLayoutList, LuX } from "react-icons/lu";
 import { Button, Input, Skeleton } from "@/components/common";
 import { getArticles, likeArticle, saveArticle, getPostInteraction } from "@/features/articles/api/articleApi";
 import type { Article } from "@/features/articles/api/articleApi";
-import { getTags } from "@/features/articles/api/tagApi";
 import { ArticleCard } from "@/features/articles/components/ArticleCard";
+import { ArticleSearchDropdown } from "@/features/articles/components/ArticleSearchDropdown";
 import { toast } from "@/hooks/useToast";
 
 interface DisplayArticle {
@@ -91,7 +90,18 @@ function mapArticle(art: Article): DisplayArticle {
     authorId: art.author?.id || art.authorId,
     title: art.title || "Untitled Article",
     excerpt: art.excerpt || art.content || "",
-    tagNames: art.tags && art.tags.length > 0 ? art.tags : (art.tagNames || []),
+    tagNames: (() => {
+      const rawTags = (art.tags && art.tags.length > 0 ? art.tags : art.tagNames) || [];
+      return rawTags
+        .map((t: unknown) =>
+          typeof t === "string"
+            ? t
+            : t && typeof t === "object" && "name" in t
+              ? String((t as { name: unknown }).name)
+              : "",
+        )
+        .filter(Boolean);
+    })(),
     category: art.series || "General",
     coverImage: art.coverImageUrl || art.coverImage,
     status: art.status as DisplayArticle["status"],
@@ -116,7 +126,7 @@ export function ArticlesPage(): JSX.Element {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
-  const [categories, setCategories] = useState<string[]>(["All"]);
+  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());
   const [layout, setLayout] = useState<"list" | "grid">("list");
 
@@ -185,21 +195,6 @@ export function ArticlesPage(): JSX.Element {
     return () => {
       isSubscribed = false;
     };
-  }, []);
-
-  // Fetch tags for filter pills
-  useEffect(() => {
-    async function loadTags() {
-      try {
-        const tags = await getTags();
-        if (tags.length > 0) {
-          setCategories(["All", ...tags.map((t) => t.name)]);
-        }
-      } catch {
-        // Silently fall back — "All" is always present
-      }
-    }
-    loadTags();
   }, []);
 
   const toggleBookmark = async (id: string) => {
@@ -316,47 +311,62 @@ export function ArticlesPage(): JSX.Element {
         </Button>
       </div>
 
-      {/* Filter bar */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-start justify-between gap-4">
-        <div className="w-full md:w-64 shrink-0">
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by keyword or tag..."
-            inputSize="md"
-            leftIcon={<MdOutlineSearch className="text-text/40 text-lg" />}
-            className="bg-white border-border"
-          />
-        </div>
+      {/* Filter & Search Bar */}
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+          {/* Search container with 2-column dropdown */}
+          <div className="relative flex-1 max-w-xl">
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setIsDropdownOpen(true)}
+              onClick={() => setIsDropdownOpen(true)}
+              placeholder="Search by keyword, tag, or topic..."
+              inputSize="md"
+              leftIcon={<MdOutlineSearch className="text-text/40 text-lg" />}
+              rightIcon={
+                searchQuery ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSearchQuery("");
+                    }}
+                    className="p-1 text-text/40 hover:text-text cursor-pointer transition-colors"
+                    title="Clear search"
+                  >
+                    <LuX className="w-4 h-4" />
+                  </button>
+                ) : undefined
+              }
+              className="bg-white border-border shadow-2xs"
+            />
 
-        <div className="flex-1 flex flex-wrap items-center justify-between gap-3">
-          {/* Tags list wrapping after 5 */}
-          <div className="flex flex-wrap items-center gap-2 max-w-xl">
-            <FiFilter className="w-4 h-4 text-text/40 shrink-0 hidden sm:block mr-0.5" />
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
-                  selectedCategory === cat
-                    ? "bg-primary text-white shadow-xs"
-                    : "bg-white border border-border text-text/70 hover:bg-slate-50 hover:text-text"
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
+            <ArticleSearchDropdown
+              isOpen={isDropdownOpen}
+              onClose={() => setIsDropdownOpen(false)}
+              searchQuery={searchQuery}
+              selectedTag={selectedCategory}
+              onSelectTag={(tagName) => {
+                setSelectedCategory(tagName);
+                setSearchQuery("");
+                setIsDropdownOpen(false);
+              }}
+              onSelectTopic={(topic) => {
+                setIsDropdownOpen(false);
+                navigate(`/articles/${topic.id}`);
+              }}
+            />
           </div>
 
           {/* Layout toggle */}
-          <div className="flex items-center bg-white border border-border rounded-lg overflow-hidden shrink-0 ml-auto self-start">
+          <div className="flex items-center bg-white border border-border rounded-lg overflow-hidden shrink-0 self-end sm:self-auto shadow-2xs">
             <button
               type="button"
               id="layout-list"
               onClick={() => setLayout("list")}
               title="List view"
-              className={`p-2 transition-colors ${
+              className={`p-2 transition-colors cursor-pointer ${
                 layout === "list"
                   ? "bg-primary text-white"
                   : "text-text/50 hover:bg-slate-50 hover:text-text"
@@ -369,7 +379,7 @@ export function ArticlesPage(): JSX.Element {
               id="layout-grid"
               onClick={() => setLayout("grid")}
               title="Grid view"
-              className={`p-2 transition-colors ${
+              className={`p-2 transition-colors cursor-pointer ${
                 layout === "grid"
                   ? "bg-primary text-white"
                   : "text-text/50 hover:bg-slate-50 hover:text-text"
@@ -379,6 +389,31 @@ export function ArticlesPage(): JSX.Element {
             </button>
           </div>
         </div>
+
+        {/* Active tag filter indicator */}
+        {selectedCategory !== "All" && (
+          <div className="flex items-center gap-2 pt-0.5">
+            <span className="text-xs text-text/50 font-medium">Filtered by tag:</span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-primary text-white shadow-[0_0_12px_rgba(99,102,241,0.6)]">
+              #{selectedCategory}
+              <button
+                type="button"
+                onClick={() => setSelectedCategory("All")}
+                className="hover:text-white/80 p-0.5 rounded-full cursor-pointer ml-0.5"
+                title="Clear tag filter"
+              >
+                <LuX className="w-3.5 h-3.5" />
+              </button>
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectedCategory("All")}
+              className="text-xs text-text/50 hover:text-primary transition-colors cursor-pointer underline"
+            >
+              Clear filter
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Loading skeletons */}
@@ -486,6 +521,12 @@ export function ArticlesPage(): JSX.Element {
               title={article.title}
               excerpt={article.excerpt}
               tagNames={article.tagNames}
+              selectedTag={selectedCategory}
+              onTagClick={(tag) =>
+                setSelectedCategory((prev) =>
+                  prev.toLowerCase() === tag.toLowerCase() ? "All" : tag,
+                )
+              }
               coverImage={article.coverImage}
               authorName={article.authoruserName}
               authorAvatar={article.authorAvatar}
@@ -513,6 +554,12 @@ export function ArticlesPage(): JSX.Element {
               title={article.title}
               excerpt={article.excerpt}
               tagNames={article.tagNames}
+              selectedTag={selectedCategory}
+              onTagClick={(tag) =>
+                setSelectedCategory((prev) =>
+                  prev.toLowerCase() === tag.toLowerCase() ? "All" : tag,
+                )
+              }
               coverImage={article.coverImage}
               authorName={article.authoruserName}
               authorAvatar={article.authorAvatar}
