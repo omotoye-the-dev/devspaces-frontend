@@ -1,23 +1,9 @@
-import {
-  useEffect,
-  useState,
-  type JSX,
-} from "react";
-
+import { useEffect, useState, type JSX } from "react";
 import { Avatar, Button, Skeleton } from "@/components/common";
-
 import { toast } from "@/hooks/useToast";
-
 import { useAuthStore } from "@/stores/useAuthStore";
-
 import { AiOutlineLike } from "react-icons/ai";
-
-import {
-  getArticleComments,
-  createComment,
-  type Comment,
-} from "@/features/articles/api/articleApi";
-
+import { getArticleComments, createComment, type Comment } from "@/features/articles/api/articleApi";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
 
 interface ArticleCommentsProps {
@@ -25,52 +11,14 @@ interface ArticleCommentsProps {
   onCommentCountChange?: (count: number) => void;
 }
 
-/**
- * The API currently returns userId only.
- *
- * This interface supports the response shape if your backend
- * later includes the user's profile information.
- */
-interface CommentUser {
-  id?: string;
-  userName?: string;
-  name?: string;
-  avatarUrl?: string | null;
-}
+type DisplayComment = Comment;
 
-/**
- * We extend Comment locally so the component can support
- * optional user information from the API without breaking
- * the existing Comment interface.
- */
-type DisplayComment = Comment & {
-  user?: CommentUser | null;
-  userName?: string;
-  userAvatar?: string | null;
-  avatarUrl?: string | null;
-};
-
-/**
- * Recursively adds a reply to the correct comment.
- *
- * Example:
- *
- * Comment A
- *   └── Reply B
- *        └── Reply C
- *
- * If Reply C is created, this function finds Reply B
- * anywhere in the tree and adds Reply C to its replies.
- */
 function addReplyToComment(
   comments: DisplayComment[],
   parentId: string,
   newReply: DisplayComment,
 ): DisplayComment[] {
   return comments.map((comment) => {
-    /**
-     * The parent comment was found.
-     */
     if (comment.id === parentId) {
       return {
         ...comment,
@@ -81,9 +29,6 @@ function addReplyToComment(
       };
     }
 
-    /**
-     * The parent may be nested deeper in the tree.
-     */
     if (
       comment.replies &&
       comment.replies.length > 0
@@ -102,9 +47,6 @@ function addReplyToComment(
   });
 }
 
-/**
- * Counts all comments including nested replies.
- */
 function countAllComments(
   comments: DisplayComment[],
 ): number {
@@ -119,25 +61,36 @@ function countAllComments(
   }, 0);
 }
 
-/**
- * Recursively renders a single comment and its replies.
- */
 interface CommentItemProps {
   comment: DisplayComment;
   depth: number;
   replyingTo: string | null;
   replyText: string;
   isReplying: boolean;
-  currentUserId?: string;
-  onReplyClick: (comment: DisplayComment) => void;
-  onReplyTextChange: (value: string) => void;
+  userId?: string;
+
+  onReplyClick: (
+    comment: DisplayComment,
+  ) => void;
+
+  onReplyTextChange: (
+    value: string,
+  ) => void;
+
   onCancelReply: () => void;
+
   onSubmitReply: (
     event: React.FormEvent,
     parentId: string,
   ) => Promise<void>;
-  formatTimeAgo: (dateString: string) => string;
-  onLike: (commentId: string) => void;
+
+  formatTimeAgo: (
+    dateString: string,
+  ) => string;
+
+  onLike: (
+    commentId: string,
+  ) => void;
 }
 
 function CommentItem({
@@ -146,7 +99,7 @@ function CommentItem({
   replyingTo,
   replyText,
   isReplying,
-  currentUserId,
+  userId,
   onReplyClick,
   onReplyTextChange,
   onCancelReply,
@@ -154,43 +107,19 @@ function CommentItem({
   formatTimeAgo,
   onLike,
 }: CommentItemProps): JSX.Element {
-  /**
-   * Limit indentation so deeply nested replies do not
-   * make the comment content too narrow on mobile.
-   */
   const indentation =
     Math.min(depth, 4) * 16;
 
-  /**
-   * Resolve user information.
-   *
-   * The preferred API shape is:
-   *
-   * comment.user.userName
-   * comment.user.avatarUrl
-   *
-   * But the fallback also supports:
-   *
-   * comment.userName
-   * comment.avatarUrl
-   *
-   * Finally we use userId when nothing else exists.
-   */
   const displayName =
-    comment.user?.userName?.trim() ||
-    comment.user?.name?.trim() ||
-    comment.userName?.trim() ||
+    comment.user?.username?.trim() ||
     comment.userId ||
     "User";
 
   const displayAvatar =
-    comment.user?.avatarUrl ||
-    comment.userAvatar ||
-    comment.avatarUrl ||
-    undefined;
+    comment.user?.avatarUrl || undefined;
 
   const isOwnComment =
-    currentUserId === comment.userId;
+    userId === comment.userId;
 
   return (
     <div
@@ -202,9 +131,7 @@ function CommentItem({
             : undefined,
       }}
     >
-      {/* ============================================================ */}
-      {/* COMMENT                                                       */}
-      {/* ============================================================ */}
+      {/* COMMENT  */}
 
       <div className="flex gap-3">
         {/* Avatar */}
@@ -213,64 +140,25 @@ function CommentItem({
           name={displayName}
           alt={displayName}
           size="sm"
-          className="
-            h-8
-            w-8
-            shrink-0
-            sm:h-9
-            sm:w-9
-          "
+          className="h-8  w-8 shrink-0 sm:h-9 sm:w-9"
         />
 
         {/* Content */}
         <div className="min-w-0 flex-1">
           {/* User information */}
-          <div
-            className="
-              mb-1
-              flex
-              flex-wrap
-              items-center
-              gap-x-2
-              gap-y-0.5
-            "
-          >
-            <p
-              className="
-                wrap-break-word
-                text-[10px]
-                font-semibold
-                text-gray-900
-                sm:text-xs
-              "
-            >
+          <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            <p className=" wrap-break-word text-[10px] font-semibold text-gray-900 sm:text-xs">
               {displayName}
             </p>
 
             {isOwnComment && (
               <span
-                className="
-                  rounded-full
-                  bg-blue-50
-                  px-1.5
-                  py-0.5
-                  text-[8px]
-                  font-medium
-                  text-blue-600
-                  sm:text-[9px]
-                "
-              >
+                className="rounded-full bg-blue-50 px-1.5 py-0.5 text-[8px] font-medium text-blue-600 sm:text-[9px]">
                 You
               </span>
             )}
 
-            <span
-              className="
-                text-[9px]
-                text-gray-400
-                sm:text-[10px]
-              "
-            >
+            <span className="text-[9px] text-gray-400 sm:text-[10px]" >
               {formatTimeAgo(
                 comment.createdAt,
               )}
@@ -348,9 +236,7 @@ function CommentItem({
             </button>
           </div>
 
-          {/* ======================================================== */}
-          {/* REPLY INPUT                                               */}
-          {/* ======================================================== */}
+          {/* REPLY INPUT */}
 
           {replyingTo === comment.id && (
             <form
@@ -466,9 +352,7 @@ function CommentItem({
         </div>
       </div>
 
-      {/* ============================================================ */}
-      {/* NESTED REPLIES                                               */}
-      {/* ============================================================ */}
+      {/* NESTED REPLIES */}
 
       {comment.replies &&
         comment.replies.length > 0 && (
@@ -485,20 +369,12 @@ function CommentItem({
               (reply) => (
                 <CommentItem
                   key={reply.id}
-                  comment={
-                    reply as DisplayComment
-                  }
+                  comment={reply}
                   depth={depth + 1}
-                  replyingTo={
-                    replyingTo
-                  }
+                  replyingTo={replyingTo}
                   replyText={replyText}
-                  isReplying={
-                    isReplying
-                  }
-                  currentUserId={
-                    currentUserId
-                  }
+                  isReplying={isReplying}
+                  userId={userId}
                   onReplyClick={
                     onReplyClick
                   }
@@ -528,9 +404,8 @@ export function ArticleComments({
   articleId,
   onCommentCountChange,
 }: ArticleCommentsProps): JSX.Element {
-  const [comments, setComments] = useState<
-    DisplayComment[]
-  >([]);
+  const [comments, setComments] =
+    useState<DisplayComment[]>([]);
 
   const [isLoading, setIsLoading] =
     useState(true);
@@ -541,17 +416,9 @@ export function ArticleComments({
   const [isSubmitting, setIsSubmitting] =
     useState(false);
 
-  /**
-   * ID of the comment currently being replied to.
-   *
-   * null = no reply box open.
-   */
   const [replyingTo, setReplyingTo] =
     useState<string | null>(null);
 
-  /**
-   * Text inside the currently active reply box.
-   */
   const [replyText, setReplyText] =
     useState("");
 
@@ -561,14 +428,21 @@ export function ArticleComments({
   const user = useAuthStore(
     (state) => state.user,
   );
-  const isAuthenticated = useAuthStore(
-    (state) => state.isAuthenticated,
-  );
 
-  // ================================================================
-  // LOAD COMMENTS
-  // ================================================================
+  const isAuthenticated =
+    useAuthStore(
+      (state) => state.isAuthenticated,
+    );
+  useEffect(() => {
+    onCommentCountChange?.(
+      countAllComments(comments),
+    );
+  }, [
+    comments,
+    onCommentCountChange,
+  ]);
 
+ 
   useEffect(() => {
     let isMounted = true;
 
@@ -584,20 +458,23 @@ export function ArticleComments({
         if (!isMounted) {
           return;
         }
-
         const displayComments =
-          data as DisplayComment[];
+          data.map((comment) => ({
+            ...comment,
+            user: comment.user
+              ? {
+                  id: comment.user.id,
+                  username:
+                    comment.user.username,
+                  avatarUrl:
+                    comment.user.avatarUrl,
+                }
+              : null,
+            replies:
+              comment.replies ?? [],
+          }));
 
         setComments(displayComments);
-
-        /**
-         * Count nested replies as comments too.
-         */
-        onCommentCountChange?.(
-          countAllComments(
-            displayComments,
-          ),
-        );
       } catch (err: unknown) {
         console.error(
           "Error loading comments:",
@@ -622,21 +499,15 @@ export function ArticleComments({
     return () => {
       isMounted = false;
     };
-  }, [
-    articleId,
-    onCommentCountChange,
-  ]);
-
-  // ================================================================
-  // CREATE TOP-LEVEL COMMENT
-  // ================================================================
+  }, [articleId]);
 
   const handleSubmitComment = async (
     event: React.FormEvent,
   ) => {
     event.preventDefault();
 
-    const message = newComment.trim();
+    const message =
+      newComment.trim();
 
     if (!message) {
       toast.error(
@@ -655,10 +526,6 @@ export function ArticleComments({
     try {
       setIsSubmitting(true);
 
-      /**
-       * No parentId means this is a top-level
-       * comment.
-       */
       const createdComment =
         await createComment(
           articleId,
@@ -666,30 +533,39 @@ export function ArticleComments({
           undefined,
         );
 
+      /*
+       * If the backend returns `user`,
+       * use it.
+       *
+       * If it doesn't, use the currently
+       * authenticated user as a fallback.
+       */
+      const normalizedComment: DisplayComment =
+        {
+          ...createdComment,
+          user:
+            createdComment.user ??
+            (user
+              ? {
+                  id: user.id,
+                  username:
+                    user.userName ??
+                    "You",
+                  avatarUrl:
+                    user.avatarUrl ??
+                    null,
+                }
+              : null),
+          replies:
+            createdComment.replies ?? [],
+        };
+
       setComments((previous) => [
-        createdComment as DisplayComment,
+        normalizedComment,
         ...previous,
       ]);
 
       setNewComment("");
-
-      /**
-       * Calculate the new count from the
-       * current state instead of relying on
-       * a potentially stale `comments.length`.
-       */
-      setComments((previous) => {
-        const updated = [
-          createdComment as DisplayComment,
-          ...previous,
-        ];
-
-        onCommentCountChange?.(
-          countAllComments(updated),
-        );
-
-        return updated;
-      });
 
       toast.success(
         "Comment posted successfully!",
@@ -709,10 +585,6 @@ export function ArticleComments({
     }
   };
 
-  // ================================================================
-  // OPEN REPLY BOX
-  // ================================================================
-
   const handleReplyClick = (
     comment: DisplayComment,
   ) => {
@@ -723,10 +595,6 @@ export function ArticleComments({
       return;
     }
 
-    /**
-     * Clicking Reply on the currently open
-     * comment closes the reply box.
-     */
     if (replyingTo === comment.id) {
       setReplyingTo(null);
       setReplyText("");
@@ -737,105 +605,91 @@ export function ArticleComments({
     setReplyText("");
   };
 
-  // ================================================================
-  // SUBMIT REPLY
-  // ================================================================
-
   const handleSubmitReply = async (
-    event: React.FormEvent,
-    parentId: string,
-  ) => {
-    event.preventDefault();
+  event: React.FormEvent,
+  parentId: string,
+) => {
+  event.preventDefault();
 
-    const message = replyText.trim();
+  const message = replyText.trim();
 
-    if (!message) {
-      toast.error(
-        "Reply cannot be empty",
-      );
-      return;
-    }
+  if (!message) {
+    toast.error("Reply cannot be empty");
+    return;
+  }
 
-    if (!isAuthenticated && !user) {
-      toast.error(
-        "You must be logged in to reply",
-      );
-      return;
-    }
+  if (!isAuthenticated && !user) {
+    toast.error(
+      "You must be logged in to reply",
+    );
+    return;
+  }
 
-    try {
-      setIsReplying(true);
+  try {
+    setIsReplying(true);
 
-      /**
-       * THIS is the important part.
-       *
-       * parentId is the ID of the comment
-       * being replied to.
-       */
-      const createdReply =
-        await createComment(
-          articleId,
-          message,
-          parentId,
-        );
+    const createdReply = await createComment(
+      articleId,
+      message,
+      parentId,
+    );
 
-      /**
-       * Add the reply to the correct comment,
-       * even if that comment is already nested.
-       */
-      setComments((previous) => {
-        const updated =
-          addReplyToComment(
-            previous,
-            parentId,
-            createdReply as DisplayComment,
-          );
+    const replyWithUser: DisplayComment = {
+      ...createdReply,
+      user:
+        createdReply.user ?? {
+          id: user?.id ?? createdReply.userId,
+          username:
+            user?.userName ??
+            user?.username ??
+            "You",
+          avatarUrl:
+            user?.avatarUrl ?? null,
+        },
+      replies: createdReply.replies ?? [],
+    };
 
-        onCommentCountChange?.(
-          countAllComments(updated),
-        );
-
-        return updated;
-      });
-
-      setReplyText("");
-      setReplyingTo(null);
-
-      toast.success(
-        "Reply posted successfully!",
-      );
-    } catch (err: unknown) {
-      console.error(
-        "Error posting reply:",
-        err,
+    setComments((previous) => {
+      const updated = addReplyToComment(
+        previous,
+        parentId,
+        replyWithUser,
       );
 
-      toast.error(
-        getApiErrorMessage(err) ||
-          "Failed to post reply",
+      onCommentCountChange?.(
+        countAllComments(updated),
       );
-    } finally {
-      setIsReplying(false);
-    }
-  };
 
-  // ================================================================
-  // LIKE COMMENT
-  // ================================================================
+      return updated;
+    });
+
+    setReplyText("");
+    setReplyingTo(null);
+
+    toast.success("Reply posted successfully!");
+  } catch (err: unknown) {
+    console.error(
+      "Error posting reply:",
+      err,
+    );
+
+    toast.error(
+      getApiErrorMessage(err) ||
+        "Failed to post reply",
+    );
+  } finally {
+    setIsReplying(false);
+  }
+};
 
   const handleLikeComment = (
     commentId: string,
   ) => {
-    /**
-     * Your current API does not have a
-     * comment-like endpoint.
-     *
-     * Keep this function here so the UI
-     * can be connected later.
-     */
     setComments((previous) =>
       previous.map((comment) => {
-        if (comment.id === commentId) {
+        if (
+          comment.id === commentId
+        ) {
           return {
             ...comment,
           };
@@ -860,21 +714,20 @@ export function ArticleComments({
     );
   };
 
-  // ================================================================
-  // FORMAT TIME
-  // ================================================================
-
   const formatTimeAgo = (
     dateString: string,
   ) => {
     const now = new Date();
-    const date = new Date(dateString);
 
-    const diffInSeconds = Math.floor(
-      (now.getTime() -
-        date.getTime()) /
-        1000,
-    );
+    const date =
+      new Date(dateString);
+
+    const diffInSeconds =
+      Math.floor(
+        (now.getTime() -
+          date.getTime()) /
+          1000,
+      );
 
     if (diffInSeconds < 60) {
       return "just now";
@@ -918,10 +771,6 @@ export function ArticleComments({
     );
   };
 
-  // ================================================================
-  // RENDER
-  // ================================================================
-
   return (
     <div
       className="
@@ -934,10 +783,6 @@ export function ArticleComments({
         p-4
       "
     >
-      {/* ============================================================ */}
-      {/* HEADER                                                        */}
-      {/* ============================================================ */}
-
       <div className="flex items-center justify-between">
         <h2
           className="
@@ -947,15 +792,13 @@ export function ArticleComments({
             sm:text-sm
           "
         >
-          Comments ({countAllComments(
+          Comments (
+          {countAllComments(
             comments,
-          )})
+          )}
+          )
         </h2>
       </div>
-
-      {/* ============================================================ */}
-      {/* NEW COMMENT INPUT                                             */}
-      {/* ============================================================ */}
 
       {user || isAuthenticated ? (
         <form
@@ -1097,10 +940,6 @@ export function ArticleComments({
         </div>
       )}
 
-      {/* ============================================================ */}
-      {/* COMMENTS LIST                                                 */}
-      {/* ============================================================ */}
-
       <div className="space-y-5">
         {isLoading ? (
           Array.from({
@@ -1153,7 +992,7 @@ export function ArticleComments({
               replyingTo={replyingTo}
               replyText={replyText}
               isReplying={isReplying}
-              currentUserId={user?.id}
+              userId={user?.id}
               onReplyClick={
                 handleReplyClick
               }
@@ -1181,21 +1020,14 @@ export function ArticleComments({
   );
 }
 
-/**
- * Recursively finds a comment and returns
- * an updated comment tree.
- *
- * Currently this is just a placeholder for
- * the comment-like UI because your provided
- * API does not yet expose a like-comment
- * endpoint.
- */
 function updateCommentLike(
   comments: DisplayComment[],
   commentId: string,
 ): DisplayComment[] {
   return comments.map((comment) => {
-    if (comment.id === commentId) {
+    if (
+      comment.id === commentId
+    ) {
       return {
         ...comment,
       };

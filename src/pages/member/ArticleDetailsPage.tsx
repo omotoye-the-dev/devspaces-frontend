@@ -1,35 +1,19 @@
 import { useEffect, useState, type JSX } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import {
-  AiFillHeart,
-  AiOutlineComment,
-  AiOutlineHeart,
-  AiOutlineShareAlt,
-} from "react-icons/ai";
+import { Link, useNavigate, useParams,
+} from "react-router-dom";
+import { AiFillHeart, AiOutlineComment, AiOutlineHeart, AiOutlineShareAlt } from "react-icons/ai";
 import { HiOutlineEllipsisHorizontal } from "react-icons/hi2";
 import { LuBookmark, LuBookmarkCheck, LuClock } from "react-icons/lu";
-
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import articlePlaceholder from "@/assets/images/article-placeholder.jpg";
-
 import { Avatar, Button, Skeleton, Tag } from "@/components/common";
-
 import { toast } from "@/hooks/useToast";
 import { cn } from "@/lib/utils/cn";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
-
-import {
-  deleteArticle,
-  getArticleById,
-  likeArticle,
-  saveArticle,
-  type Article,
-} from "@/features/articles/api/articleApi";
-
-import { followAuthor } from "@/lib/api/user.api";
+import { deleteArticle, getArticleById, likeArticle, saveArticle, type Article } from "@/features/articles/api/articleApi";
+import { followAuthor, getUserProfileById, formatProfileName, getProfileAvatar, type UserProfile } from "@/lib/api/user.api";
 import { useAuthStore } from "@/stores/useAuthStore";
-
 import ArticleComments from "@/features/articles/components/ArticleComments";
 import RelatedArticles from "@/features/articles/components/RelatedArticles";
 import AuthorCard from "@/features/articles/components/AuthorCard";
@@ -44,34 +28,52 @@ export function ArticleDetailsPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const currentUser = useAuthStore((state) => state.user);
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const currentUser = useAuthStore(
+    (state) => state.user
+  );
 
-  const [article, setArticle] = useState<DisplayArticle | null>(null);
+  const isAuthenticated = useAuthStore(
+    (state) => state.isAuthenticated
+  );
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [article, setArticle] =
+    useState<DisplayArticle | null>(null);
 
-  const [isLiked, setIsLiked] = useState(false);
+  const [authorProfile, setAuthorProfile] =
+    useState<UserProfile | null>(null);
 
-  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [isLoading, setIsLoading] =
+    useState(true);
 
-  const [isFollowing, setIsFollowing] = useState(false);
+  const [isLiked, setIsLiked] =
+    useState(false);
 
-  const [isFollowLoading, setIsFollowLoading] = useState(false);
+  const [isBookmarked, setIsBookmarked] =
+    useState(false);
 
-  const [likeCount, setLikeCount] = useState(0);
+  const [isFollowing, setIsFollowing] =
+    useState(false);
 
-  const [commentCount, setCommentCount] = useState(0);
+  const [isFollowLoading, setIsFollowLoading] =
+    useState(false);
 
-  const [isLiking, setIsLiking] = useState(false);
+  const [likeCount, setLikeCount] =
+    useState(0);
 
-  const [isSaving, setIsSaving] = useState(false);
+  const [commentCount, setCommentCount] =
+    useState(0);
 
-  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [isLiking, setIsLiking] =
+    useState(false);
 
-  // Controls whether the comment card is visible
-  const [showComments, setShowComments] = useState(false);
+  const [isSaving, setIsSaving] =
+    useState(false);
 
+  const [showMoreMenu, setShowMoreMenu] =
+    useState(false);
+
+  const [showComments, setShowComments] =
+    useState(false);
   useEffect(() => {
     if (!id) {
       navigate("/articles");
@@ -79,24 +81,33 @@ export function ArticleDetailsPage(): JSX.Element {
     }
 
     const articleId = id;
+
     let isSubscribed = true;
 
-    async function loadArticle() {
+    async function loadArticle(): Promise<void> {
       try {
         setIsLoading(true);
 
-        const data = await getArticleById(articleId);
+        const data =
+          await getArticleById(articleId);
 
         if (!isSubscribed) {
           return;
         }
 
-        const articleData = data as Article & Record<string, unknown>;
+        const articleData =
+          data as Article &
+            Record<string, unknown>;
 
-        const initialLikes = data.likeCount ?? data.likes ?? 0;
+        const initialLikes =
+          data.likeCount ??
+          data.likes ??
+          0;
 
         const initialLiked = Boolean(
-          data.liked ?? data.isLiked ?? false
+          data.liked ??
+            data.isLiked ??
+            false
         );
 
         const initialSaved = Boolean(
@@ -105,29 +116,73 @@ export function ArticleDetailsPage(): JSX.Element {
             articleData.saved ??
             false
         );
-
-        const authorObj = data.author;
-
-        const resolvedAuthorAvatar =
-          authorObj?.avatarUrl ||
-          (articleData.authorAvatar as string | undefined) ||
-          undefined;
+        const articleAuthor =
+          data.author as
+            | Record<string, unknown>
+            | undefined;
 
         const displayArticle: DisplayArticle = {
           ...data,
-          authorUserName: authorObj?.userName?.trim(),
-          authorName: authorObj?.name?.trim() || "DevSpace Author",
-          authorAvatar: resolvedAuthorAvatar,
+
+          authorName:
+            typeof articleAuthor?.name ===
+            "string"
+              ? articleAuthor.name
+              : undefined,
+
+          authorAvatar:
+            typeof articleAuthor?.avatarUrl ===
+            "string"
+              ? articleAuthor.avatarUrl
+              : undefined,
         };
 
         setArticle(displayArticle);
+
         setIsLiked(initialLiked);
         setIsBookmarked(initialSaved);
         setLikeCount(initialLikes);
-        setCommentCount(data.commentCount ?? data.comments ?? 0);
+
+        setCommentCount(
+          data.commentCount ??
+            data.comments ??
+            0
+        );
+        const initialFollowing =
+          typeof articleData.following ===
+          "boolean"
+            ? articleData.following
+            : typeof articleData.isFollowing ===
+                "boolean"
+              ? articleData.isFollowing
+              : false;
+
+        setIsFollowing(initialFollowing);
+        if (data.authorId) {
+          try {
+            const profile =
+              await getUserProfileById(
+                data.authorId
+              );
+
+            if (
+              isSubscribed &&
+              profile
+            ) {
+              setAuthorProfile(profile);
+            }
+          } catch {
+            /**
+             * Do not prevent the article from
+             * rendering if the profile endpoint
+             * fails.
+             */
+          }
+        }
       } catch (error: unknown) {
         toast.error(
-          getApiErrorMessage(error) || "Failed to load article"
+          getApiErrorMessage(error) ||
+            "Failed to load article"
         );
 
         if (isSubscribed) {
@@ -140,59 +195,86 @@ export function ArticleDetailsPage(): JSX.Element {
       }
     }
 
-    loadArticle();
+    void loadArticle();
 
     return () => {
       isSubscribed = false;
     };
   }, [id, navigate]);
 
-  const handleLike = async (event?: React.MouseEvent) => {
+  const handleLike = async (
+    event?: React.MouseEvent
+  ): Promise<void> => {
     event?.preventDefault();
     event?.stopPropagation();
 
-    if (isLiking || !article) {
+    if (
+      isLiking ||
+      !article
+    ) {
       return;
     }
 
-    if (!isAuthenticated && !currentUser) {
+    if (
+      !isAuthenticated &&
+      !currentUser
+    ) {
       navigate("/auth/sign-in");
       return;
     }
 
-    const previousLiked = isLiked;
+    const previousLiked =
+      isLiked;
 
-    setIsLiked(!previousLiked);
+    setIsLiked(
+      !previousLiked
+    );
 
-    setLikeCount((previous) =>
-      Math.max(
-        0,
-        previous + (previousLiked ? -1 : 1)
-      )
+    setLikeCount(
+      (previous) =>
+        Math.max(
+          0,
+          previous +
+            (previousLiked
+              ? -1
+              : 1)
+        )
     );
 
     setIsLiking(true);
 
     try {
-      await likeArticle(article.id);
+      await likeArticle(
+        article.id
+      );
 
       toast.success(
         previousLiked
           ? "Removed like"
           : "Liked article"
       );
-    } catch (error: unknown) {
-      setIsLiked(previousLiked);
+    } catch (
+      error: unknown
+    ) {
+      setIsLiked(
+        previousLiked
+      );
 
-      setLikeCount((previous) =>
-        Math.max(
-          0,
-          previous + (previousLiked ? 1 : -1)
-        )
+      setLikeCount(
+        (previous) =>
+          Math.max(
+            0,
+            previous +
+              (previousLiked
+                ? 1
+                : -1)
+          )
       );
 
       toast.error(
-        getApiErrorMessage(error) ||
+        getApiErrorMessage(
+          error
+        ) ||
           "Failed to update like"
       );
     } finally {
@@ -202,38 +284,55 @@ export function ArticleDetailsPage(): JSX.Element {
 
   const handleBookmark = async (
     event?: React.MouseEvent
-  ) => {
+  ): Promise<void> => {
     event?.preventDefault();
     event?.stopPropagation();
 
-    if (isSaving || !article) {
+    if (
+      isSaving ||
+      !article
+    ) {
       return;
     }
 
-    if (!isAuthenticated && !currentUser) {
+    if (
+      !isAuthenticated &&
+      !currentUser
+    ) {
       navigate("/auth/sign-in");
       return;
     }
 
-    const previousBookmarked = isBookmarked;
+    const previousBookmarked =
+      isBookmarked;
 
-    setIsBookmarked(!previousBookmarked);
+    setIsBookmarked(
+      !previousBookmarked
+    );
 
     setIsSaving(true);
 
     try {
-      await saveArticle(article.id);
+      await saveArticle(
+        article.id
+      );
 
       toast.success(
         previousBookmarked
           ? "Removed from bookmarks"
           : "Saved to bookmarks"
       );
-    } catch (error: unknown) {
-      setIsBookmarked(previousBookmarked);
+    } catch (
+      error: unknown
+    ) {
+      setIsBookmarked(
+        previousBookmarked
+      );
 
       toast.error(
-        getApiErrorMessage(error) ||
+        getApiErrorMessage(
+          error
+        ) ||
           "Failed to update bookmark"
       );
     } finally {
@@ -241,94 +340,129 @@ export function ArticleDetailsPage(): JSX.Element {
     }
   };
 
-  const handleFollowToggle = async () => {
-    if (isFollowLoading || !article?.authorId) {
-      return;
-    }
-
-    if (!isAuthenticated && !currentUser) {
-      toast.error("Please sign in to follow authors");
-      navigate("/auth/sign-in");
-      return;
-    }
-
-    if (currentUser?.id && article.authorId === currentUser.id) {
-      toast.info("You cannot follow yourself");
-      return;
-    }
-
-    const previousState = isFollowing;
-    const nextState = !previousState;
-
-    setIsFollowing(nextState);
-    setIsFollowLoading(true);
-
-    try {
-      const res = await followAuthor(article.authorId);
+  const handleFollowToggle =
+    async (): Promise<void> => {
+      if (
+        isFollowLoading ||
+        !article?.authorId
+      ) {
+        return;
+      }
 
       if (
-        res &&
-        typeof res.isFollowing === "boolean"
+        !isAuthenticated &&
+        !currentUser
       ) {
-        setIsFollowing(res.isFollowing);
-      }
-
-      const authorDisplayName =
-        article.authorName ||
-        article.authorUserName ||
-        "the author";
-
-      if (nextState) {
-        toast.success(
-          `You are now following ${authorDisplayName}`
+        toast.error(
+          "Please sign in to follow authors"
         );
-      } else {
-        toast.info(
-          `Unfollowed ${authorDisplayName}`
+
+        navigate(
+          "/auth/sign-in"
         );
-      }
-    } catch (error: unknown) {
-      setIsFollowing(previousState);
-
-      toast.error(
-        getApiErrorMessage(error) ||
-          "Failed to update follow status"
-      );
-    } finally {
-      setIsFollowLoading(false);
-    }
-  };
-
-  const handleShare = async () => {
-    if (!article) {
-      return;
-    }
-
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: article.title,
-          text: article.excerpt ?? article.title,
-          url: window.location.href,
-        });
 
         return;
       }
 
-      await navigator.clipboard.writeText(
-        window.location.href
+      if (
+        currentUser?.id &&
+        article.authorId ===
+          currentUser.id
+      ) {
+        toast.info(
+          "You cannot follow yourself"
+        );
+
+        return;
+      }
+
+      const previousState =
+        isFollowing;
+
+      const nextState =
+        !previousState;
+
+      setIsFollowing(
+        nextState
       );
 
-      toast.success("Link copied to clipboard");
-    } catch (error) {
-      if (
-        error instanceof DOMException &&
-        error.name === "AbortError"
+      setIsFollowLoading(
+        true
+      );
+
+      try {
+        const res =
+          await followAuthor(
+            article.authorId
+          );
+
+        if (
+          res &&
+          typeof res.isFollowing ===
+            "boolean"
+        ) {
+          setIsFollowing(
+            res.isFollowing
+          );
+        }
+
+        const authorDisplayName =
+          resolvedAuthorName;
+
+        if (nextState) {
+          toast.success(
+            `You are now following ${authorDisplayName}`
+          );
+        } else {
+          toast.info(
+            `Unfollowed ${authorDisplayName}`
+          );
+        }
+      } catch (
+        error: unknown
       ) {
+        setIsFollowing(
+          previousState
+        );
+
+        toast.error(
+          getApiErrorMessage(
+            error
+          ) ||
+            "Failed to update follow status"
+        );
+      } finally {
+        setIsFollowLoading(
+          false
+        );
+      }
+    };
+
+  const handleShare =
+    async (): Promise<void> => {
+      if (!article) {
         return;
       }
 
       try {
+        if (
+          navigator.share
+        ) {
+          await navigator.share(
+            {
+              title:
+                article.title,
+              text:
+                article.excerpt ??
+                article.title,
+              url:
+                window.location.href,
+            }
+          );
+
+          return;
+        }
+
         await navigator.clipboard.writeText(
           window.location.href
         );
@@ -336,76 +470,110 @@ export function ArticleDetailsPage(): JSX.Element {
         toast.success(
           "Link copied to clipboard"
         );
-      } catch {
-        toast.error("Unable to share article");
+      } catch (
+        error
+      ) {
+        if (
+          error instanceof
+            DOMException &&
+          error.name ===
+            "AbortError"
+        ) {
+          return;
+        }
+
+        try {
+          await navigator.clipboard.writeText(
+            window.location.href
+          );
+
+          toast.success(
+            "Link copied to clipboard"
+          );
+        } catch {
+          toast.error(
+            "Unable to share article"
+          );
+        }
       }
-    }
-  };
+    };
 
-  const handleEdit = () => {
-    if (!article) {
-      return;
-    }
+  const handleEdit =
+    (): void => {
+      if (!article) {
+        return;
+      }
 
-    navigate(`/articles/${article.id}/edit`);
-
-    setShowMoreMenu(false);
-  };
-
-  const handleDelete = async () => {
-    if (!article) {
-      return;
-    }
-
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this article? This action cannot be undone."
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      await deleteArticle(article.id);
-
-      toast.success(
-        "Article deleted successfully"
+      navigate(
+        `/articles/${article.id}/edit`
       );
 
-      navigate("/articles");
-    } catch (error: unknown) {
-      toast.error(
-        getApiErrorMessage(error) ||
-          "Failed to delete article"
+      setShowMoreMenu(
+        false
       );
-    }
-  };
+    };
 
-  // Toggle comments visibility
-  const handleCommentsToggle = () => {
-    setShowComments((previous) => !previous);
-  };
+  const handleDelete =
+    async (): Promise<void> => {
+      if (!article) {
+        return;
+      }
+
+      const confirmed =
+        window.confirm(
+          "Are you sure you want to delete this article? This action cannot be undone."
+        );
+
+      if (!confirmed) {
+        return;
+      }
+
+      try {
+        await deleteArticle( article.id );
+
+        toast.success( "Article deleted successfully" );
+
+        navigate( "/articles" );
+      } catch (
+        error: unknown
+      ) {
+        toast.error(
+          getApiErrorMessage(
+            error
+          ) ||
+            "Failed to delete article"
+        );
+      }
+    };
+
+  const handleCommentsToggle =
+    (): void => {
+      setShowComments(
+        (previous) =>
+          !previous
+      );
+    };
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="mx-auto max-w-7xl px-4 py-8">
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-            {/* Left skeleton */}
-            <div className="hidden lg:flex lg:col-span-1 flex-col items-center gap-4">
+            <div className="hidden lg:col-span-1 lg:flex lg:flex-col lg:items-center lg:gap-4">
               {Array.from({
                 length: 5,
-              }).map((_, index) => (
-                <Skeleton
-                  key={index}
-                  variant="circular"
-                  width={40}
-                  height={40}
-                />
-              ))}
+              }).map(
+                (_, index) => (
+                  <Skeleton
+                    key={index}
+                    variant="circular"
+                    width={40}
+                    height={40}
+                  />
+                )
+              )}
             </div>
 
-            {/* Main skeleton */}
             <div className="lg:col-span-6">
               <Skeleton
                 variant="text"
@@ -452,8 +620,7 @@ export function ArticleDetailsPage(): JSX.Element {
               />
             </div>
 
-            {/* Right skeleton */}
-            <div className="hidden lg:block lg:col-span-5">
+            <div className="hidden lg:col-span-5 lg:block">
               <Skeleton
                 variant="rounded"
                 width="100%"
@@ -487,7 +654,9 @@ export function ArticleDetailsPage(): JSX.Element {
           </p>
 
           <Button
-            onClick={() => navigate("/articles")}
+            onClick={() =>
+              navigate( "/articles" )
+            }
             variant="primary"
           >
             Back to Articles
@@ -498,15 +667,80 @@ export function ArticleDetailsPage(): JSX.Element {
   }
 
   const isAuthor =
-    currentUser?.id === article.authorId;
+    currentUser?.id ===
+    article.authorId;
 
-  const formattedDate = new Date(
-    article.createdAt
-  ).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  /**
+   * Resolve the author's display name
+   * using the same helper as AuthorCard.
+   */
+  const resolvedAuthorName =
+    formatProfileName(
+      authorProfile,
+      article.authorName ||
+        "DevSpace Author"
+    );
+
+  /**
+   * Resolve the avatar using the same
+   * helper as AuthorCard.
+   */
+  const resolvedAuthorAvatar =
+    getProfileAvatar(
+      authorProfile
+    ) ??
+    article.authorAvatar;
+
+  /**
+   * UserProfile can expose username fields
+   * with slightly different names depending
+   * on the API response.
+   *
+   * Check the profile first because this is
+   * the source of truth for the author.
+   */
+  const profileData =
+    authorProfile as
+      | (UserProfile &
+          Record<string, unknown>)
+      | null;
+
+  const resolvedAuthorUsername =
+    (
+      profileData?.userName ??
+      profileData?.username ??
+      profileData?.user_name ??
+      profileData?.handle ??
+      profileData?.user?.userName ??
+      profileData?.user?.username
+    )
+      ?.toString()
+      .trim()
+      .replace(/^@/, "") ||
+    "DevSpace Author";
+    
+  const authorProfileIdentifier =
+    resolvedAuthorUsername !==
+    "DevSpace Author"
+      ? resolvedAuthorUsername
+      : article.authorId;
+
+  const authorProfileUrl =
+    authorProfileIdentifier
+      ? `/profile/${authorProfileIdentifier}`
+      : "/profile";
+
+  const formattedDate =
+    new Date(
+      article.createdAt
+    ).toLocaleDateString(
+      "en-US",
+      {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      }
+    );
 
   const readingTime =
     article.readingTimeMinutes ??
@@ -514,7 +748,8 @@ export function ArticleDetailsPage(): JSX.Element {
     Math.max(
       1,
       Math.ceil(
-        (article.content?.length ?? 0) / 200
+        (article.content?.length ??
+          0) / 200
       )
     );
 
@@ -529,10 +764,7 @@ export function ArticleDetailsPage(): JSX.Element {
         <div className="mb-8 h-1 rounded-full bg-linear-to-r from-primary to-blue-500" />
 
         <div className="flex w-full justify-between gap-8 lg:gap-12">
-          {/* ================================================================ */}
-          {/* LEFT ACTION SIDEBAR                                              */}
-          {/* ================================================================ */}
-
+          {/* Left action bar */}
           <aside className="hidden shrink-0 lg:flex">
             <div className="sticky top-8 flex h-fit flex-col items-center gap-1 rounded-xl border border-gray-100 bg-white p-2 shadow-sm">
               {/* Like */}
@@ -541,7 +773,9 @@ export function ArticleDetailsPage(): JSX.Element {
                 onClick={handleLike}
                 disabled={isLiking}
                 title={
-                  isLiked ? "Unlike" : "Like"
+                  isLiked
+                    ? "Unlike"
+                    : "Like"
                 }
                 aria-label={
                   isLiked
@@ -577,7 +811,7 @@ export function ArticleDetailsPage(): JSX.Element {
               {/* Comments */}
               <button
                 type="button"
-                onClick={handleCommentsToggle}
+                onClick={ handleCommentsToggle }
                 title={
                   showComments
                     ? "Hide comments"
@@ -612,7 +846,7 @@ export function ArticleDetailsPage(): JSX.Element {
               {/* Bookmark */}
               <button
                 type="button"
-                onClick={handleBookmark}
+                onClick={ handleBookmark }
                 disabled={isSaving}
                 title={
                   isBookmarked
@@ -642,7 +876,9 @@ export function ArticleDetailsPage(): JSX.Element {
               {/* Share */}
               <button
                 type="button"
-                onClick={handleShare}
+                onClick={
+                  handleShare
+                }
                 title="Share"
                 aria-label="Share article"
                 className="flex w-14 flex-col items-center gap-1 rounded-lg p-2.5 text-gray-400 transition hover:bg-gray-50 hover:text-primary"
@@ -656,7 +892,8 @@ export function ArticleDetailsPage(): JSX.Element {
                   type="button"
                   onClick={() =>
                     setShowMoreMenu(
-                      (previous) => !previous
+                      (previous) =>
+                        !previous
                     )
                   }
                   title="More options"
@@ -672,7 +909,9 @@ export function ArticleDetailsPage(): JSX.Element {
                       <>
                         <button
                           type="button"
-                          onClick={handleEdit}
+                          onClick={
+                            handleEdit
+                          }
                           className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
                         >
                           Edit Article
@@ -681,7 +920,8 @@ export function ArticleDetailsPage(): JSX.Element {
                         <button
                           type="button"
                           onClick={() => {
-                            setShowMoreMenu(false);
+                            setShowMoreMenu( false );
+
                             void handleDelete();
                           }}
                           className="w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50"
@@ -694,7 +934,7 @@ export function ArticleDetailsPage(): JSX.Element {
                         <button
                           type="button"
                           onClick={() =>
-                            setShowMoreMenu(false)
+                            setShowMoreMenu( false )
                           }
                           className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
                         >
@@ -704,7 +944,7 @@ export function ArticleDetailsPage(): JSX.Element {
                         <button
                           type="button"
                           onClick={() =>
-                            setShowMoreMenu(false)
+                            setShowMoreMenu( false )
                           }
                           className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
                         >
@@ -718,10 +958,7 @@ export function ArticleDetailsPage(): JSX.Element {
             </div>
           </aside>
 
-          {/* ================================================================ */}
-          {/* MAIN ARTICLE                                                     */}
-          {/* ================================================================ */}
-
+          {/* Main content */}
           <main className="min-w-0 flex-1">
             {/* Article header */}
             <header className="space-y-5">
@@ -737,7 +974,8 @@ export function ArticleDetailsPage(): JSX.Element {
 
               {/* Tags */}
               {article.tagNames &&
-                article.tagNames.length > 0 && (
+                article.tagNames.length >
+                  0 && (
                   <div className="flex flex-wrap gap-2">
                     {article.tagNames.map(
                       (tag) => (
@@ -758,28 +996,19 @@ export function ArticleDetailsPage(): JSX.Element {
             <div className="my-6 flex items-center justify-between border-y border-gray-200 py-4">
               <div className="flex min-w-0 items-center gap-3">
                 <Avatar
-                  src={article.authorAvatar}
-                  alt={
-                    article.authorUserName ??
-                    "Author"
-                  }
-                  name={
-                    article.authorUserName ??
-                    "Author"
-                  }
+                  src={ resolvedAuthorAvatar }
+                  alt={ resolvedAuthorName }
+                  name={ resolvedAuthorName }
                   size="md"
                   className="h-11 w-11"
                 />
 
                 <div className="min-w-0">
                   <Link
-                    to={`/profile/${
-                      article.authorUserName ?? ""
-                    }`}
+                    to={ authorProfileUrl }
                     className="truncate text-sm font-semibold text-gray-900 hover:text-primary hover:underline"
                   >
-                    {article.authorUserName ??
-                      "DevSpace Author"}
+                    {resolvedAuthorUsername}
                   </Link>
 
                   <div className="flex items-center gap-2 text-xs text-gray-500">
@@ -787,11 +1016,15 @@ export function ArticleDetailsPage(): JSX.Element {
                       {formattedDate}
                     </span>
 
-                    <span>·</span>
+                    <span>
+                      ·
+                    </span>
 
                     <span className="flex items-center gap-1">
                       <LuClock className="h-3 w-3" />
-                      {readingTime} min read
+
+                      {readingTime}{" "}
+                      min read
                     </span>
                   </div>
                 </div>
@@ -806,8 +1039,10 @@ export function ArticleDetailsPage(): JSX.Element {
                         : "primary"
                     }
                     size="sm"
-                    isLoading={isFollowLoading}
-                    onClick={handleFollowToggle}
+                    isLoading={ isFollowLoading }
+                    onClick={
+                      handleFollowToggle
+                    }
                     className="ml-4 shrink-0 rounded-lg font-semibold"
                   >
                     {isFollowing
@@ -822,74 +1057,30 @@ export function ArticleDetailsPage(): JSX.Element {
               <div className="mb-8 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
                 <img
                   src={coverImage}
-                  alt={article.title}
+                  alt={ article.title }
                   className="h-auto max-h-125 w-full object-cover"
                 />
               </div>
             )}
 
             {/* Article content */}
-            <article
-              className="
-                w-full
-                max-w-none
-                wrap-break-word
-                prose
-                prose-sm
-                sm:prose-base
-                prose-headings:font-bold
-                prose-headings:text-gray-900
-                prose-headings:tracking-tight
-                prose-headings:break-words
-                prose-headings:mt-8
-                prose-headings:mb-4
-                prose-p:text-gray-700
-                prose-p:leading-7
-                prose-p:break-words
-                prose-a:text-primary
-                prose-a:no-underline
-                prose-a:break-words
-                hover:prose-a:underline
-                prose-strong:text-gray-900
-                prose-blockquote:border-primary
-                prose-blockquote:text-gray-600
-                prose-code:rounded
-                prose-code:bg-gray-100
-                prose-code:px-1.5
-                prose-code:py-0.5
-                prose-code:text-sm
-                prose-code:text-gray-800
-                prose-code:break-words
-                prose-pre:max-w-full
-                prose-pre:overflow-x-auto
-                prose-pre:rounded-xl
-                prose-pre:bg-gray-900
-                prose-pre:p-5
-                prose-li:text-gray-700
-                prose-li:break-words
-                prose-img:max-w-full
-                prose-img:h-auto
-                prose-img:rounded-xl
-                prose-img:shadow-sm
-              "
-            >
+            <article className="w-full max-w-none wrap-break-word prose prose-sm sm:prose-base prose-headings:font-bold prose-headings:text-gray-900 prose-headings:tracking-tight prose-headings:break-words prose-headings:mt-8 prose-headings:mb-4 prose-p:text-gray-700 prose-p:leading-7 prose-p:break-words prose-a:text-primary prose-a:no-underline prose-a:break-words hover:prose-a:underline prose-strong:text-gray-900 prose-blockquote:border-primary prose-blockquote:text-gray-600 prose-code:rounded prose-code:bg-gray-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:text-sm prose-code:text-gray-800 prose-code:break-words prose-pre:max-w-full prose-pre:overflow-x-auto prose-pre:rounded-xl prose-pre:bg-gray-900 prose-pre:p-5 prose-li:text-gray-700 prose-li:break-words prose-img:max-w-full prose-img:h-auto prose-img:rounded-xl prose-img:shadow-sm">
               <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
+                remarkPlugins={[
+                  remarkGfm,
+                ]}
               >
                 {article.content}
               </ReactMarkdown>
             </article>
 
-            {/* ============================================================ */}
-            {/* MOBILE ACTIONS                                               */}
-            {/* ============================================================ */}
-
+            {/* Mobile actions */}
             <div className="mt-8 flex items-center gap-2 overflow-x-auto border-t border-gray-200 py-4 lg:hidden">
               {/* Like */}
               <button
                 type="button"
-                onClick={handleLike}
-                disabled={isLiking}
+                onClick={ handleLike }
+                disabled={ isLiking }
                 className={cn(
                   "flex shrink-0 items-center gap-2 rounded-lg border px-4 py-2 transition",
                   isLiked
@@ -904,14 +1095,14 @@ export function ArticleDetailsPage(): JSX.Element {
                 )}
 
                 <span className="text-sm font-semibold">
-                  {likeCount}
+                  { likeCount }
                 </span>
               </button>
 
               {/* Comments */}
               <button
                 type="button"
-                onClick={handleCommentsToggle}
+                onClick={ handleCommentsToggle }
                 className={cn(
                   "flex shrink-0 items-center gap-2 rounded-lg border px-4 py-2 transition",
                   showComments
@@ -922,15 +1113,15 @@ export function ArticleDetailsPage(): JSX.Element {
                 <AiOutlineComment className="h-5 w-5" />
 
                 <span className="text-sm font-semibold">
-                  {commentCount}
+                  { commentCount }
                 </span>
               </button>
 
               {/* Bookmark */}
               <button
                 type="button"
-                onClick={handleBookmark}
-                disabled={isSaving}
+                onClick={ handleBookmark }
+                disabled={ isSaving }
                 className={cn(
                   "flex shrink-0 items-center gap-2 rounded-lg border px-4 py-2 transition",
                   isBookmarked
@@ -948,65 +1139,59 @@ export function ArticleDetailsPage(): JSX.Element {
               {/* Share */}
               <button
                 type="button"
-                onClick={handleShare}
+                onClick={ handleShare }
                 className="flex shrink-0 items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-gray-600 transition hover:bg-gray-50"
               >
                 <AiOutlineShareAlt className="h-5 w-5" />
               </button>
             </div>
 
-            {/* ============================================================ */}
-            {/* MOBILE COMMENTS                                               */}
-            {/* ============================================================ */}
-
+            {/* Mobile comments */}
             {showComments && (
               <div
                 id="comments-section"
                 className="mt-8 border-t border-gray-200 pt-8 lg:hidden"
               >
                 <ArticleComments
-                  articleId={article.id}
-                  onCommentCountChange={
-                    setCommentCount
-                  }
+                  articleId={ article.id  }
+                  onCommentCountChange={ setCommentCount }
                 />
               </div>
             )}
           </main>
 
-          {/* ================================================================ */}
-          {/* RIGHT SIDEBAR                                                    */}
-          {/* ================================================================ */}
-
+          {/* Right sidebar */}
           <aside className="hidden lg:flex lg:w-80 lg:shrink-0 lg:flex-col lg:gap-8 xl:w-96">
             <div className="sticky top-8 flex flex-col gap-8">
-              {/* Author */}
-            <AuthorCard
-              authorId={article.authorId}
-              authorName={article.authorName}
-              authorAvatar={article.authorAvatar}
-              isAuthor={isAuthor}
-            />
+              {/* Author Card */}
+              <AuthorCard
+                authorId={ article.authorId  }
+                authorName={ resolvedAuthorName }
+                authorAvatar={ resolvedAuthorAvatar }
+                isAuthor={ isAuthor }
+              />
 
-            {/* Related */}
-            <RelatedArticles
-              currentArticleId={article.id}
-            />
+              {/* Related articles */}
+              <RelatedArticles
+                currentArticleId={ article.id }
+              />
 
-            {/* Desktop Comments */}
-            {showComments && (
-              <div
-                id="comments-section"
-                className="border-t border-gray-200 pt-8"
-              >
-                <ArticleComments
-                  articleId={article.id}
-                  onCommentCountChange={
-                    setCommentCount
-                  }
-                />
-              </div>
-            )}
+              {/* Desktop comments */}
+              {showComments && (
+                <div
+                  id="comments-section"
+                  className="border-t border-gray-200 pt-8"
+                >
+                  <ArticleComments
+                    articleId={
+                      article.id
+                    }
+                    onCommentCountChange={
+                      setCommentCount
+                    }
+                  />
+                </div>
+              )}
             </div>
           </aside>
         </div>
