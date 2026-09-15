@@ -16,6 +16,7 @@ export interface Attachment {
 export interface AuthorInfo {
   id?: string;
   name?: string;
+  username?: string;
   userName?: string;
   avatarUrl?: string | null;
 }
@@ -24,16 +25,21 @@ export interface Article
   extends Omit<Partial<ArticleFormData>, "status"> {
   id: string;
   authorId: string;
+
   author?: AuthorInfo | null;
   authorName?: string;
+
   title: string;
   content: string;
 
   slug?: string;
   excerpt?: string | null;
+
   tags?: string[];
   tagNames?: string[];
+
   attachments?: Attachment[];
+
   coverImageUrl?: string | null;
   coverImage?: string;
 
@@ -42,6 +48,7 @@ export interface Article
 
   likeCount?: number;
   likes?: number;
+
   liked?: boolean;
   isLiked?: boolean;
 
@@ -95,28 +102,40 @@ export interface Comment {
   message: string;
   parentId: string | null;
   createdAt: string;
-  author?: AuthorInfo | null;
 
-  replies: Comment[];
+  user?: {
+    id: string;
+    username: string;
+    avatarUrl: string | null;
+  } | null;
+  replies?: Comment[] | number;
 }
 
 export interface PostInteraction {
   id?: string;
+
   liked: boolean;
   likedAt?: string | null;
+
   saved: boolean;
   savedAt?: string | null;
+
   viewed?: boolean;
   viewedAt?: string | null;
+
   userId?: string;
   postId?: string;
+
   isActive?: boolean;
   isDeleted?: boolean;
+
   createdAt?: string;
   updatedAt?: string;
 }
 
-/** GET /api/posts/{id}/interaction */
+/**
+ * GET /api/posts/{id}/interaction
+ */
 export async function getPostInteraction(
   id: string,
 ): Promise<PostInteraction | null> {
@@ -134,17 +153,17 @@ export async function getPostInteraction(
       response.data &&
       typeof response.data === "object"
     ) {
-      const d =
+      const data =
         response.data as Record<
           string,
           unknown
         >;
 
       if (
-        d.data &&
-        typeof d.data === "object"
+        data.data &&
+        typeof data.data === "object"
       ) {
-        return d.data as PostInteraction;
+        return data.data as PostInteraction;
       }
 
       return response.data as PostInteraction;
@@ -156,7 +175,9 @@ export async function getPostInteraction(
   }
 }
 
-/** GET /api/posts/feed */
+/**
+ * GET /api/posts/feed
+ */
 export async function getArticles(): Promise<Article[]> {
   const response =
     await apiClient.get<
@@ -187,7 +208,9 @@ export async function getArticles(): Promise<Article[]> {
   return [];
 }
 
-/** GET /api/posts/my-posts */
+/**
+ * GET /api/posts/my-posts
+ */
 export async function getMyPosts(): Promise<Article[]> {
   const response =
     await apiClient.get<
@@ -218,28 +241,49 @@ export async function getMyPosts(): Promise<Article[]> {
   return [];
 }
 
-export async function getArticleById(id: string): Promise<Article> {
-  const response = await apiClient.get<Article>(ENDPOINTS.POSTS.DETAIL(id));
+/**
+ * GET /api/posts/{id}
+ */
+export async function getArticleById(
+  id: string,
+): Promise<Article> {
+  const response =
+    await apiClient.get<Article>(
+      ENDPOINTS.POSTS.DETAIL(id),
+    );
 
   return response.data;
 }
 
-/** POST /api/posts — create a new post */
-export async function createArticle(data: ArticleFormData): Promise<Article> {
+/**
+ * POST /api/posts
+ */
+export async function createArticle(
+  data: ArticleFormData,
+): Promise<Article> {
   const isHttpUrl =
     typeof data.coverImage === "string" &&
-    (data.coverImage.startsWith("http://") || data.coverImage.startsWith("https://"));
+    (data.coverImage.startsWith(
+      "http://",
+    ) ||
+      data.coverImage.startsWith(
+        "https://",
+      ));
 
-  const isPublished = data.status === "published";
+  const isPublished =
+    data.status === "published";
 
   const payload = {
     title: data.title,
     content: data.content,
+
     slug: data.slug || undefined,
+
     excerpt: data.excerpt || null,
     tagNames: data.tagNames || [],
     coverImageUrl: isHttpUrl ? data.coverImage : null,
     status: isPublished ? 1 : 0,
+
     publishImmediately: isPublished,
   };
 
@@ -252,24 +296,56 @@ export async function createArticle(data: ArticleFormData): Promise<Article> {
   return response.data;
 }
 
-/** PUT /api/posts/{id} — update an existing post */
+/**
+ * PUT /api/posts/{id}
+ */
 export async function updateArticle(
   id: string,
   data: Partial<ArticleFormData>,
 ): Promise<Article> {
-  const { status, ...rest } = data;
+  const {
+    status,
+    ...rest
+  } = data;
+
   const isHttpUrl =
     typeof data.coverImage === "string" &&
-    (data.coverImage.startsWith("http://") || data.coverImage.startsWith("https://"));
+    (data.coverImage.startsWith(
+      "http://",
+    ) ||
+      data.coverImage.startsWith(
+        "https://",
+      ));
 
-  const isPublished = status === "published";
+  const isPublished =
+    status === "published";
 
   const payload = {
     ...rest,
-    status: status !== undefined ? (isPublished ? 1 : 0) : undefined,
-    publishImmediately: status !== undefined ? isPublished : undefined,
-    tags: data.tagNames !== undefined ? data.tagNames : undefined,
-    coverImageUrl: data.coverImage !== undefined ? (isHttpUrl ? data.coverImage : null) : undefined,
+
+    status:
+      status !== undefined
+        ? isPublished
+          ? 1
+          : 0
+        : undefined,
+
+    publishImmediately:
+      status !== undefined
+        ? isPublished
+        : undefined,
+
+    tags:
+      data.tagNames !== undefined
+        ? data.tagNames
+        : undefined,
+
+    coverImageUrl:
+      data.coverImage !== undefined
+        ? isHttpUrl
+          ? data.coverImage
+          : null
+        : undefined,
   };
 
   const response =
@@ -281,27 +357,52 @@ export async function updateArticle(
   return response.data;
 }
 
-/** POST /api/posts/{id}/cover-image — upload cover image file for a post */
+/**
+ * POST /api/posts/{id}/cover-image
+ */
 export async function uploadArticleCoverImage(
   id: string,
   file: File,
-): Promise<{ coverImageUrl?: string; message?: string } | Article> {
+): Promise<
+  | {
+      coverImageUrl?: string;
+      message?: string;
+    }
+  | Article
+> {
   const formData = new FormData();
+
   formData.append("file", file);
 
-  const response = await apiClient.post(ENDPOINTS.POSTS.COVER_IMAGE(id), formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
+  const response =
+    await apiClient.post(
+      ENDPOINTS.POSTS.COVER_IMAGE(id),
+      formData,
+      {
+        headers: {
+          "Content-Type":
+            "multipart/form-data",
+        },
+      },
+    );
+
   return response.data;
 }
 
-export async function deleteArticle(id: string): Promise<void> {
-  await apiClient.delete(ENDPOINTS.POSTS.DETAIL(id));
+/**
+ * DELETE /api/posts/{id}
+ */
+export async function deleteArticle(
+  id: string,
+): Promise<void> {
+  await apiClient.delete(
+    ENDPOINTS.POSTS.DETAIL(id),
+  );
 }
 
-/** POST /api/posts/{id}/like — like or unlike a post */
+/**
+ * POST /api/posts/{id}/like
+ */
 export async function likeArticle(
   id: string,
 ): Promise<void> {
@@ -311,7 +412,9 @@ export async function likeArticle(
   );
 }
 
-/** POST /api/posts/{id}/save — save or unsave a post */
+/**
+ * POST /api/posts/{id}/save
+ */
 export async function saveArticle(
   id: string,
 ): Promise<void> {
@@ -321,29 +424,130 @@ export async function saveArticle(
   );
 }
 
-/** GET /api/posts/{id}/comments */
+/**
+ * GET /api/posts/{id}/comments
+ *
+ * Get top-level comments:
+ *
+ *   getArticleComments(postId)
+ *
+ * Request:
+ *
+ *   GET /api/posts/{postId}/comments
+ *
+ * Get replies for a specific comment:
+ *
+ *   getArticleComments(postId, parentId)
+ *
+ * Request:
+ *
+ *   GET /api/posts/{postId}/comments?parentId={parentId}
+ *
+ * The apiClient automatically attaches:
+ *
+ *   Authorization: Bearer <token>
+ */
 export async function getArticleComments(
-  id: string,
+  postId: string,
+  parentId?: string,
 ): Promise<Comment[]> {
   const response =
-    await apiClient.get<Comment[]>(
-      `/api/posts/${id}/comments`,
+    await apiClient.get<
+      Comment[] | { data?: Comment[] }
+    >(
+      `/api/posts/${postId}/comments`,
+      {
+        params: parentId
+          ? {
+              parentId,
+            }
+          : undefined,
+      },
     );
 
-  return response.data;
+  if (Array.isArray(response.data)) {
+    return response.data;
+  }
+
+  if (
+    response.data &&
+    typeof response.data === "object" &&
+    "data" in response.data &&
+    Array.isArray((response.data as { data?: Comment[] }).data)
+  ) {
+    return (response.data as { data: Comment[] }).data;
+  }
+
+  return [];
 }
 
+/**
+ * POST /api/posts/{id}/comment
+ *
+ * Create a top-level comment:
+ *
+ *   createComment(postId, message)
+ *
+ * Payload:
+ *
+ *   {
+ *     message: "...",
+ *     parentId: null
+ *   }
+ *
+ * Create a reply:
+ *
+ *   createComment(
+ *     postId,
+ *     message,
+ *     parentCommentId
+ *   )
+ *
+ * Payload:
+ *
+ *   {
+ *     message: "...",
+ *     parentId: "parent-comment-id"
+ *   }
+ */
 export async function createComment(
-  id: string,
+  postId: string,
   message: string,
   parentId?: string,
 ): Promise<Comment> {
-  const response = await apiClient.post<Comment>(ENDPOINTS.POSTS.CREATE_COMMENT(id), {
-    message,
-    parentId: parentId ?? null,
-  });
+  const response = await apiClient.post<Record<string, unknown>>(
+    ENDPOINTS.POSTS.CREATE_COMMENT(postId),
+    {
+      message,
+      parentId: parentId ?? null,
+    },
+  );
 
-  return response.data;
+  const resData = response.data;
+  const dataObj =
+    (resData && typeof resData === "object"
+      ? (resData.data || resData.comment || resData.result || resData.item || resData)
+      : null) as Record<string, unknown> | null;
+
+  const returnedMessage =
+    typeof dataObj?.message === "string" &&
+    dataObj.message.trim() &&
+    !dataObj.message.toLowerCase().includes("successfully") &&
+    !dataObj.message.toLowerCase().includes("comment added") &&
+    !dataObj.message.toLowerCase().includes("reply added")
+      ? dataObj.message
+      : message;
+
+  return {
+    id: (dataObj?.id || dataObj?.commentId || `temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`) as string,
+    postId,
+    userId: (dataObj?.userId || "") as string,
+    message: returnedMessage,
+    parentId: (dataObj?.parentId ?? parentId ?? null) as string | null,
+    createdAt: (dataObj?.createdAt || new Date().toISOString()) as string,
+    user: (dataObj?.user as Comment["user"]) || null,
+    replies: (dataObj?.replies as Comment["replies"]) ?? [],
+  };
 }
 
 export interface TrendingPost {
