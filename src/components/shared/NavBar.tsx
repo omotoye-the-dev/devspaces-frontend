@@ -4,7 +4,7 @@ import { MdOutlineSearch } from "react-icons/md";
 import { FiMenu, FiX } from "react-icons/fi";
 import { HiOutlineBell } from "react-icons/hi";
 import { LuPenLine } from "react-icons/lu";
-import { Input, Button, Avatar } from "./index";
+import { Avatar, Input, Button, Skeleton } from "../common";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 const searchSuggestions = [
@@ -100,7 +100,7 @@ export function NavBar(): JSX.Element {
                 type="button"
                 variant="ghost"
                 onClick={() => handleProtectedNavigation("/articles")}
-               
+
               >
                 Articles
               </Button>
@@ -149,30 +149,15 @@ export function NavBar(): JSX.Element {
                       <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white bg-blue-500 rounded-full">
                         {notifications}
                       </span>
-                    )} 
+                    )}
                   </Button>
 
-<<<<<<< HEAD
                   <Avatar
                     src={userAvatar ?? undefined}
                     alt="User profile"
                     name={userName ?? "User"}
                     size="md"
                   />
-=======
-                  {isProfileLoading ? (
-                    <Skeleton variant="circular" width={40} height={40} />
-                  ) : (
-                    <Avatar
-                      src={avatarUrl}
-                      alt={displayName ?? "User avatar"}
-                      name={displayName}
-                      href="/profile"
-                      fallbackIcon={!displayName ? <FaUser /> : undefined}
-                      size="md"
-                    />
-                  )}
->>>>>>> b12f7de1a85b9b9bcbeddefec8454413fb1bc47a
                 </>
               )}
             </div>
@@ -211,24 +196,21 @@ export function NavBar(): JSX.Element {
         </div>
 
         <div
-          className={`fixed inset-0 z-50 md:hidden transition-all duration-300 ease-out ${
-            mobileSearchOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
-          }`}
+          className={`fixed inset-0 z-50 md:hidden transition-all duration-300 ease-out ${mobileSearchOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+            }`}
           onClick={() => {
             setMobileSearchOpen(false);
             setSearchTerm("");
           }}
         >
           <div
-            className={`absolute inset-0 bg-black/10 transition-opacity duration-500 ease-out ${
-              mobileSearchOpen ? "opacity-100" : "opacity-0"
-            }`}
+            className={`absolute inset-0 bg-black/10 transition-opacity duration-500 ease-out ${mobileSearchOpen ? "opacity-100" : "opacity-0"
+              }`}
           />
 
           <div
-            className={`relative bg-white border-b border-border shadow-sm transform transition-all duration-500 ease-out ${
-              mobileSearchOpen ? "translate-y-0 opacity-100" : "-translate-y-3 opacity-0"
-            }`}
+            className={`relative bg-white border-b border-border shadow-sm transform transition-all duration-500 ease-out ${mobileSearchOpen ? "translate-y-0 opacity-100" : "-translate-y-3 opacity-0"
+              }`}
             onClick={(event) => event.stopPropagation()}
           >
             <div className="px-4 pt-3 pb-2">
@@ -236,7 +218,7 @@ export function NavBar(): JSX.Element {
                 <div className="flex-1">
                   <Input
                     value={searchTerm}
-                    onChange={(event) => setSearchTerm(event.target.value)}
+                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(event.target.value)}
                     className="bg-gray-200 border-gray-300 focus:ring-primary focus:border-primary"
                     placeholder="Search articles, tags, resources..."
                     inputSize="md"
@@ -282,17 +264,15 @@ export function NavBar(): JSX.Element {
 
         {/* Mobile Menu Panel */}
         <div
-          className={`md:hidden fixed inset-0 z-50 transition-opacity duration-1000 ${
-            mobileOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
-          }`}
+          className={`md:hidden fixed inset-0 z-50 transition-opacity duration-1000 ${mobileOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+            }`}
           onClick={() => setMobileOpen(false)}
         >
           <div className="absolute inset-0 bg-black/10" />
 
           <div
-            className={`absolute inset-y-0 right-0 w-[82%] max-w-sm bg-white border-l border-border shadow-2xl transition-transform duration-300 ease-out ${
-              mobileOpen ? "translate-x-0" : "translate-x-full"
-            }`}
+            className={`absolute inset-y-0 right-0 w-[82%] max-w-sm bg-white border-l border-border shadow-2xl transition-transform duration-300 ease-out ${mobileOpen ? "translate-x-0" : "translate-x-full"
+              }`}
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">
@@ -353,6 +333,45 @@ export function NavBar(): JSX.Element {
                 {isAuthenticated ? "Write Article" : "Sign in"}
               </Button>
             </div>
+          </div>
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+export interface NavBarProps {
+  className?: string;
+}
+
+export function NavBarSkeleton({ className }: NavBarProps): JSX.Element {
+  return (
+    <nav
+      className={`w-full bg-white border-b border-border${className ? ` ${className}` : ""}`}
+      aria-label="Loading navigation"
+    >
+      <div className="mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo skeleton */}
+          <div className="flex items-center gap-2 shrink-0">
+            <Skeleton variant="text" width={32} height={28} />
+            <Skeleton variant="text" width={100} height={28} />
+          </div>
+
+          {/* Search skeleton */}
+          <div className="w-200 px-4 hidden sm:block">
+            <Skeleton variant="rounded" width="100%" height={38} />
+          </div>
+
+          {/* Actions skeleton */}
+          <div className="flex items-center gap-3">
+            <div className="hidden md:flex items-center gap-4">
+              <Skeleton variant="text" width={64} height={20} />
+              <Skeleton variant="text" width={72} height={20} />
+              <Skeleton variant="text" width={48} height={20} />
+            </div>
+            <Skeleton variant="rounded" width={110} height={36} />
+            <Skeleton variant="circular" width={36} height={36} />
           </div>
         </div>
       </div>

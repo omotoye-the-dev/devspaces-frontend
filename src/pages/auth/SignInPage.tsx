@@ -9,7 +9,7 @@ import { FcGoogle } from "react-icons/fc";
 
 import { FormInput, Button } from "@/components/common";
 import { toast } from "@/hooks/useToast";
-import { initiateOAuth, signIn } from "@/lib/api/auth.api";
+import { initiateOAuth, signIn } from "@/features/auth/api/auth.api";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 const signInSchema = z.object({
