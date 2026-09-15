@@ -237,7 +237,7 @@ export async function createArticle(data: ArticleFormData): Promise<Article> {
     content: data.content,
     slug: data.slug || undefined,
     excerpt: data.excerpt || null,
-    tags: data.tagNames || [],
+    tagNames: data.tagNames || [],
     coverImageUrl: isHttpUrl ? data.coverImage : null,
     status: isPublished ? 1 : 0,
     publishImmediately: isPublished,
