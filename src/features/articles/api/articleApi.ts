@@ -345,3 +345,54 @@ export async function createComment(
 
   return response.data;
 }
+
+export interface TrendingPost {
+  id: string;
+  authorId?: string;
+  author?: AuthorInfo | null;
+  title: string;
+  slug?: string;
+  content?: string;
+  excerpt?: string | null;
+  tags?: string[];
+  coverImageUrl?: string | null;
+  readingTimeMinutes?: number;
+  viewCount?: number;
+  likeCount?: number;
+  commentCount?: number;
+  createdAt?: string;
+}
+
+export interface TrendingResponse {
+  success: boolean;
+  message: string;
+  data: TrendingPost[];
+  pagination?: Pagination;
+}
+
+export interface GetTrendingParams {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+}
+
+/** GET /api/posts/trending — fetch trending posts */
+export async function getTrendingPosts(params?: GetTrendingParams): Promise<TrendingPost[]> {
+  try {
+    const response = await apiClient.get<
+      TrendingResponse | TrendingPost[] | { data?: TrendingPost[] }
+    >(ENDPOINTS.POSTS.TRENDING, { params });
+
+    const body = response.data;
+    if (Array.isArray(body)) {
+      return body;
+    }
+    if (body && typeof body === "object" && "data" in body && Array.isArray(body.data)) {
+      return body.data;
+    }
+    return [];
+  } catch {
+    return [];
+  }
+}
+
