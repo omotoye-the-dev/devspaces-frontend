@@ -31,7 +31,7 @@ export function ArticleEditorPage(): JSX.Element {
           excerpt: article.excerpt || "",
           content: article.content,
           coverImage: article.coverImageUrl || article.coverImage || "",
-          tagNames: article.tags || article.tagNames || [],
+          tagNames: article.tagNames || [],
           status: (
             typeof article.status === "string"
               ? article.status.trim().toLowerCase() === "published"

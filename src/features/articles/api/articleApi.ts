@@ -280,13 +280,8 @@ export async function createArticle(
     slug: data.slug || undefined,
 
     excerpt: data.excerpt || null,
-
-    tags: data.tagNames || [],
-
-    coverImageUrl: isHttpUrl
-      ? data.coverImage
-      : null,
-
+    tagNames: data.tagNames || [],
+    coverImageUrl: isHttpUrl ? data.coverImage : null,
     status: isPublished ? 1 : 0,
 
     publishImmediately: isPublished,

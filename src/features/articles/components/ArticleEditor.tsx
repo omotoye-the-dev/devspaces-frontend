@@ -1,4 +1,13 @@
-import { useState, useEffect, useRef, type JSX, type KeyboardEvent, type ChangeEvent } from "react";
+import {
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  type JSX,
+  type KeyboardEvent,
+  type ChangeEvent,
+} from "react";
+import { clsx } from "clsx";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import ReactMarkdown from "react-markdown";
@@ -33,6 +42,7 @@ import {
 import { Button } from "@/components/common";
 import { toast } from "@/hooks/useToast";
 import { articleSchema, type ArticleFormData } from "../schemas/articleSchema";
+import { getTags, type Tag } from "../api/tagApi";
 
 export interface ArticleEditorProps {
   initialData?: Partial<ArticleFormData>;
@@ -55,6 +65,45 @@ export function ArticleEditor({
   const [headingMenuOpen, setHeadingMenuOpen] = useState(false);
   const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
   const [coverImagePreview, setCoverImagePreview] = useState<string>(initialData?.coverImage ?? "");
+
+  const [allTags, setAllTags] = useState<Tag[]>([]);
+  const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
+  const [highlightedTagIndex, setHighlightedTagIndex] = useState<number>(-1);
+  const tagDropdownRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadAllTags() {
+      try {
+        const data = await getTags({ pageSize: 100 });
+        if (isMounted) {
+          setAllTags(data);
+        }
+      } catch (err: unknown) {
+        console.error("Failed to load tag suggestions:", err);
+      }
+    }
+    loadAllTags();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isTagDropdownOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        tagDropdownRef.current &&
+        !tagDropdownRef.current.contains(e.target as Node)
+      ) {
+        setIsTagDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isTagDropdownOpen]);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -102,7 +151,8 @@ export function ArticleEditor({
   const titleValue = useWatch({ control, name: "title" }) || "";
   const contentValue = useWatch({ control, name: "content" }) || "";
   const coverImageValue = useWatch({ control, name: "coverImage" }) || "";
-  const tagNamesValue = useWatch({ control, name: "tagNames" }) || [];
+  const watchedTagNames = useWatch({ control, name: "tagNames" });
+  const tagNamesValue = useMemo(() => watchedTagNames || [], [watchedTagNames]);
   const visibilityValue = useWatch({ control, name: "visibility" }) || "public";
   const excerptValue = useWatch({ control, name: "excerpt" }) || "";
   const statusValue = useWatch({ control, name: "status" }) || "draft";
@@ -163,8 +213,29 @@ export function ArticleEditor({
     }, 0);
   };
 
-  const handleAddTag = () => {
-    const trimmed = tagInput
+  const tagSuggestions = useMemo(() => {
+    const query = tagInput.trim().toLowerCase();
+    if (!query) return [];
+
+    return allTags
+      .filter((tag) => {
+        const name = tag.name.toLowerCase();
+        const matchesQuery = name.includes(query);
+        const notAlreadyAdded = !tagNamesValue.some(
+          (t) => t.toLowerCase() === name,
+        );
+        return matchesQuery && notAlreadyAdded;
+      })
+      .slice(0, 6);
+  }, [tagInput, allTags, tagNamesValue]);
+
+  const activeHighlightedIndex =
+    highlightedTagIndex >= 0 && highlightedTagIndex < tagSuggestions.length
+      ? highlightedTagIndex
+      : -1;
+
+  const handleSelectTag = (tagName: string) => {
+    const trimmed = tagName
       .trim()
       .toLowerCase()
       .replace(/[^a-z0-9-]/g, "");
@@ -179,6 +250,16 @@ export function ArticleEditor({
     }
     setValue("tagNames", [...tagNamesValue, trimmed], { shouldValidate: true });
     setTagInput("");
+    setIsTagDropdownOpen(false);
+    setHighlightedTagIndex(-1);
+  };
+
+  const handleAddTag = () => {
+    if (activeHighlightedIndex >= 0 && tagSuggestions[activeHighlightedIndex]) {
+      handleSelectTag(tagSuggestions[activeHighlightedIndex].name);
+      return;
+    }
+    handleSelectTag(tagInput);
   };
 
   const handleRemoveTag = (tagToRemove: string) => {
@@ -437,25 +518,124 @@ export function ArticleEditor({
               <div className="h-px bg-border/60" />
 
               {/* Tags Input */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2 bg-slate-50 border border-border rounded-lg px-3 py-1.5">
+              <div ref={tagDropdownRef} className="space-y-2 relative">
+                <div className="flex items-center justify-between gap-2 bg-slate-50 border rounded-lg px-3 py-1.5 focus-within:ring-2 focus-within:ring-primary/40 focus-within:border-primary/60 transition-all">
                   <input
                     type="text"
                     value={tagInput}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setTagInput(e.target.value)}
-                    onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
-                      if (e.key === "Enter" || e.key === ",") {
-                        e.preventDefault();
-                        handleAddTag();
+                    onFocus={() => {
+                      if (tagInput.trim()) {
+                        setIsTagDropdownOpen(true);
                       }
                     }}
-                    placeholder="Add up to 4 tags"
-                    className="w-full bg-transparent text-xs text-text border-none outline-none focus:ring-0"
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                      setTagInput(e.target.value);
+                      setIsTagDropdownOpen(true);
+                      setHighlightedTagIndex(-1);
+                    }}
+                    onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
+                      if (e.key === "ArrowDown") {
+                        if (tagSuggestions.length > 0) {
+                          e.preventDefault();
+                          setIsTagDropdownOpen(true);
+                          setHighlightedTagIndex((prev) =>
+                            prev < tagSuggestions.length - 1 ? prev + 1 : 0,
+                          );
+                        }
+                      } else if (e.key === "ArrowUp") {
+                        if (tagSuggestions.length > 0) {
+                          e.preventDefault();
+                          setIsTagDropdownOpen(true);
+                          setHighlightedTagIndex((prev) =>
+                            prev > 0 ? prev - 1 : tagSuggestions.length - 1,
+                          );
+                        }
+                      } else if (e.key === "Enter" || e.key === ",") {
+                        e.preventDefault();
+                        if (
+                          activeHighlightedIndex >= 0 &&
+                          tagSuggestions[activeHighlightedIndex]
+                        ) {
+                          handleSelectTag(
+                            tagSuggestions[activeHighlightedIndex].name,
+                          );
+                        } else if (tagSuggestions.length > 0 && tagInput.trim()) {
+                          const exactMatch = tagSuggestions.find(
+                            (t) =>
+                              t.name.toLowerCase() ===
+                              tagInput.trim().toLowerCase(),
+                          );
+                          if (exactMatch) {
+                            handleSelectTag(exactMatch.name);
+                          } else {
+                            handleAddTag();
+                          }
+                        } else {
+                          handleAddTag();
+                        }
+                      } else if (e.key === "Escape") {
+                        setIsTagDropdownOpen(false);
+                        setHighlightedTagIndex(-1);
+                      }
+                    }}
+                    placeholder={
+                      tagNamesValue.length >= 4
+                        ? "Maximum 4 tags reached"
+                        : "Type to search or add tags (e.g. frontend, react)..."
+                    }
+                    disabled={tagNamesValue.length >= 4}
+                    className="w-full bg-transparent text-xs text-text border-none outline-none focus:ring-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <span className="text-[11px] font-mono font-medium text-text/40 shrink-0">
                     {tagNamesValue.length}/4
                   </span>
                 </div>
+
+                {/* Suggestions Dropdown */}
+                {isTagDropdownOpen && tagSuggestions.length > 0 && (
+                  <ul
+                    role="listbox"
+                    aria-label="Tag suggestions"
+                    className="absolute top-full left-0 mt-1 w-full bg-white border border-border rounded-lg shadow-lg z-30 py-1 max-h-48 overflow-y-auto"
+                  >
+                    {tagSuggestions.map((tag, index) => {
+                      const isHighlighted = index === activeHighlightedIndex;
+                      return (
+                        <li
+                          key={tag.id ?? tag.name}
+                          role="option"
+                          aria-selected={isHighlighted}
+                        >
+                          <button
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleSelectTag(tag.name);
+                            }}
+                            onMouseEnter={() => setHighlightedTagIndex(index)}
+                            className={clsx(
+                              "w-full px-3 py-2 text-left text-xs flex items-center justify-between transition-colors cursor-pointer",
+                              isHighlighted
+                                ? "bg-indigo-50 text-indigo-600 font-medium"
+                                : "text-text hover:bg-slate-50",
+                            )}
+                          >
+                            <span className="flex items-center gap-1.5 truncate">
+                              <span className="text-indigo-500 font-bold">#</span>
+                              <span>{tag.name}</span>
+                            </span>
+                            {tag.usageCount !== undefined && tag.usageCount > 0 && (
+                              <span className="text-[10px] text-text/40 shrink-0 ml-2">
+                                {tag.usageCount}{" "}
+                                {tag.usageCount === 1 ? "post" : "posts"}
+                              </span>
+                            )}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
 
                 {tagNamesValue.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 pt-1">
