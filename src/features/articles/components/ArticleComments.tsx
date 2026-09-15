@@ -9,13 +9,71 @@ import {
   type Comment,
 } from "@/features/articles/api/articleApi";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
+import type { AuthUser } from "@/types/auth.types";
 
-interface ArticleCommentsProps {
+export interface ArticleCommentsProps {
   articleId: string;
+  initialCommentCount?: number;
   onCommentCountChange?: (count: number) => void;
 }
 
-type DisplayComment = Comment;
+export interface CommentUser {
+  id: string;
+  username?: string;
+  userName?: string;
+  name?: string;
+  avatarUrl?: string | null;
+  avatar?: string | null;
+}
+
+export interface DisplayComment extends Omit<Comment, "replies" | "user"> {
+  user?: CommentUser | null;
+  replies?: DisplayComment[];
+  repliesCount?: number;
+  isRepliesOpen?: boolean;
+  isLoadingReplies?: boolean;
+}
+
+function normalizeComment(comment: Comment | DisplayComment): DisplayComment {
+  const c = comment as unknown as Record<string, unknown>;
+  const rawUser = (comment.user || c.User || c.author) as Record<string, unknown> | undefined;
+
+  const resolvedUser: CommentUser | null = rawUser
+    ? {
+        id: (rawUser.id || rawUser.userId || comment.userId || "") as string,
+        username: (rawUser.username || rawUser.userName || rawUser.name || "User") as string,
+        avatarUrl: (rawUser.avatarUrl || rawUser.avatar || null) as string | null,
+      }
+    : null;
+
+  const rawReplies = comment.replies;
+  const repliesCount =
+    typeof rawReplies === "number"
+      ? rawReplies
+      : Array.isArray(rawReplies)
+        ? rawReplies.length
+        : typeof c.replyCount === "number"
+          ? (c.replyCount as number)
+          : 0;
+
+  const repliesArray = Array.isArray(rawReplies)
+    ? rawReplies.map(normalizeComment)
+    : [];
+
+  return {
+    id: comment.id,
+    postId: comment.postId,
+    userId: comment.userId,
+    message: comment.message,
+    parentId: comment.parentId ?? null,
+    createdAt: comment.createdAt,
+    user: resolvedUser,
+    replies: repliesArray,
+    repliesCount,
+    isRepliesOpen: repliesArray.length > 0,
+    isLoadingReplies: false,
+  };
+}
 
 function addReplyToComment(
   comments: DisplayComment[],
@@ -24,16 +82,19 @@ function addReplyToComment(
 ): DisplayComment[] {
   return comments.map((comment) => {
     if (comment.id === parentId) {
+      const currentReplies = Array.isArray(comment.replies) ? comment.replies : [];
       return {
         ...comment,
-        replies: [...(comment.replies ?? []), newReply],
+        replies: [...currentReplies, newReply],
+        repliesCount: Math.max((comment.repliesCount ?? 0) + 1, currentReplies.length + 1),
+        isRepliesOpen: true,
       };
     }
 
     if (comment.replies && comment.replies.length > 0) {
       return {
         ...comment,
-        replies: addReplyToComment(comment.replies as DisplayComment[], parentId, newReply),
+        replies: addReplyToComment(comment.replies, parentId, newReply),
       };
     }
 
@@ -41,13 +102,73 @@ function addReplyToComment(
   });
 }
 
-function countAllComments(comments: DisplayComment[]): number {
-  return comments.reduce((total, comment) => {
-    const repliesCount = comment.replies
-      ? countAllComments(comment.replies as DisplayComment[])
-      : 0;
+function findCommentById(comments: DisplayComment[], id: string): DisplayComment | null {
+  for (const c of comments) {
+    if (c.id === id) return c;
+    if (c.replies && c.replies.length > 0) {
+      const found = findCommentById(c.replies, id);
+      if (found) return found;
+    }
+  }
+  return null;
+}
 
-    return total + 1 + repliesCount;
+function setCommentRepliesOpen(comments: DisplayComment[], id: string, isOpen: boolean): DisplayComment[] {
+  return comments.map((c) => {
+    if (c.id === id) {
+      return { ...c, isRepliesOpen: isOpen };
+    }
+    if (c.replies && c.replies.length > 0) {
+      return { ...c, replies: setCommentRepliesOpen(c.replies, id, isOpen) };
+    }
+    return c;
+  });
+}
+
+function setCommentLoadingReplies(comments: DisplayComment[], id: string, isLoading: boolean): DisplayComment[] {
+  return comments.map((c) => {
+    if (c.id === id) {
+      return { ...c, isLoadingReplies: isLoading };
+    }
+    if (c.replies && c.replies.length > 0) {
+      return { ...c, replies: setCommentLoadingReplies(c.replies, id, isLoading) };
+    }
+    return c;
+  });
+}
+
+function setCommentRepliesData(comments: DisplayComment[], id: string, replies: DisplayComment[]): DisplayComment[] {
+  return comments.map((c) => {
+    if (c.id === id) {
+      return {
+        ...c,
+        replies,
+        repliesCount: replies.length,
+        isRepliesOpen: true,
+        isLoadingReplies: false,
+      };
+    }
+    if (c.replies && c.replies.length > 0) {
+      return { ...c, replies: setCommentRepliesData(c.replies, id, replies) };
+    }
+    return c;
+  });
+}
+
+export function countAllComments(comments: Array<Comment | DisplayComment>): number {
+  if (!Array.isArray(comments)) return 0;
+  return comments.reduce((total, comment) => {
+    const rawReplies = comment.replies;
+    const loadedRepliesCount =
+      Array.isArray(rawReplies) && rawReplies.length > 0
+        ? countAllComments(rawReplies as Array<Comment | DisplayComment>)
+        : typeof rawReplies === "number"
+          ? rawReplies
+          : typeof (comment as unknown as DisplayComment).repliesCount === "number"
+            ? (comment as unknown as DisplayComment).repliesCount!
+            : 0;
+
+    return total + 1 + loadedRepliesCount;
   }, 0);
 }
 
@@ -57,18 +178,13 @@ interface CommentItemProps {
   replyingTo: string | null;
   replyText: string;
   isReplying: boolean;
-  userId?: string;
-
+  currentUser: AuthUser | null;
   onReplyClick: (comment: DisplayComment) => void;
-
   onReplyTextChange: (value: string) => void;
-
   onCancelReply: () => void;
-
   onSubmitReply: (event: React.FormEvent, parentId: string) => Promise<void>;
-
+  onToggleReplies: (commentId: string) => void;
   formatTimeAgo: (dateString: string) => string;
-
   onLike: (commentId: string) => void;
 }
 
@@ -78,21 +194,41 @@ function CommentItem({
   replyingTo,
   replyText,
   isReplying,
-  userId,
+  currentUser,
   onReplyClick,
   onReplyTextChange,
   onCancelReply,
   onSubmitReply,
+  onToggleReplies,
   formatTimeAgo,
   onLike,
 }: CommentItemProps): JSX.Element {
   const indentation = Math.min(depth, 4) * 16;
 
-  const displayName = comment.user?.username?.trim() || comment.userId || "User";
+  const displayName =
+    comment.user?.username?.trim() ||
+    comment.user?.userName?.trim() ||
+    comment.user?.name?.trim() ||
+    comment.userId ||
+    "User";
 
-  const displayAvatar = comment.user?.avatarUrl || undefined;
+  const displayAvatar = comment.user?.avatarUrl || comment.user?.avatar || undefined;
 
-  const isOwnComment = userId === comment.userId;
+  const isOwnComment =
+    Boolean(currentUser?.id && (currentUser.id === comment.userId || (comment.user?.id && currentUser.id === comment.user.id)));
+
+  const currentUserName =
+    currentUser?.userName ||
+    currentUser?.username ||
+    currentUser?.firstName ||
+    "You";
+
+  const currentUserAvatar = currentUser?.avatarUrl || undefined;
+
+  const effectiveRepliesCount =
+    comment.replies && comment.replies.length > 0
+      ? comment.replies.length
+      : (comment.repliesCount ?? 0);
 
   return (
     <div
@@ -101,8 +237,7 @@ function CommentItem({
         marginLeft: indentation > 0 ? `${indentation}px` : undefined,
       }}
     >
-      {/* COMMENT  */}
-
+      {/* COMMENT */}
       <div className="flex gap-3">
         {/* Avatar */}
         <Avatar
@@ -110,14 +245,14 @@ function CommentItem({
           name={displayName}
           alt={displayName}
           size="sm"
-          className="h-8  w-8 shrink-0 sm:h-9 sm:w-9"
+          className="h-8 w-8 shrink-0 sm:h-9 sm:w-9"
         />
 
         {/* Content */}
         <div className="min-w-0 flex-1">
           {/* User information */}
           <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-            <p className=" wrap-break-word text-[10px] font-semibold text-gray-900 sm:text-xs">
+            <p className="wrap-break-word text-[10px] font-semibold text-gray-900 sm:text-xs">
               {displayName}
             </p>
 
@@ -199,8 +334,38 @@ function CommentItem({
             </button>
           </div>
 
-          {/* REPLY INPUT */}
+          {/* View/Hide Replies Toggle */}
+          {effectiveRepliesCount > 0 && (
+            <button
+              type="button"
+              onClick={() => onToggleReplies(comment.id)}
+              className="
+                mt-2
+                flex
+                items-center
+                gap-1.5
+                text-[9px]
+                font-semibold
+                text-blue-600
+                transition-colors
+                hover:text-blue-700
+                hover:underline
+                sm:text-[10px]
+              "
+            >
+              {comment.isLoadingReplies ? (
+                <span>Loading replies...</span>
+              ) : comment.isRepliesOpen ? (
+                <span>Hide {effectiveRepliesCount === 1 ? "reply" : "replies"}</span>
+              ) : (
+                <span>
+                  View {effectiveRepliesCount} {effectiveRepliesCount === 1 ? "reply" : "replies"}
+                </span>
+              )}
+            </button>
+          )}
 
+          {/* REPLY INPUT */}
           {replyingTo === comment.id && (
             <form
               onSubmit={(event) => onSubmitReply(event, comment.id)}
@@ -216,9 +381,9 @@ function CommentItem({
             >
               <div className="flex gap-2.5">
                 <Avatar
-                  src={undefined}
-                  name="You"
-                  alt="You"
+                  src={currentUserAvatar}
+                  name={currentUserName}
+                  alt={currentUserName}
                   size="sm"
                   className="
                     h-7
@@ -232,7 +397,7 @@ function CommentItem({
                 <textarea
                   value={replyText}
                   onChange={(event) => onReplyTextChange(event.target.value)}
-                  placeholder={`Reply to ${displayName}...`}
+                  placeholder={`Reply to @${displayName}...`}
                   rows={2}
                   autoFocus
                   className="
@@ -302,8 +467,7 @@ function CommentItem({
       </div>
 
       {/* NESTED REPLIES */}
-
-      {comment.replies && comment.replies.length > 0 && (
+      {comment.isRepliesOpen && comment.replies && comment.replies.length > 0 && (
         <div
           className="
               space-y-4
@@ -321,11 +485,12 @@ function CommentItem({
               replyingTo={replyingTo}
               replyText={replyText}
               isReplying={isReplying}
-              userId={userId}
+              currentUser={currentUser}
               onReplyClick={onReplyClick}
               onReplyTextChange={onReplyTextChange}
               onCancelReply={onCancelReply}
               onSubmitReply={onSubmitReply}
+              onToggleReplies={onToggleReplies}
               formatTimeAgo={formatTimeAgo}
               onLike={onLike}
             />
@@ -338,6 +503,7 @@ function CommentItem({
 
 export function ArticleComments({
   articleId,
+  initialCommentCount,
   onCommentCountChange,
 }: ArticleCommentsProps): JSX.Element {
   const [comments, setComments] = useState<DisplayComment[]>([]);
@@ -357,9 +523,12 @@ export function ArticleComments({
   const user = useAuthStore((state) => state.user);
 
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
   useEffect(() => {
-    onCommentCountChange?.(countAllComments(comments));
-  }, [comments, onCommentCountChange]);
+    if (!isLoading) {
+      onCommentCountChange?.(countAllComments(comments));
+    }
+  }, [comments, isLoading, onCommentCountChange]);
 
   useEffect(() => {
     let isMounted = true;
@@ -373,19 +542,17 @@ export function ArticleComments({
         if (!isMounted) {
           return;
         }
-        const displayComments = data.map((comment) => ({
-          ...comment,
-          user: comment.user
-            ? {
-                id: comment.user.id,
-                username: comment.user.username,
-                avatarUrl: comment.user.avatarUrl,
-              }
-            : null,
-          replies: comment.replies ?? [],
-        }));
+
+        const commentsList = Array.isArray(data)
+          ? data
+          : Array.isArray((data as unknown as { data?: Comment[] })?.data)
+            ? (data as unknown as { data: Comment[] }).data
+            : [];
+
+        const displayComments = commentsList.map(normalizeComment);
 
         setComments(displayComments);
+        onCommentCountChange?.(countAllComments(displayComments));
       } catch (err: unknown) {
         console.error("Error loading comments:", err);
 
@@ -404,7 +571,7 @@ export function ArticleComments({
     return () => {
       isMounted = false;
     };
-  }, [articleId]);
+  }, [articleId, onCommentCountChange]);
 
   const handleSubmitComment = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -426,33 +593,38 @@ export function ArticleComments({
 
       const createdComment = await createComment(articleId, message, undefined);
 
-      /*
-       * If the backend returns `user`,
-       * use it.
-       *
-       * If it doesn't, use the currently
-       * authenticated user as a fallback.
-       */
-      const normalizedComment: DisplayComment = {
+      const normalizedComment = normalizeComment({
         ...createdComment,
-        user:
-          createdComment.user ?? {
-            id: user?.id ?? createdComment.userId,
-            username:
-              user?.userName ??
-              user?.username ??
-              "You",
-            avatarUrl:
-              user?.avatarUrl ?? null,
-          },
-        replies: createdComment.replies ?? [],
-      };
+        message,
+        user: {
+          id: user?.id ?? createdComment.userId,
+          username: user?.userName ?? user?.username ?? user?.firstName ?? "You",
+          avatarUrl: user?.avatarUrl ?? null,
+        },
+      });
 
-      setComments((previous) => [normalizedComment, ...previous]);
+      setComments((previous) => {
+        const next = [normalizedComment, ...previous];
+        onCommentCountChange?.(countAllComments(next));
+        return next;
+      });
 
       setNewComment("");
-
       toast.success("Comment posted successfully!");
+
+      // Sync with server in background to get server IDs and timestamps
+      void (async () => {
+        try {
+          const fresh = await getArticleComments(articleId);
+          if (Array.isArray(fresh) && fresh.length > 0) {
+            const mapped = fresh.map(normalizeComment);
+            setComments(mapped);
+            onCommentCountChange?.(countAllComments(mapped));
+          }
+        } catch {
+          // Keep optimistic
+        }
+      })();
     } catch (err: unknown) {
       console.error("Error posting comment:", err);
 
@@ -498,21 +670,21 @@ export function ArticleComments({
 
       const createdReply = await createComment(articleId, message, parentId);
 
-      const replyWithUser: DisplayComment = {
+      const replyWithUser: DisplayComment = normalizeComment({
         ...createdReply,
-        user: createdReply.user ?? {
+        message,
+        parentId,
+        user: {
           id: user?.id ?? createdReply.userId,
-          username: user?.userName ?? user?.username ?? "You",
+          username: user?.userName ?? user?.username ?? user?.firstName ?? "You",
           avatarUrl: user?.avatarUrl ?? null,
         },
-        replies: createdReply.replies ?? [],
-      };
+        replies: [],
+      });
 
       setComments((previous) => {
         const updated = addReplyToComment(previous, parentId, replyWithUser);
-
         onCommentCountChange?.(countAllComments(updated));
-
         return updated;
       });
 
@@ -520,6 +692,19 @@ export function ArticleComments({
       setReplyingTo(null);
 
       toast.success("Reply posted successfully!");
+
+      // Sync replies for this comment from server in background
+      void (async () => {
+        try {
+          const freshReplies = await getArticleComments(articleId, parentId);
+          if (Array.isArray(freshReplies) && freshReplies.length > 0) {
+            const mapped = freshReplies.map(normalizeComment);
+            setComments((prev) => setCommentRepliesData(prev, parentId, mapped));
+          }
+        } catch {
+          // Keep optimistic
+        }
+      })();
     } catch (err: unknown) {
       console.error("Error posting reply:", err);
 
@@ -529,25 +714,41 @@ export function ArticleComments({
     }
   };
 
+  const handleToggleReplies = async (commentId: string) => {
+    const target = findCommentById(comments, commentId);
+    if (!target) return;
+
+    if (target.isRepliesOpen) {
+      setComments((prev) => setCommentRepliesOpen(prev, commentId, false));
+      return;
+    }
+
+    if (target.replies && target.replies.length > 0) {
+      setComments((prev) => setCommentRepliesOpen(prev, commentId, true));
+      return;
+    }
+
+    try {
+      setComments((prev) => setCommentLoadingReplies(prev, commentId, true));
+
+      const data = await getArticleComments(articleId, commentId);
+      const list = Array.isArray(data)
+        ? data
+        : Array.isArray((data as unknown as { data?: Comment[] })?.data)
+          ? (data as unknown as { data: Comment[] }).data
+          : [];
+
+      const mappedReplies = list.map(normalizeComment);
+
+      setComments((prev) => setCommentRepliesData(prev, commentId, mappedReplies));
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err) || "Failed to load replies");
+      setComments((prev) => setCommentLoadingReplies(prev, commentId, false));
+    }
+  };
+
   const handleLikeComment = (commentId: string) => {
-    setComments((previous) =>
-      previous.map((comment) => {
-        if (comment.id === commentId) {
-          return {
-            ...comment,
-          };
-        }
-
-        if (comment.replies && comment.replies.length > 0) {
-          return {
-            ...comment,
-            replies: updateCommentLike(comment.replies as DisplayComment[], commentId),
-          };
-        }
-
-        return comment;
-      }),
-    );
+    setComments((previous) => updateCommentLike(previous, commentId));
   };
 
   const formatTimeAgo = (dateString: string) => {
@@ -605,7 +806,7 @@ export function ArticleComments({
             sm:text-sm
           "
         >
-          Comments ({countAllComments(comments)})
+          Comments ({isLoading ? (initialCommentCount ?? countAllComments(comments)) : countAllComments(comments)})
         </h2>
       </div>
 
@@ -614,8 +815,8 @@ export function ArticleComments({
           <div className="flex gap-3">
             <Avatar
               src={user?.avatarUrl || undefined}
-              name={user?.userName || "You"}
-              alt={user?.userName || "You"}
+              name={user?.userName || user?.username || user?.firstName || "You"}
+              alt={user?.userName || user?.username || user?.firstName || "You"}
               size="sm"
               className="
                 h-9
@@ -758,7 +959,7 @@ export function ArticleComments({
               replyingTo={replyingTo}
               replyText={replyText}
               isReplying={isReplying}
-              userId={user?.id}
+              currentUser={user}
               onReplyClick={handleReplyClick}
               onReplyTextChange={setReplyText}
               onCancelReply={() => {
@@ -766,6 +967,7 @@ export function ArticleComments({
                 setReplyText("");
               }}
               onSubmitReply={handleSubmitReply}
+              onToggleReplies={handleToggleReplies}
               formatTimeAgo={formatTimeAgo}
               onLike={handleLikeComment}
             />
@@ -796,3 +998,4 @@ function updateCommentLike(comments: DisplayComment[], commentId: string): Displ
 }
 
 export default ArticleComments;
+

@@ -1,4 +1,4 @@
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -11,7 +11,6 @@ import { FormInput, Button } from "@/components/common";
 import { toast } from "@/hooks/useToast";
 import { initiateOAuth, signIn } from "@/features/auth/api/auth.api";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { getApiErrorMessage } from "@/lib/utils/apiError";
 
 const signInSchema = z.object({
   usernameOrEmail: z
@@ -29,9 +28,6 @@ type SignInFormData = z.infer<typeof signInSchema>;
 
 export default function SignInPage() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const redirectPath =
-    (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || "/";
 
   const {
     register,
@@ -56,7 +52,7 @@ export default function SignInPage() {
         usernameOrEmail: data.usernameOrEmail.trim(),
         password: data.password,
       });
-      if (res && (res.accessToken || res.success)) {
+      if (res && res.success) {
         if (res.accessToken) localStorage.setItem("devspace_token", res.accessToken);
         if (res.refreshToken) localStorage.setItem("devspace_refresh_token", res.refreshToken);
 
@@ -73,13 +69,14 @@ export default function SignInPage() {
         setAuth(res.accessToken ?? "", res.refreshToken ?? null, userFromApi);
         toast.success(res.message ?? "Welcome back to DevSpace!");
         reset();
-        navigate(redirectPath, { replace: true });
+        navigate("/");
       } else {
-        toast.error(res.message || "Authentication failed.");
+        toast.error(res.message ?? "Sign in failed. Check your credentials.");
       }
-    } catch (error: unknown) {
+    } catch (error) {
+      // log for debugging and show a user-friendly message
       console.error(error);
-      toast.error(getApiErrorMessage(error));
+      toast.error("Failed to sign in. Please try again.");
     }
   };
 
@@ -157,7 +154,9 @@ export default function SignInPage() {
       <div className="my-4 flex w-full items-center gap-3">
         <div className="h-px flex-1 bg-slate-200" />
 
-        <span className="whitespace-nowrap text-xs text-slate-500">Or continue with</span>
+        <span className="whitespace-nowrap text-xs text-slate-500">
+          Or continue with
+        </span>
 
         <div className="h-px flex-1 bg-slate-200" />
       </div>
@@ -188,12 +187,12 @@ export default function SignInPage() {
 
       {/* Footer Navigation */}
       <div className="text-center text-base text-text/70">
-        New to DevSpace?{" "}
+        New to DevSpace? {" "}
         <Link
           to="/auth/sign-up"
           className="text-primary font-semibold hover:underline transition-colors"
         >
-          Create account
+         Create account
         </Link>
       </div>
 

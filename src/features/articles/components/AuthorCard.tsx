@@ -15,6 +15,7 @@ import {
   getProfileRole,
   type UserProfile,
 } from "@/lib/api/user.api";
+import { getArticles, getMyPosts } from "@/features/articles/api/articleApi";
 
 export interface AuthorCardProps {
   authorId?: string;
@@ -43,6 +44,8 @@ export function AuthorCard({
 }: AuthorCardProps): JSX.Element {
   const [profile, setProfile] =
     useState<UserProfile | null>(null);
+  const [authorArticlesCount, setAuthorArticlesCount] =
+    useState<number | null>(null);
 
   const [isLoading, setIsLoading] =
     useState<boolean>(false);
@@ -58,11 +61,40 @@ export function AuthorCard({
       try {
         setIsLoading(true);
 
-        const data =
-          await getUserProfileById(authorId as string);
+        const [profileResult, articlesResult] =
+          await Promise.allSettled([
+            getUserProfileById(authorId as string),
+            isAuthor ? getMyPosts() : getArticles(),
+          ]);
 
-        if (isSubscribed) {
-          setProfile(data);
+        if (!isSubscribed) {
+          return;
+        }
+
+        if (
+          profileResult.status === "fulfilled" &&
+          profileResult.value
+        ) {
+          setProfile(profileResult.value);
+        }
+
+        if (
+          articlesResult.status === "fulfilled" &&
+          Array.isArray(articlesResult.value)
+        ) {
+          const allArticles = articlesResult.value;
+          const userArticles = isAuthor
+            ? allArticles
+            : allArticles.filter(
+                (art) =>
+                  art.authorId === authorId ||
+                  art.author?.id === authorId ||
+                  (authorName &&
+                    authorName !== "DevSpace Author" &&
+                    (art.authorName === authorName ||
+                      art.author?.name === authorName))
+              );
+          setAuthorArticlesCount(userArticles.length);
         }
       } catch {
         // Fallback gracefully
@@ -78,16 +110,16 @@ export function AuthorCard({
     return () => {
       isSubscribed = false;
     };
-  }, [authorId]);
+  }, [authorId, isAuthor, authorName]);
 
   const displayName =
     authorName &&
-    authorName !== "DevSpace Author"
+      authorName !== "DevSpace Author"
       ? authorName
       : formatProfileName(
-          profile,
-          authorName || "DevSpace Author",
-        );
+        profile,
+        authorName || "DevSpace Author",
+      );
 
   const displayAvatar =
     authorAvatar ?? getProfileAvatar(profile);
@@ -194,9 +226,42 @@ export function AuthorCard({
 
   /**
    * Articles
+   *
+   * Matches the actual count of articles created by the author,
+   * falling back to all possible profile properties and props.
    */
   const totalArticles = getStatNumber(
+    authorArticlesCount,
     profile?.articlesCount,
+    profile?.totalArticles,
+    profile?.totalPosts,
+    profile?.postsCount,
+    profile?.postCount,
+    profile?.articleCount,
+    (
+      profile as Record<
+        string,
+        unknown
+      > | null
+    )?.totalArticleCount,
+    (
+      profile as Record<
+        string,
+        unknown
+      > | null
+    )?.totalArticlesCount,
+    (
+      profile as Record<
+        string,
+        unknown
+      > | null
+    )?.totalPostCount,
+    (
+      profile as Record<
+        string,
+        unknown
+      > | null
+    )?.totalPostsCount,
     articlesCount,
   );
 

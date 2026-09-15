@@ -11,10 +11,10 @@ import { Avatar, Button, Skeleton, Tag } from "@/components/common";
 import { toast } from "@/hooks/useToast";
 import { cn } from "@/lib/utils/cn";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
-import { deleteArticle, getArticleById, likeArticle, saveArticle, type Article } from "@/features/articles/api/articleApi";
+import { deleteArticle, getArticleById, getArticleComments, likeArticle, saveArticle, type Article } from "@/features/articles/api/articleApi";
 import { followAuthor, getUserProfileById, formatProfileName, getProfileAvatar, type UserProfile } from "@/lib/api/user.api";
 import { useAuthStore } from "@/stores/useAuthStore";
-import ArticleComments from "@/features/articles/components/ArticleComments";
+import ArticleComments, { countAllComments } from "@/features/articles/components/ArticleComments";
 import RelatedArticles from "@/features/articles/components/RelatedArticles";
 import AuthorCard from "@/features/articles/components/AuthorCard";
 
@@ -74,6 +74,30 @@ export function ArticleDetailsPage(): JSX.Element {
 
   const [showComments, setShowComments] =
     useState(false);
+
+  const [readingProgress, setReadingProgress] =
+    useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const totalScroll =
+        document.documentElement.scrollHeight - window.innerHeight;
+      if (totalScroll <= 0) {
+        setReadingProgress(100);
+        return;
+      }
+      const currentProgress = (window.scrollY / totalScroll) * 100;
+      setReadingProgress(Math.min(100, Math.max(0, currentProgress)));
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
   useEffect(() => {
     if (!id) {
       navigate("/articles");
@@ -88,12 +112,24 @@ export function ArticleDetailsPage(): JSX.Element {
       try {
         setIsLoading(true);
 
-        const data =
-          await getArticleById(articleId);
+        const [articleResult, commentsResult] =
+          await Promise.allSettled([
+            getArticleById(articleId),
+            getArticleComments(articleId),
+          ]);
 
         if (!isSubscribed) {
           return;
         }
+
+        if (
+          articleResult.status !== "fulfilled" ||
+          !articleResult.value
+        ) {
+          throw new Error("Failed to load article");
+        }
+
+        const data = articleResult.value;
 
         const articleData =
           data as Article &
@@ -143,11 +179,22 @@ export function ArticleDetailsPage(): JSX.Element {
         setIsBookmarked(initialSaved);
         setLikeCount(initialLikes);
 
-        setCommentCount(
+        let resolvedCommentsCount =
           data.commentCount ??
-            data.comments ??
-            0
-        );
+          data.comments ??
+          (articleData.commentsCount as number | undefined) ??
+          0;
+
+        if (
+          commentsResult.status === "fulfilled" &&
+          Array.isArray(commentsResult.value)
+        ) {
+          resolvedCommentsCount = countAllComments(
+            commentsResult.value
+          );
+        }
+
+        setCommentCount(resolvedCommentsCount);
         const initialFollowing =
           typeof articleData.following ===
           "boolean"
@@ -764,8 +811,28 @@ export function ArticleDetailsPage(): JSX.Element {
 
   return (
     <div className="min-h-screen w-full bg-gray-50">
+      {/* Top Fixed Reading Progress Bar */}
+      <div className="fixed top-0 left-0 right-0 z-50 h-1 bg-transparent">
+        <div
+          className="h-full bg-linear-to-r from-primary via-blue-500 to-indigo-500 transition-all duration-100 ease-out"
+          style={{ width: `${readingProgress}%` }}
+        />
+      </div>
+
       <div className="w-full px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mb-8 h-1 rounded-full bg-linear-to-r from-primary to-blue-500" />
+        {/* In-page Reading Progress Bar */}
+        <div
+          className="mb-8 h-1.5 w-full overflow-hidden rounded-full bg-gray-200"
+          role="progressbar"
+          aria-valuenow={Math.round(readingProgress)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        >
+          <div
+            className="h-full rounded-full bg-linear-to-r from-primary to-blue-500 transition-all duration-100 ease-out"
+            style={{ width: `${readingProgress}%` }}
+          />
+        </div>
 
         <div className="flex w-full justify-between gap-8 lg:gap-12">
           {/* Left action bar */}
@@ -1158,6 +1225,7 @@ export function ArticleDetailsPage(): JSX.Element {
               >
                 <ArticleComments
                   articleId={ article.id  }
+                  initialCommentCount={ commentCount }
                   onCommentCountChange={ setCommentCount }
                 />
               </div>
@@ -1173,6 +1241,7 @@ export function ArticleDetailsPage(): JSX.Element {
                 authorName={ resolvedAuthorName }
                 authorAvatar={ resolvedAuthorAvatar }
                 isAuthor={ isAuthor }
+                articlesCount={ authorProfile?.articlesCount }
               />
 
               {/* Related articles */}
@@ -1189,6 +1258,9 @@ export function ArticleDetailsPage(): JSX.Element {
                   <ArticleComments
                     articleId={
                       article.id
+                    }
+                    initialCommentCount={
+                      commentCount
                     }
                     onCommentCountChange={
                       setCommentCount
