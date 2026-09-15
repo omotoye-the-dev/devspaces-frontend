@@ -705,14 +705,18 @@ export function ArticleDetailsPage(): JSX.Element {
           Record<string, unknown>)
       | null;
 
+  const profileUser = profileData?.user as
+    | Record<string, unknown>
+    | undefined;
+
   const resolvedAuthorUsername =
     (
       profileData?.userName ??
       profileData?.username ??
       profileData?.user_name ??
       profileData?.handle ??
-      profileData?.user?.userName ??
-      profileData?.user?.username
+      profileUser?.userName ??
+      profileUser?.username
     )
       ?.toString()
       .trim()
