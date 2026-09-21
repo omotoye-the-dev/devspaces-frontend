@@ -2,13 +2,15 @@ import { useEffect, useState, type JSX } from "react";
 import { Avatar, Button, Skeleton } from "@/components/common";
 import { toast } from "@/hooks/useToast";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { AiOutlineLike } from "react-icons/ai";
+import { AiFillLike, AiOutlineLike } from "react-icons/ai";
 import {
   getArticleComments,
   createComment,
+  likeComment,
   type Comment,
 } from "@/features/articles/api/articleApi";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
+import { cn } from "@/lib/utils/cn";
 import type { AuthUser } from "@/types/auth.types";
 
 export interface ArticleCommentsProps {
@@ -32,6 +34,9 @@ export interface DisplayComment extends Omit<Comment, "replies" | "user"> {
   repliesCount?: number;
   isRepliesOpen?: boolean;
   isLoadingReplies?: boolean;
+  liked?: boolean;
+  likeCount?: number;
+  isLiking?: boolean;
 }
 
 function normalizeComment(comment: Comment | DisplayComment): DisplayComment {
@@ -60,6 +65,13 @@ function normalizeComment(comment: Comment | DisplayComment): DisplayComment {
     ? rawReplies.map(normalizeComment)
     : [];
 
+  const rawLiked = comment.liked ?? (c.isLiked as boolean | undefined) ?? (c.liked as boolean | undefined);
+  const rawLikeCount =
+    comment.likeCount ??
+    (c.likes as number | undefined) ??
+    (c.likesCount as number | undefined) ??
+    (c.likeCount as number | undefined);
+
   return {
     id: comment.id,
     postId: comment.postId,
@@ -72,6 +84,9 @@ function normalizeComment(comment: Comment | DisplayComment): DisplayComment {
     repliesCount,
     isRepliesOpen: repliesArray.length > 0,
     isLoadingReplies: false,
+    liked: Boolean(rawLiked),
+    likeCount: typeof rawLikeCount === "number" ? Math.max(0, rawLikeCount) : 0,
+    isLiking: false,
   };
 }
 
@@ -293,28 +308,33 @@ function CommentItem({
             {/* Like */}
             <button
               type="button"
+              disabled={comment.isLiking}
               onClick={() => onLike(comment.id)}
-              className="
-                group
-                flex
-                items-center
-                gap-1
-                text-[9px]
-                text-gray-500
-                transition-colors
-                hover:text-blue-600
-                sm:text-[10px]
-              "
+              aria-label={comment.liked ? "Unlike comment" : "Like comment"}
+              className={cn(
+                "group flex items-center gap-1.5 text-[9px] transition-colors sm:text-[10px]",
+                comment.liked
+                  ? "font-semibold text-blue-600"
+                  : "text-gray-500 hover:text-blue-600",
+                comment.isLiking && "cursor-not-allowed opacity-60",
+              )}
             >
-              <AiOutlineLike
-                className="
-                  h-3.5
-                  w-3.5
-                  group-hover:text-blue-600
-                "
-              />
+              {comment.liked ? (
+                <AiFillLike className="h-3.5 w-3.5 text-blue-600 transition-transform active:scale-125" />
+              ) : (
+                <AiOutlineLike className="h-3.5 w-3.5 transition-transform group-hover:text-blue-600 active:scale-125" />
+              )}
 
-              <span>Like</span>
+              <span>
+                {(comment.likeCount ?? 0) > 0 ? (
+                  <>
+                    <span>{comment.likeCount}</span>{" "}
+                    <span>{comment.likeCount === 1 ? "Like" : "Likes"}</span>
+                  </>
+                ) : (
+                  "Like"
+                )}
+              </span>
             </button>
 
             {/* Reply */}
@@ -747,8 +767,54 @@ export function ArticleComments({
     }
   };
 
-  const handleLikeComment = (commentId: string) => {
-    setComments((previous) => updateCommentLike(previous, commentId));
+  const handleLikeComment = async (commentId: string) => {
+    if (!isAuthenticated && !user) {
+      toast.error("You must be logged in to like comments");
+      return;
+    }
+
+    const target = findCommentById(comments, commentId);
+    if (!target || target.isLiking) {
+      return;
+    }
+
+    const previousLiked = Boolean(target.liked);
+    const previousLikeCount = target.likeCount ?? 0;
+
+    // Optimistic update
+    setComments((previous) =>
+      updateCommentLikeState(previous, commentId, (comment) => ({
+        ...comment,
+        liked: !previousLiked,
+        likeCount: Math.max(0, previousLikeCount + (previousLiked ? -1 : 1)),
+        isLiking: true,
+      }))
+    );
+
+    try {
+      await likeComment(commentId);
+
+      setComments((previous) =>
+        updateCommentLikeState(previous, commentId, (comment) => ({
+          ...comment,
+          isLiking: false,
+        }))
+      );
+    } catch (err: unknown) {
+      console.error("Error liking comment:", err);
+
+      // Revert optimistic update on failure
+      setComments((previous) =>
+        updateCommentLikeState(previous, commentId, (comment) => ({
+          ...comment,
+          liked: previousLiked,
+          likeCount: previousLikeCount,
+          isLiking: false,
+        }))
+      );
+
+      toast.error(getApiErrorMessage(err) || "Failed to update like status");
+    }
   };
 
   const formatTimeAgo = (dateString: string) => {
@@ -978,18 +1044,24 @@ export function ArticleComments({
   );
 }
 
-function updateCommentLike(comments: DisplayComment[], commentId: string): DisplayComment[] {
+function updateCommentLikeState(
+  comments: DisplayComment[],
+  commentId: string,
+  updater: (comment: DisplayComment) => DisplayComment,
+): DisplayComment[] {
   return comments.map((comment) => {
     if (comment.id === commentId) {
-      return {
-        ...comment,
-      };
+      return updater(comment);
     }
 
     if (comment.replies && comment.replies.length > 0) {
       return {
         ...comment,
-        replies: updateCommentLike(comment.replies as DisplayComment[], commentId),
+        replies: updateCommentLikeState(
+          comment.replies as DisplayComment[],
+          commentId,
+          updater,
+        ),
       };
     }
 
