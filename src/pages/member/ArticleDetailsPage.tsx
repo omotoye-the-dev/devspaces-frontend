@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type JSX } from "react";
-import { Link, useNavigate, useParams,
+import {
+  Link, useNavigate, useParams,
 } from "react-router-dom";
 import { AiFillHeart, AiOutlineComment, AiOutlineHeart, AiOutlineShareAlt } from "react-icons/ai";
 import { HiOutlineEllipsisHorizontal } from "react-icons/hi2";
@@ -113,83 +114,28 @@ useEffect(() => {
       const articleTop = articleRect.top - containerRect.top + scrollTop;
       const articleBottom = articleTop + articleEl.offsetHeight;
 
-  const pageRef = useRef<HTMLDivElement>(null);
-  const articleRef = useRef<HTMLElement>(null);
-  const [readingProgress, setReadingProgress] = useState(0);
+      // Reading completes when bottom of article is in view
+      const targetScroll = articleBottom - clientHeight;
 
-  useEffect(() => {
-    const getScrollContainer = (): HTMLElement | null => {
-      return (
-        pageRef.current?.closest("main") ??
-        document.querySelector("main")
-      );
-    };
-
-    const handleScroll = () => {
-      const container = getScrollContainer();
-
-      let scrollTop = 0;
-      let clientHeight = window.innerHeight;
-      let scrollHeight = document.documentElement.scrollHeight;
-
-      if (container) {
-        scrollTop = container.scrollTop;
-        clientHeight = container.clientHeight;
-        scrollHeight = container.scrollHeight;
-      } else {
-        scrollTop = window.scrollY || document.documentElement.scrollTop;
-        clientHeight = window.innerHeight;
-        scrollHeight = document.documentElement.scrollHeight;
+      if (targetScroll <= 0) {
+        setReadingProgress(100);
+        return;
       }
 
-      if (articleRef.current) {
-        const articleEl = articleRef.current;
-        const containerRect = container ? container.getBoundingClientRect() : { top: 0 };
-        const articleRect = articleEl.getBoundingClientRect();
-
-        // Absolute position of article relative to scroll container top
-        const articleTop = articleRect.top - containerRect.top + scrollTop;
-        const articleBottom = articleTop + articleEl.offsetHeight;
-
-        // Reading completes when bottom of article is in view
-        const targetScroll = articleBottom - clientHeight;
-
-        if (targetScroll <= 0) {
-          setReadingProgress(100);
-          return;
-        }
-
-        const progress = (scrollTop / targetScroll) * 100;
-        setReadingProgress(Math.min(100, Math.max(0, Math.round(progress))));
-      } else {
-        const maxScroll = scrollHeight - clientHeight;
-        if (maxScroll <= 0) {
-          setReadingProgress(100);
-          return;
-        }
-        const progress = (scrollTop / maxScroll) * 100;
-        setReadingProgress(Math.min(100, Math.max(0, Math.round(progress))));
+      const progress = (scrollTop / targetScroll) * 100;
+      setReadingProgress(Math.min(100, Math.max(0, Math.round(progress))));
+    } else {
+      const maxScroll = scrollHeight - clientHeight;
+      if (maxScroll <= 0) {
+        setReadingProgress(100);
+        return;
       }
-    };
-
-    const container = getScrollContainer();
-
-    if (container) {
-      container.addEventListener("scroll", handleScroll, { passive: true });
+      const progress = (scrollTop / maxScroll) * 100;
+      setReadingProgress(Math.min(100, Math.max(0, Math.round(progress))));
     }
-    window.addEventListener("scroll", handleScroll, { passive: true, capture: true });
-    window.addEventListener("resize", handleScroll, { passive: true });
+  };
 
-    handleScroll();
-
-    return () => {
-      if (container) {
-        container.removeEventListener("scroll", handleScroll);
-      }
-      window.removeEventListener("scroll", handleScroll, { capture: true });
-      window.removeEventListener("resize", handleScroll);
-    };
-  }, [article?.content]);
+  const container = getScrollContainer();
 
   if (container) {
     container.addEventListener("scroll", handleScroll, { passive: true });
@@ -208,13 +154,11 @@ useEffect(() => {
   };
 }, [article?.content]);
 
-    const scrollContainer = document.querySelector("main");
-    if (scrollContainer) {
-      scrollContainer.scrollTop = 0;
-    }
-    window.scrollTo(0, 0);
-
-    const articleId = id;
+useEffect(() => {
+  if (!id) {
+    navigate("/articles");
+    return;
+  }
 
   const articleId = id;
 
@@ -825,65 +769,19 @@ if (!article) {
   );
 }
 
-  /**
-   * Resolve the avatar using the same
-   * helper as AuthorCard.
-   */
-  const resolvedAuthorAvatar =
-    getProfileAvatar(
-      authorProfile
-    ) ??
-    article.authorAvatar;
+const isAuthor =
+  currentUser?.id ===
+  article.authorId;
 
-  /**
-   * UserProfile can expose username fields
-   * with slightly different names depending
-   * on the API response.
-   *
-   * Check the profile first because this is
-   * the source of truth for the author.
-   */
-  const profileData =
-    authorProfile as
-      | (UserProfile &
-          Record<string, unknown>)
-      | null;
-
-  const profileUser = profileData?.user as
-    | Record<string, unknown>
-    | undefined;
-
-const resolvedAuthorUsername =
-  (
-    profileData?.userName ??
-    profileData?.username ??
-    profileData?.user_name ??
-    profileData?.handle ??
-    profileUser?.userName ??
-    profileUser?.username
-  )
-    ?.toString()
-    .trim()
-    .replace(/^@/, "") ||
-  "DevSpace Author";
-
-const authorProfileUrl = isAuthor
-  ? "/profile"
-  : article.authorId
-    ? `/profile/${article.authorId}`
-    : "/profile";
-
-
-const formattedDate =
-  new Date(
-    article.createdAt
-  ).toLocaleDateString(
-    "en-US",
-    {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    }
+/**
+ * Resolve the author's display name
+ * using the same helper as AuthorCard.
+ */
+const resolvedAuthorName =
+  formatProfileName(
+    authorProfile,
+    article.authorName ||
+    "DevSpace Author"
   );
 
 /**
@@ -936,7 +834,7 @@ const authorProfileIdentifier =
 
 const authorProfileUrl =
   authorProfileIdentifier
-    ? `/profile/${authorProfileIdentifier}`
+    ? `/profile/${article.authorId}`
     : "/profile";
 
 const formattedDate =
@@ -962,32 +860,36 @@ const readingTime =
     )
   );
 
-  return (
-    <div ref={pageRef} className="min-h-screen w-full bg-gray-50">
-      {/* Top Fixed Reading Progress Bar */}
-      <div className="fixed top-0 left-0 right-0 z-50 h-1 bg-transparent pointer-events-none">
-        <div
-          className="h-full bg-linear-to-r from-primary via-blue-500 to-indigo-500 transition-all duration-100 ease-out"
-          style={{ width: `${readingProgress}%` }}
-        />
-      </div>
+const coverImage =
+  article.coverImage ??
+  article.coverImageUrl ??
+  articlePlaceholder;
 
-      <div className="w-full px-4 py-6 sm:px-6 lg:px-8">
-        {/* In-page Sticky Reading Progress Bar */}
-        <div className="sticky -top-2 sm:-top-4 md:-top-6 z-30 mb-8 bg-gray-50/95 py-2 backdrop-blur-xs">
+return (
+  <div ref={pageRef} className="min-h-screen w-full bg-gray-50">
+    {/* Top Fixed Reading Progress Bar */}
+    <div className="fixed top-0 left-0 right-0 z-50 h-1 bg-transparent pointer-events-none">
+      <div
+        className="h-full bg-linear-to-r from-primary via-blue-500 to-indigo-500 transition-all duration-100 ease-out"
+        style={{ width: `${readingProgress}%` }}
+      />
+    </div>
+
+    <div className="w-full px-4 py-6 sm:px-6 lg:px-8">
+      {/* In-page Sticky Reading Progress Bar */}
+      <div className="sticky -top-2 sm:-top-4 md:-top-6 z-30 mb-8 bg-gray-50/95 py-2 backdrop-blur-xs">
+        <div
+          className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200"
+          role="progressbar"
+          aria-label="Reading progress"
+          aria-valuenow={Math.round(readingProgress)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        >
           <div
-            className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200"
-            role="progressbar"
-            aria-label="Reading progress"
-            aria-valuenow={Math.round(readingProgress)}
-            aria-valuemin={0}
-            aria-valuemax={100}
-          >
-            <div
-              className="h-full rounded-full bg-linear-to-r from-primary to-blue-500 transition-all duration-150 ease-out"
-              style={{ width: `${readingProgress}%` }}
-            />
-          </div>
+            className="h-full rounded-full bg-linear-to-r from-primary to-blue-500 transition-all duration-150 ease-out"
+            style={{ width: `${readingProgress}%` }}
+          />
         </div>
       </div>
 
@@ -1200,62 +1102,22 @@ const readingTime =
               </p>
             )}
 
-              {/* Tags */}
-              {article.tagNames &&
-                article.tagNames.length >
-                  0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {article.tagNames.map(
-                      (tag) => (
-                        <Tag
-                          key={tag}
-                          variant="outline"
-                          size="sm"
-                        >
-                          {tag}
-                        </Tag>
-                      )
-                    )}
-                  </div>
-                )}
-            </header>
-
-          {/* Author */}
-          <div className="my-6 flex items-center justify-between border-y border-gray-200 py-4">
-            <div className="flex min-w-0 items-center gap-3">
-              <Avatar
-                src={resolvedAuthorAvatar}
-                alt={resolvedAuthorName}
-                name={resolvedAuthorName}
-                size="md"
-                className="h-11 w-11"
-                href={authorProfileUrl}
-              />
-
-                <div className="min-w-0">
-                  <Link
-                    to={ authorProfileUrl }
-                    className="truncate text-sm font-semibold text-gray-900 hover:text-primary hover:underline"
-                  >
-                    {resolvedAuthorUsername}
-                  </Link>
-
-                  <div className="flex items-center gap-2 text-xs text-gray-500">
-                    <span>
-                      {formattedDate}
-                    </span>
-
-                    <span>
-                      ·
-                    </span>
-
-                    <span className="flex items-center gap-1">
-                      <LuClock className="h-3 w-3" />
-
-                      {readingTime}{" "}
-                      min read
-                    </span>
-                  </div>
+            {/* Tags */}
+            {article.tagNames &&
+              article.tagNames.length >
+              0 && (
+                <div className="flex flex-wrap gap-2">
+                  {article.tagNames.map(
+                    (tag) => (
+                      <Tag
+                        key={tag}
+                        variant="outline"
+                        size="sm"
+                      >
+                        {tag}
+                      </Tag>
+                    )
+                  )}
                 </div>
               )}
           </header>
@@ -1266,6 +1128,7 @@ const readingTime =
               <Avatar
                 src={resolvedAuthorAvatar}
                 alt={resolvedAuthorName}
+                href={authorProfileUrl}
                 name={resolvedAuthorName}
                 size="md"
                 className="h-11 w-11"
@@ -1284,19 +1147,9 @@ const readingTime =
                     {formattedDate}
                   </span>
 
-            {/* Article content */}
-            <article
-              ref={articleRef}
-              className="w-full max-w-none wrap-break-word prose prose-sm sm:prose-base prose-headings:font-bold prose-headings:text-gray-900 prose-headings:tracking-tight prose-headings:break-words prose-headings:mt-8 prose-headings:mb-4 prose-p:text-gray-700 prose-p:leading-7 prose-p:break-words prose-a:text-primary prose-a:no-underline prose-a:break-words hover:prose-a:underline prose-strong:text-gray-900 prose-blockquote:border-primary prose-blockquote:text-gray-600 prose-code:rounded prose-code:bg-gray-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:text-sm prose-code:text-gray-800 prose-code:break-words prose-pre:max-w-full prose-pre:overflow-x-auto prose-pre:rounded-xl prose-pre:bg-gray-900 prose-pre:p-5 prose-li:text-gray-700 prose-li:break-words prose-img:max-w-full prose-img:h-auto prose-img:rounded-xl prose-img:shadow-sm"
-            >
-              <ReactMarkdown
-                remarkPlugins={[
-                  remarkGfm,
-                ]}
-              >
-                {article.content}
-              </ReactMarkdown>
-            </article>
+                  <span>
+                    ·
+                  </span>
 
                   <span className="flex items-center gap-1">
                     <LuClock className="h-3 w-3" />
