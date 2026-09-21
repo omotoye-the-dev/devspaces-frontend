@@ -1,10 +1,19 @@
-import type { JSX } from "react";
+import { useEffect, useRef, type JSX } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { Sidebar } from "@/components/shared";
 import NavBar from "@/components/shared/NavBar";
 
 const PublicLayout = (): JSX.Element => {
   const location = useLocation();
+  const mainRef = useRef<HTMLElement>(null);
+
+  // Scroll to top whenever the route / pathname changes
+  useEffect(() => {
+    if (mainRef.current) {
+      mainRef.current.scrollTop = 0;
+    }
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
 
   // Write article routes: /articles/new and /articles/:id/edit
   const isWriteArticlePage =
@@ -47,6 +56,7 @@ const PublicLayout = (): JSX.Element => {
 
         {/* Main Page View */}
         <main
+          ref={mainRef}
           className={
             shouldHideSidebar
               ? "flex-1 overflow-y-auto p-2 sm:p-4 md:p-6"
