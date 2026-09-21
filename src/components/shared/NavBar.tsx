@@ -109,11 +109,11 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
 
   const displayName = currentProfile
     ? [currentProfile.firstName, currentProfile.lastName].filter(Boolean).join(" ") ||
-      (currentProfile.name as string | undefined) ||
-      (currentProfile.fullName as string | undefined) ||
-      (currentProfile.userName as string | undefined) ||
-      (currentProfile.username as string | undefined) ||
-      undefined
+    (currentProfile.name as string | undefined) ||
+    (currentProfile.fullName as string | undefined) ||
+    (currentProfile.userName as string | undefined) ||
+    (currentProfile.username as string | undefined) ||
+    undefined
     : undefined;
 
   const filteredSuggestions = useMemo(() => {
@@ -232,7 +232,7 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
                       <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white bg-blue-500 rounded-full">
                         {notifications}
                       </span>
-                    )} 
+                    )}
                   </Button>
 
                   {isProfileLoading ? (
@@ -279,24 +279,21 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
         </div>
 
         <div
-          className={`fixed inset-0 z-50 md:hidden transition-all duration-300 ease-out ${
-            mobileSearchOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
-          }`}
+          className={`fixed inset-0 z-50 md:hidden transition-all duration-300 ease-out ${mobileSearchOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+            }`}
           onClick={() => {
             setMobileSearchOpen(false);
             setSearchTerm("");
           }}
         >
           <div
-            className={`absolute inset-0 bg-black/10 transition-opacity duration-500 ease-out ${
-              mobileSearchOpen ? "opacity-100" : "opacity-0"
-            }`}
+            className={`absolute inset-0 bg-black/10 transition-opacity duration-500 ease-out ${mobileSearchOpen ? "opacity-100" : "opacity-0"
+              }`}
           />
 
           <div
-            className={`relative bg-white border-b border-border shadow-sm transform transition-all duration-500 ease-out ${
-              mobileSearchOpen ? "translate-y-0 opacity-100" : "-translate-y-3 opacity-0"
-            }`}
+            className={`relative bg-white border-b border-border shadow-sm transform transition-all duration-500 ease-out ${mobileSearchOpen ? "translate-y-0 opacity-100" : "-translate-y-3 opacity-0"
+              }`}
             onClick={(event) => event.stopPropagation()}
           >
             <div className="px-4 pt-3 pb-2">
@@ -350,17 +347,15 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
 
         {/* Mobile Menu Panel */}
         <div
-          className={`md:hidden fixed inset-0 z-50 transition-opacity duration-1000 ${
-            mobileOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
-          }`}
+          className={`md:hidden fixed inset-0 z-50 transition-opacity duration-1000 ${mobileOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+            }`}
           onClick={() => setMobileOpen(false)}
         >
           <div className="absolute inset-0 bg-black/10" />
 
           <div
-            className={`absolute inset-y-0 right-0 w-[82%] max-w-sm bg-white border-l border-border shadow-2xl transition-transform duration-300 ease-out ${
-              mobileOpen ? "translate-x-0" : "translate-x-full"
-            }`}
+            className={`absolute inset-y-0 right-0 w-[82%] max-w-sm bg-white border-l border-border shadow-2xl transition-transform duration-300 ease-out ${mobileOpen ? "translate-x-0" : "translate-x-full"
+              }`}
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">

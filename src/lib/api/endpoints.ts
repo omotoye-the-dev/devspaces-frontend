@@ -35,6 +35,7 @@ export const ENDPOINTS = {
     COMMENTS: (id: string) => `${API_BASE_URL}/api/posts/${id}/comments`,
 
     CREATE_COMMENT: (id: string) => `${API_BASE_URL}/api/posts/${id}/comment`,
+    LIKE_COMMENT: (commentId: string) => `${API_BASE_URL}/api/posts/comments/${commentId}/like`,
 
     SAVE: (id: string) => `${API_BASE_URL}/api/posts/${id}/save`,
     COVER_IMAGE: (id: string) => `${API_BASE_URL}/api/posts/${id}/cover-image`,

@@ -109,6 +109,8 @@ export interface Comment {
     avatarUrl: string | null;
   } | null;
   replies?: Comment[] | number;
+  liked?: boolean;
+  likeCount?: number;
 }
 
 export interface PostInteraction {
@@ -547,7 +549,19 @@ export async function createComment(
     createdAt: (dataObj?.createdAt || new Date().toISOString()) as string,
     user: (dataObj?.user as Comment["user"]) || null,
     replies: (dataObj?.replies as Comment["replies"]) ?? [],
+    liked: false,
+    likeCount: 0,
   };
+}
+
+/**
+ * POST /api/posts/comments/{commentId}/like
+ */
+export async function likeComment(commentId: string): Promise<void> {
+  await apiClient.post(
+    ENDPOINTS.POSTS.LIKE_COMMENT(commentId),
+    {},
+  );
 }
 
 export interface TrendingPost {
