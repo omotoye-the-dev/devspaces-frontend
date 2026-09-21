@@ -104,6 +104,12 @@ export function ArticleDetailsPage(): JSX.Element {
       return;
     }
 
+    const scrollContainer = document.querySelector("main");
+    if (scrollContainer) {
+      scrollContainer.scrollTop = 0;
+    }
+    window.scrollTo(0, 0);
+
     const articleId = id;
 
     let isSubscribed = true;
@@ -756,42 +762,38 @@ export function ArticleDetailsPage(): JSX.Element {
     | Record<string, unknown>
     | undefined;
 
-  const resolvedAuthorUsername =
-    (
-      profileData?.userName ??
-      profileData?.username ??
-      profileData?.user_name ??
-      profileData?.handle ??
-      profileUser?.userName ??
-      profileUser?.username
-    )
-      ?.toString()
-      .trim()
-      .replace(/^@/, "") ||
-    "DevSpace Author";
-    
-  const authorProfileIdentifier =
-    resolvedAuthorUsername !==
-    "DevSpace Author"
-      ? resolvedAuthorUsername
-      : article.authorId;
+const resolvedAuthorUsername =
+  (
+    profileData?.userName ??
+    profileData?.username ??
+    profileData?.user_name ??
+    profileData?.handle ??
+    profileUser?.userName ??
+    profileUser?.username
+  )
+    ?.toString()
+    .trim()
+    .replace(/^@/, "") ||
+  "DevSpace Author";
 
-  const authorProfileUrl =
-    authorProfileIdentifier
-      ? `/profile/${authorProfileIdentifier}`
-      : "/profile";
+const authorProfileUrl = isAuthor
+  ? "/profile"
+  : article.authorId
+    ? `/profile/${article.authorId}`
+    : "/profile";
 
-  const formattedDate =
-    new Date(
-      article.createdAt
-    ).toLocaleDateString(
-      "en-US",
-      {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      }
-    );
+
+const formattedDate =
+  new Date(
+    article.createdAt
+  ).toLocaleDateString(
+    "en-US",
+    {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    }
+  );
 
   const readingTime =
     article.readingTimeMinutes ??
@@ -1063,16 +1065,17 @@ export function ArticleDetailsPage(): JSX.Element {
                 )}
             </header>
 
-            {/* Author */}
-            <div className="my-6 flex items-center justify-between border-y border-gray-200 py-4">
-              <div className="flex min-w-0 items-center gap-3">
-                <Avatar
-                  src={ resolvedAuthorAvatar }
-                  alt={ resolvedAuthorName }
-                  name={ resolvedAuthorName }
-                  size="md"
-                  className="h-11 w-11"
-                />
+          {/* Author */}
+          <div className="my-6 flex items-center justify-between border-y border-gray-200 py-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <Avatar
+                src={resolvedAuthorAvatar}
+                alt={resolvedAuthorName}
+                name={resolvedAuthorName}
+                size="md"
+                className="h-11 w-11"
+                href={authorProfileUrl}
+              />
 
                 <div className="min-w-0">
                   <Link
