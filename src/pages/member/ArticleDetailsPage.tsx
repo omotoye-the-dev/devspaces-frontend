@@ -1,4 +1,4 @@
-import { useEffect, useState, type JSX } from "react";
+import { useEffect, useRef, useState, type JSX } from "react";
 import { Link, useNavigate, useParams,
 } from "react-router-dom";
 import { AiFillHeart, AiOutlineComment, AiOutlineHeart, AiOutlineShareAlt } from "react-icons/ai";
@@ -75,28 +75,83 @@ export function ArticleDetailsPage(): JSX.Element {
   const [showComments, setShowComments] =
     useState(false);
 
-  const [readingProgress, setReadingProgress] =
-    useState(0);
+  const pageRef = useRef<HTMLDivElement>(null);
+  const articleRef = useRef<HTMLElement>(null);
+  const [readingProgress, setReadingProgress] = useState(0);
 
   useEffect(() => {
-    const handleScroll = () => {
-      const totalScroll =
-        document.documentElement.scrollHeight - window.innerHeight;
-      if (totalScroll <= 0) {
-        setReadingProgress(100);
-        return;
-      }
-      const currentProgress = (window.scrollY / totalScroll) * 100;
-      setReadingProgress(Math.min(100, Math.max(0, currentProgress)));
+    const getScrollContainer = (): HTMLElement | null => {
+      return (
+        pageRef.current?.closest("main") ??
+        document.querySelector("main")
+      );
     };
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
+    const handleScroll = () => {
+      const container = getScrollContainer();
+
+      let scrollTop = 0;
+      let clientHeight = window.innerHeight;
+      let scrollHeight = document.documentElement.scrollHeight;
+
+      if (container) {
+        scrollTop = container.scrollTop;
+        clientHeight = container.clientHeight;
+        scrollHeight = container.scrollHeight;
+      } else {
+        scrollTop = window.scrollY || document.documentElement.scrollTop;
+        clientHeight = window.innerHeight;
+        scrollHeight = document.documentElement.scrollHeight;
+      }
+
+      if (articleRef.current) {
+        const articleEl = articleRef.current;
+        const containerRect = container ? container.getBoundingClientRect() : { top: 0 };
+        const articleRect = articleEl.getBoundingClientRect();
+
+        // Absolute position of article relative to scroll container top
+        const articleTop = articleRect.top - containerRect.top + scrollTop;
+        const articleBottom = articleTop + articleEl.offsetHeight;
+
+        // Reading completes when bottom of article is in view
+        const targetScroll = articleBottom - clientHeight;
+
+        if (targetScroll <= 0) {
+          setReadingProgress(100);
+          return;
+        }
+
+        const progress = (scrollTop / targetScroll) * 100;
+        setReadingProgress(Math.min(100, Math.max(0, Math.round(progress))));
+      } else {
+        const maxScroll = scrollHeight - clientHeight;
+        if (maxScroll <= 0) {
+          setReadingProgress(100);
+          return;
+        }
+        const progress = (scrollTop / maxScroll) * 100;
+        setReadingProgress(Math.min(100, Math.max(0, Math.round(progress))));
+      }
+    };
+
+    const container = getScrollContainer();
+
+    if (container) {
+      container.addEventListener("scroll", handleScroll, { passive: true });
+    }
+    window.addEventListener("scroll", handleScroll, { passive: true, capture: true });
+    window.addEventListener("resize", handleScroll, { passive: true });
+
     handleScroll();
 
     return () => {
-      window.removeEventListener("scroll", handleScroll);
+      if (container) {
+        container.removeEventListener("scroll", handleScroll);
+      }
+      window.removeEventListener("scroll", handleScroll, { capture: true });
+      window.removeEventListener("resize", handleScroll);
     };
-  }, []);
+  }, [article?.content]);
 
   useEffect(() => {
     if (!id) {
@@ -812,9 +867,9 @@ const formattedDate =
     articlePlaceholder;
 
   return (
-    <div className="min-h-screen w-full bg-gray-50">
+    <div ref={pageRef} className="min-h-screen w-full bg-gray-50">
       {/* Top Fixed Reading Progress Bar */}
-      <div className="fixed top-0 left-0 right-0 z-50 h-1 bg-transparent">
+      <div className="fixed top-0 left-0 right-0 z-50 h-1 bg-transparent pointer-events-none">
         <div
           className="h-full bg-linear-to-r from-primary via-blue-500 to-indigo-500 transition-all duration-100 ease-out"
           style={{ width: `${readingProgress}%` }}
@@ -822,18 +877,21 @@ const formattedDate =
       </div>
 
       <div className="w-full px-4 py-6 sm:px-6 lg:px-8">
-        {/* In-page Reading Progress Bar */}
-        <div
-          className="mb-8 h-1.5 w-full overflow-hidden rounded-full bg-gray-200"
-          role="progressbar"
-          aria-valuenow={Math.round(readingProgress)}
-          aria-valuemin={0}
-          aria-valuemax={100}
-        >
+        {/* In-page Sticky Reading Progress Bar */}
+        <div className="sticky -top-2 sm:-top-4 md:-top-6 z-30 mb-8 bg-gray-50/95 py-2 backdrop-blur-xs">
           <div
-            className="h-full rounded-full bg-linear-to-r from-primary to-blue-500 transition-all duration-100 ease-out"
-            style={{ width: `${readingProgress}%` }}
-          />
+            className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200"
+            role="progressbar"
+            aria-label="Reading progress"
+            aria-valuenow={Math.round(readingProgress)}
+            aria-valuemin={0}
+            aria-valuemax={100}
+          >
+            <div
+              className="h-full rounded-full bg-linear-to-r from-primary to-blue-500 transition-all duration-150 ease-out"
+              style={{ width: `${readingProgress}%` }}
+            />
+          </div>
         </div>
 
         <div className="flex w-full justify-between gap-8 lg:gap-12">
@@ -1138,7 +1196,10 @@ const formattedDate =
             )}
 
             {/* Article content */}
-            <article className="w-full max-w-none wrap-break-word prose prose-sm sm:prose-base prose-headings:font-bold prose-headings:text-gray-900 prose-headings:tracking-tight prose-headings:break-words prose-headings:mt-8 prose-headings:mb-4 prose-p:text-gray-700 prose-p:leading-7 prose-p:break-words prose-a:text-primary prose-a:no-underline prose-a:break-words hover:prose-a:underline prose-strong:text-gray-900 prose-blockquote:border-primary prose-blockquote:text-gray-600 prose-code:rounded prose-code:bg-gray-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:text-sm prose-code:text-gray-800 prose-code:break-words prose-pre:max-w-full prose-pre:overflow-x-auto prose-pre:rounded-xl prose-pre:bg-gray-900 prose-pre:p-5 prose-li:text-gray-700 prose-li:break-words prose-img:max-w-full prose-img:h-auto prose-img:rounded-xl prose-img:shadow-sm">
+            <article
+              ref={articleRef}
+              className="w-full max-w-none wrap-break-word prose prose-sm sm:prose-base prose-headings:font-bold prose-headings:text-gray-900 prose-headings:tracking-tight prose-headings:break-words prose-headings:mt-8 prose-headings:mb-4 prose-p:text-gray-700 prose-p:leading-7 prose-p:break-words prose-a:text-primary prose-a:no-underline prose-a:break-words hover:prose-a:underline prose-strong:text-gray-900 prose-blockquote:border-primary prose-blockquote:text-gray-600 prose-code:rounded prose-code:bg-gray-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:text-sm prose-code:text-gray-800 prose-code:break-words prose-pre:max-w-full prose-pre:overflow-x-auto prose-pre:rounded-xl prose-pre:bg-gray-900 prose-pre:p-5 prose-li:text-gray-700 prose-li:break-words prose-img:max-w-full prose-img:h-auto prose-img:rounded-xl prose-img:shadow-sm"
+            >
               <ReactMarkdown
                 remarkPlugins={[
                   remarkGfm,
