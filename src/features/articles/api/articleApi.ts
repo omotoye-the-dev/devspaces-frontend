@@ -19,6 +19,9 @@ export interface AuthorInfo {
   username?: string;
   userName?: string;
   avatarUrl?: string | null;
+  totalFollowers?: number;
+  totalFollowed?: number;
+  following?: boolean;
 }
 
 export interface Article
@@ -51,6 +54,10 @@ export interface Article
 
   liked?: boolean;
   isLiked?: boolean;
+
+  saved?: boolean;
+  isBookmarked?: boolean;
+  saveCount?: number;
 
   viewCount?: number;
 
@@ -113,101 +120,57 @@ export interface Comment {
   likeCount?: number;
 }
 
-export interface PostInteraction {
-  id?: string;
-
-  liked: boolean;
-  likedAt?: string | null;
-
-  saved: boolean;
-  savedAt?: string | null;
-
-  viewed?: boolean;
-  viewedAt?: string | null;
-
-  userId?: string;
-  postId?: string;
-
-  isActive?: boolean;
-  isDeleted?: boolean;
-
-  createdAt?: string;
-  updatedAt?: string;
+export interface GetFeedParams {
+  page?: number;
+  pageNumber?: number;
+  pageSize?: number;
 }
 
 /**
- * GET /api/posts/{id}/interaction
+ * GET /api/posts/feed (paginated)
  */
-export async function getPostInteraction(
-  id: string,
-): Promise<PostInteraction | null> {
-  try {
-    const response =
-      await apiClient.get<
-        PostInteraction | {
-          data?: PostInteraction;
-        }
-      >(
-        ENDPOINTS.POSTS.INTERACTION(id),
-      );
-
-    if (
-      response.data &&
-      typeof response.data === "object"
-    ) {
-      const data =
-        response.data as Record<
-          string,
-          unknown
-        >;
-
-      if (
-        data.data &&
-        typeof data.data === "object"
-      ) {
-        return data.data as PostInteraction;
+export async function getFeedArticles(
+  params?: GetFeedParams,
+): Promise<{ data: Article[]; pagination?: Pagination }> {
+  const queryParams = params
+    ? {
+        ...params,
+        ...(params.page !== undefined ? { page: params.page, pageNumber: params.page } : {}),
       }
+    : undefined;
 
-      return response.data as PostInteraction;
-    }
+  const response = await apiClient.get<
+    | FeedResponse
+    | Article[]
+    | {
+        data?: Article[];
+        pagination?: Pagination;
+      }
+  >(ENDPOINTS.POSTS.FEED, { params: queryParams });
 
-    return null;
-  } catch {
-    return null;
+  if (Array.isArray(response.data)) {
+    return { data: response.data };
   }
+
+  if (response.data && typeof response.data === "object") {
+    const res = response.data as FeedResponse;
+    if (Array.isArray(res.data)) {
+      return {
+        data: res.data,
+        pagination: res.pagination,
+      };
+    }
+  }
+
+  return { data: [] };
 }
 
 /**
  * GET /api/posts/feed
  */
-export async function getArticles(): Promise<Article[]> {
-  const response =
-    await apiClient.get<
-      | FeedResponse
-      | Article[]
-      | {
-          data?: Article[];
-        }
-    >(
-      ENDPOINTS.POSTS.FEED,
-    );
-
-  if (Array.isArray(response.data)) {
-    return response.data;
-  }
-
-  if (
-    response.data &&
-    Array.isArray(
-      (response.data as FeedResponse).data,
-    )
-  ) {
-    return (
-      response.data as FeedResponse
-    ).data;
-  }
-
-  return [];
+export async function getArticles(params?: GetFeedParams): Promise<Article[]> {
+  const result = await getFeedArticles(params);
+  return result.data;
 }
 
 /**

@@ -21,6 +21,7 @@ import {
   HiOutlineLightBulb,
   HiOutlineChevronDown,
   HiOutlineInformationCircle,
+  HiOutlineLockClosed,
 } from "react-icons/hi2";
 import {
   BsTypeBold,
@@ -234,16 +235,18 @@ export function ArticleEditor({
       ? highlightedTagIndex
       : -1;
 
+  const isTagLimitReached = tagNamesValue.length >= 4;
+
   const handleSelectTag = (tagName: string) => {
+    if (isTagLimitReached) {
+      toast.error("You can add a maximum of 4 tags");
+      return;
+    }
     const trimmed = tagName
       .trim()
       .toLowerCase()
       .replace(/[^a-z0-9-]/g, "");
     if (!trimmed) return;
-    if (tagNamesValue.length >= 4) {
-      toast.error("You can add a maximum of 4 tags");
-      return;
-    }
     if (tagNamesValue.includes(trimmed)) {
       toast.error("Tag already added");
       return;
@@ -255,6 +258,10 @@ export function ArticleEditor({
   };
 
   const handleAddTag = () => {
+    if (isTagLimitReached) {
+      toast.error("You can add a maximum of 4 tags");
+      return;
+    }
     if (activeHighlightedIndex >= 0 && tagSuggestions[activeHighlightedIndex]) {
       handleSelectTag(tagSuggestions[activeHighlightedIndex].name);
       return;
@@ -519,80 +526,113 @@ export function ArticleEditor({
 
               {/* Tags Input */}
               <div ref={tagDropdownRef} className="space-y-2 relative">
-                <div className="flex items-center justify-between gap-2 bg-slate-50 border rounded-lg px-3 py-1.5 focus-within:ring-2 focus-within:ring-primary/40 focus-within:border-primary/60 transition-all">
-                  <input
-                    type="text"
-                    value={tagInput}
-                    onFocus={() => {
-                      if (tagInput.trim()) {
+                <div
+                  className={clsx(
+                    "flex items-center justify-between gap-2 border rounded-lg px-3 py-1.5 transition-all",
+                    isTagLimitReached
+                      ? "bg-slate-100/90 border-slate-200 cursor-not-allowed select-none"
+                      : "bg-slate-50  focus-within:ring-2 focus-within:ring-primary/40 focus-within:border-primary/60",
+                  )}
+                >
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    {isTagLimitReached && (
+                      <HiOutlineLockClosed
+                        className="w-3.5 h-3.5 text-slate-400 shrink-0"
+                        title="Tag limit reached (4 of 4)"
+                      />
+                    )}
+                    <input
+                      type="text"
+                      value={isTagLimitReached ? "" : tagInput}
+                      onFocus={() => {
+                        if (!isTagLimitReached && tagInput.trim()) {
+                          setIsTagDropdownOpen(true);
+                        }
+                      }}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                        if (isTagLimitReached) return;
+                        setTagInput(e.target.value);
                         setIsTagDropdownOpen(true);
-                      }
-                    }}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                      setTagInput(e.target.value);
-                      setIsTagDropdownOpen(true);
-                      setHighlightedTagIndex(-1);
-                    }}
-                    onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
-                      if (e.key === "ArrowDown") {
-                        if (tagSuggestions.length > 0) {
+                        setHighlightedTagIndex(-1);
+                      }}
+                      onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
+                        if (isTagLimitReached) {
                           e.preventDefault();
-                          setIsTagDropdownOpen(true);
-                          setHighlightedTagIndex((prev) =>
-                            prev < tagSuggestions.length - 1 ? prev + 1 : 0,
-                          );
+                          return;
                         }
-                      } else if (e.key === "ArrowUp") {
-                        if (tagSuggestions.length > 0) {
+                        if (e.key === "ArrowDown") {
+                          if (tagSuggestions.length > 0) {
+                            e.preventDefault();
+                            setIsTagDropdownOpen(true);
+                            setHighlightedTagIndex((prev) =>
+                              prev < tagSuggestions.length - 1 ? prev + 1 : 0,
+                            );
+                          }
+                        } else if (e.key === "ArrowUp") {
+                          if (tagSuggestions.length > 0) {
+                            e.preventDefault();
+                            setIsTagDropdownOpen(true);
+                            setHighlightedTagIndex((prev) =>
+                              prev > 0 ? prev - 1 : tagSuggestions.length - 1,
+                            );
+                          }
+                        } else if (e.key === "Enter" || e.key === ",") {
                           e.preventDefault();
-                          setIsTagDropdownOpen(true);
-                          setHighlightedTagIndex((prev) =>
-                            prev > 0 ? prev - 1 : tagSuggestions.length - 1,
-                          );
-                        }
-                      } else if (e.key === "Enter" || e.key === ",") {
-                        e.preventDefault();
-                        if (
-                          activeHighlightedIndex >= 0 &&
-                          tagSuggestions[activeHighlightedIndex]
-                        ) {
-                          handleSelectTag(
-                            tagSuggestions[activeHighlightedIndex].name,
-                          );
-                        } else if (tagSuggestions.length > 0 && tagInput.trim()) {
-                          const exactMatch = tagSuggestions.find(
-                            (t) =>
-                              t.name.toLowerCase() ===
-                              tagInput.trim().toLowerCase(),
-                          );
-                          if (exactMatch) {
-                            handleSelectTag(exactMatch.name);
+                          if (
+                            activeHighlightedIndex >= 0 &&
+                            tagSuggestions[activeHighlightedIndex]
+                          ) {
+                            handleSelectTag(
+                              tagSuggestions[activeHighlightedIndex].name,
+                            );
+                          } else if (tagSuggestions.length > 0 && tagInput.trim()) {
+                            const exactMatch = tagSuggestions.find(
+                              (t) =>
+                                t.name.toLowerCase() ===
+                                tagInput.trim().toLowerCase(),
+                            );
+                            if (exactMatch) {
+                              handleSelectTag(exactMatch.name);
+                            } else {
+                              handleAddTag();
+                            }
                           } else {
                             handleAddTag();
                           }
-                        } else {
-                          handleAddTag();
+                        } else if (e.key === "Escape") {
+                          setIsTagDropdownOpen(false);
+                          setHighlightedTagIndex(-1);
                         }
-                      } else if (e.key === "Escape") {
-                        setIsTagDropdownOpen(false);
-                        setHighlightedTagIndex(-1);
+                      }}
+                      placeholder={
+                        isTagLimitReached
+                          ? "Maximum 4 tags reached (locked)"
+                          : "Type to search or add tags (e.g. frontend, react)..."
                       }
-                    }}
-                    placeholder={
-                      tagNamesValue.length >= 4
-                        ? "Maximum 4 tags reached"
-                        : "Type to search or add tags (e.g. frontend, react)..."
-                    }
-                    disabled={tagNamesValue.length >= 4}
-                    className="w-full bg-transparent text-xs text-text border-none outline-none focus:ring-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                  />
-                  <span className="text-[11px] font-mono font-medium text-text/40 shrink-0">
+                      disabled={isTagLimitReached}
+                      readOnly={isTagLimitReached}
+                      className={clsx(
+                        "w-full bg-transparent text-xs border-none outline-none focus:ring-0",
+                        isTagLimitReached
+                          ? "cursor-not-allowed text-slate-400"
+                          : "placeholder:text-text/40",
+                      )}
+                    />
+                  </div>
+                  <span
+                    className={clsx(
+                      "text-[11px] font-mono font-medium shrink-0",
+                      isTagLimitReached
+                        ? "text-amber-600 font-semibold"
+                        : "text-text/40",
+                    )}
+                  >
                     {tagNamesValue.length}/4
                   </span>
                 </div>
 
-                {/* Suggestions Dropdown */}
-                {isTagDropdownOpen && tagSuggestions.length > 0 && (
+                {/* Suggestions Dropdown — only shown when not locked */}
+                {!isTagLimitReached && isTagDropdownOpen && tagSuggestions.length > 0 && (
                   <ul
                     role="listbox"
                     aria-label="Tag suggestions"

@@ -1,4 +1,4 @@
-import { useState, useEffect, type JSX } from "react";
+import { useState, type JSX } from "react";
 import { useNavigate } from "react-router-dom";
 import { AiOutlineHeart, AiFillHeart } from "react-icons/ai";
 import { FiMessageCircle, FiMoreHorizontal } from "react-icons/fi";
@@ -7,13 +7,7 @@ import { clsx } from "clsx";
 import { Avatar } from "@/components/common";
 import { toast } from "@/hooks/useToast";
 import articlePlaceholder from "@/assets/images/article-placeholder.jpg";
-import {
-  getUserProfileById,
-  formatProfileName,
-  getProfileAvatar,
-  getProfileRole,
-  type UserProfile,
-} from "@/lib/api/user.api";
+import { likeArticle } from "@/features/articles/api/articleApi";
 
 export interface ArticleCardProps {
   id: string;
@@ -134,7 +128,6 @@ export function ArticleCard({
   const [likedOverride, setLikedOverride] = useState<boolean | null>(null);
   const [likeOffset, setLikeOffset] = useState<number>(0);
   const [isLiking, setIsLiking] = useState<boolean>(false);
-  const [fetchedProfile, setFetchedProfile] = useState<UserProfile | null>(null);
 
   const statusLabel = getStatusLabel(status);
 
@@ -142,39 +135,12 @@ export function ArticleCard({
   const targetAuthorHref = authorLink || (authorId ? `/profile/${authorId}` : "/profile");
   const destinationHref = targetHref || (isEditable ? `/articles/${id}/edit` : `/articles/${id}`);
 
-  const hasLiked = likedOverride !== null ? likedOverride : isLiked;
-  const localLikes = Math.max(0, likes + likeOffset);
+  const hasLiked = onLike ? isLiked : (likedOverride !== null ? likedOverride : isLiked);
+  const localLikes = onLike ? likes : Math.max(0, likes + likeOffset);
 
-  useEffect(() => {
-    if (!authorId || (authorName && authorName !== "DevSpace Author")) {
-      return;
-    }
-    let cancelled = false;
-
-    async function loadAuthorProfile(): Promise<void> {
-      try {
-        const profile = await getUserProfileById(authorId as string);
-        if (!cancelled) {
-          setFetchedProfile(profile);
-        }
-      } catch {
-        // Keep fallback values gracefully on network failure
-      }
-    }
-
-    void loadAuthorProfile();
-    return () => {
-      cancelled = true;
-    };
-  }, [authorId, authorName]);
-
-  const displayAuthorName =
-    authorName && authorName !== "DevSpace Author"
-      ? authorName
-      : formatProfileName(fetchedProfile, authorName || "DevSpace Author");
-
-  const displayAuthorAvatar = authorAvatar ?? getProfileAvatar(fetchedProfile);
-  const displayAuthorRole = authorRole ?? getProfileRole(fetchedProfile);
+  const displayAuthorName = authorName || "DevSpace Author";
+  const displayAuthorAvatar = authorAvatar;
+  const displayAuthorRole = authorRole;
 
   const formattedDate = new Date(createdAt).toLocaleDateString("en-US", {
     month: "short",
@@ -205,14 +171,25 @@ export function ArticleCard({
     e.preventDefault();
     e.stopPropagation();
     if (isLiking) return;
+
+    if (onLike) {
+      setIsLiking(true);
+      try {
+        await onLike(id);
+      } finally {
+        setIsLiking(false);
+      }
+      return;
+    }
+
     const wasLiked = hasLiked;
     const offsetDelta = wasLiked ? -1 : 1;
-    // Optimistic toggle
+    // Optimistic toggle (standalone mode)
     setLikedOverride(!wasLiked);
     setLikeOffset((prev) => prev + offsetDelta);
     setIsLiking(true);
     try {
-      if (onLike) await onLike(id);
+      await likeArticle(id);
     } catch {
       // Revert on failure
       setLikedOverride(wasLiked);

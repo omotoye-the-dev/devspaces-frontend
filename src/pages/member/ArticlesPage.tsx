@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo, type JSX } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, type JSX } from "react";
 import { useNavigate } from "react-router-dom";
 import { MdOutlineSearch } from "react-icons/md";
 import { LuPenLine, LuLayoutGrid, LuLayoutList, LuX } from "react-icons/lu";
 import { Button, Input, Skeleton } from "@/components/common";
-import { getArticles, likeArticle, saveArticle, getPostInteraction } from "@/features/articles/api/articleApi";
+import { getFeedArticles, likeArticle, saveArticle } from "@/features/articles/api/articleApi";
 import type { Article } from "@/features/articles/api/articleApi";
 import { ArticleCard } from "@/features/articles/components/ArticleCard";
 import { ArticleSearchDropdown } from "@/features/articles/components/ArticleSearchDropdown";
@@ -28,6 +28,7 @@ interface DisplayArticle {
   likes?: number;
   comments?: number;
   isLiked?: boolean;
+  isBookmarked?: boolean;
 }
 
 function getArticleAuthor(art: Article): { name: string; userName: string; avatar?: string } {
@@ -85,6 +86,14 @@ function mapArticle(art: Article): DisplayArticle {
             ? art.comments
             : 0;
 
+  const isSaved = Boolean(
+    raw.saved ??
+    raw.isBookmarked ??
+    raw.isSaved ??
+    art.saved ??
+    art.isBookmarked,
+  );
+
   return {
     id: art.id,
     authorId: art.author?.id || art.authorId,
@@ -116,6 +125,7 @@ function mapArticle(art: Article): DisplayArticle {
     likes: likeCount,
     comments: commentCount,
     isLiked,
+    isBookmarked: isSaved,
   };
 }
 
@@ -124,62 +134,66 @@ export function ArticlesPage(): JSX.Element {
 
   const [articles, setArticles] = useState<DisplayArticle[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+  const [page, setPage] = useState<number>(1);
+  const [hasNextPage, setHasNextPage] = useState<boolean>(true);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());
   const [layout, setLayout] = useState<"list" | "grid">("list");
 
-  // Fetch articles and map directly with author from feed
+  const PAGE_SIZE = 10;
+
+  // Initial feed load
   useEffect(() => {
     let isSubscribed = true;
 
-    async function loadFeed(): Promise<void> {
+    async function loadInitialFeed(): Promise<void> {
       try {
         setIsLoading(true);
-        const data = await getArticles();
+        const response = await getFeedArticles({
+          page: 1,
+          pageSize: PAGE_SIZE,
+        });
+
         if (!isSubscribed) return;
 
-        // Sort feed by most recent first
-        const sortedData = [...data].sort((a, b) => {
+        const rawArticles = response.data || [];
+
+        if (response.pagination) {
+          if (typeof response.pagination.hasNext === "boolean") {
+            setHasNextPage(response.pagination.hasNext);
+          } else if (typeof response.pagination.totalPages === "number") {
+            setHasNextPage(1 < response.pagination.totalPages);
+          } else {
+            setHasNextPage(rawArticles.length >= PAGE_SIZE);
+          }
+        } else {
+          setHasNextPage(rawArticles.length >= PAGE_SIZE);
+        }
+
+        const sortedData = [...rawArticles].sort((a, b) => {
           const dateA = new Date(a.createdAt || 0).getTime();
           const dateB = new Date(b.createdAt || 0).getTime();
           return dateB - dateA;
         });
 
-        // Set initial articles immediately from feed response
         const initialArticles = sortedData.map(mapArticle);
         setArticles(initialArticles);
+        setPage(1);
 
-        // Check user post interactions (liked, saved) concurrently
-        const token = typeof window !== "undefined" ? localStorage.getItem("devspace_token") : null;
-        if (token && sortedData.length > 0) {
-          const interactionResults = await Promise.allSettled(
-            sortedData.map((art) => getPostInteraction(art.id)),
-          );
-
-          if (!isSubscribed) return;
-
-          const updatedBookmarked = new Set<string>();
-          const updatedArticles = sortedData.map((art, idx) => {
-            const mapped = mapArticle(art);
-            const interactionRes = interactionResults[idx];
-            if (interactionRes && interactionRes.status === "fulfilled" && interactionRes.value) {
-              const inter = interactionRes.value;
-              if (typeof inter.liked === "boolean") {
-                mapped.isLiked = inter.liked;
-              }
-              if (inter.saved) {
-                updatedBookmarked.add(art.id);
-              }
-            }
-            return mapped;
-          });
-
-          setArticles(updatedArticles);
-          if (updatedBookmarked.size > 0) {
-            setBookmarkedIds(updatedBookmarked);
+        const initialBookmarked = new Set<string>();
+        initialArticles.forEach((art) => {
+          if (art.isBookmarked) {
+            initialBookmarked.add(art.id);
           }
+        });
+        if (initialBookmarked.size > 0) {
+          setBookmarkedIds(initialBookmarked);
         }
       } catch {
         if (isSubscribed) {
@@ -187,15 +201,104 @@ export function ArticlesPage(): JSX.Element {
           toast.error("Failed to load articles. Please try again later.");
         }
       } finally {
-        if (isSubscribed) setIsLoading(false);
+        if (isSubscribed) {
+          setIsLoading(false);
+        }
       }
     }
 
-    void loadFeed();
+    void loadInitialFeed();
+
     return () => {
       isSubscribed = false;
     };
   }, []);
+
+  // Fetch next page for endless scroll
+  const loadMore = useCallback(async (): Promise<void> => {
+    if (!hasNextPage || isLoading || isLoadingMore) return;
+
+    const nextPage = page + 1;
+    setIsLoadingMore(true);
+    setLoadMoreError(null);
+
+    try {
+      const response = await getFeedArticles({
+        page: nextPage,
+        pageSize: PAGE_SIZE,
+      });
+
+      const rawArticles = response.data || [];
+
+      if (response.pagination) {
+        if (typeof response.pagination.hasNext === "boolean") {
+          setHasNextPage(response.pagination.hasNext);
+        } else if (typeof response.pagination.totalPages === "number") {
+          setHasNextPage(nextPage < response.pagination.totalPages);
+        } else {
+          setHasNextPage(rawArticles.length >= PAGE_SIZE);
+        }
+      } else {
+        setHasNextPage(rawArticles.length >= PAGE_SIZE);
+      }
+
+      const sortedData = [...rawArticles].sort((a, b) => {
+        const dateA = new Date(a.createdAt || 0).getTime();
+        const dateB = new Date(b.createdAt || 0).getTime();
+        return dateB - dateA;
+      });
+
+      const newDisplayArticles = sortedData.map(mapArticle);
+
+      setArticles((prev) => {
+        const existingIds = new Set(prev.map((a) => a.id));
+        const uniqueNew = newDisplayArticles.filter((a) => !existingIds.has(a.id));
+        return [...prev, ...uniqueNew];
+      });
+
+      setPage(nextPage);
+
+      const newlyBookmarked = new Set<string>();
+      newDisplayArticles.forEach((art) => {
+        if (art.isBookmarked) {
+          newlyBookmarked.add(art.id);
+        }
+      });
+      if (newlyBookmarked.size > 0) {
+        setBookmarkedIds((prev) => new Set([...prev, ...newlyBookmarked]));
+      }
+    } catch {
+      setLoadMoreError("Failed to load more articles.");
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [hasNextPage, isLoading, isLoadingMore, page]);
+
+  // Infinite scroll intersection observer
+  useEffect(() => {
+    if (!hasNextPage || isLoading || isLoadingMore) return;
+
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+        if (first?.isIntersecting) {
+          void loadMore();
+        }
+      },
+      {
+        rootMargin: "300px",
+      },
+    );
+
+    observer.observe(sentinel);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [hasNextPage, isLoading, isLoadingMore, loadMore]);
 
   const toggleBookmark = async (id: string) => {
     const isCurrentlyBookmarked = bookmarkedIds.has(id);
@@ -510,72 +613,111 @@ export function ArticlesPage(): JSX.Element {
             </Button>
           </div>
         </div>
-      ) : layout === "list" ? (
-        /* Feed list */
-        <div className="space-y-4">
-          {filteredArticles.map((article) => (
-            <ArticleCard
-              key={article.id}
-              id={article.id}
-              authorId={article.authorId}
-              title={article.title}
-              excerpt={article.excerpt}
-              tagNames={article.tagNames}
-              selectedTag={selectedCategory}
-              onTagClick={(tag) =>
-                setSelectedCategory((prev) =>
-                  prev.toLowerCase() === tag.toLowerCase() ? "All" : tag,
-                )
-              }
-              coverImage={article.coverImage}
-              authorName={article.authoruserName}
-              authorAvatar={article.authorAvatar}
-              authorRole={article.authorRole}
-              createdAt={article.createdAt}
-              readTimeMinutes={article.readTimeMinutes}
-              likes={article.likes}
-              comments={article.comments}
-              isLiked={article.isLiked}
-              isBookmarked={bookmarkedIds.has(article.id)}
-              onBookmark={() => toggleBookmark(article.id)}
-              onLike={handleLike}
-              variant="horizontal"
-            />
-          ))}
-        </div>
       ) : (
-        /* Grid */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredArticles.map((article) => (
-            <ArticleCard
-              key={article.id}
-              id={article.id}
-              authorId={article.authorId}
-              title={article.title}
-              excerpt={article.excerpt}
-              tagNames={article.tagNames}
-              selectedTag={selectedCategory}
-              onTagClick={(tag) =>
-                setSelectedCategory((prev) =>
-                  prev.toLowerCase() === tag.toLowerCase() ? "All" : tag,
-                )
-              }
-              coverImage={article.coverImage}
-              authorName={article.authoruserName}
-              authorAvatar={article.authorAvatar}
-              authorRole={article.authorRole}
-              createdAt={article.createdAt}
-              readTimeMinutes={article.readTimeMinutes}
-              likes={article.likes}
-              comments={article.comments}
-              isLiked={article.isLiked}
-              isBookmarked={bookmarkedIds.has(article.id)}
-              onBookmark={() => toggleBookmark(article.id)}
-              onLike={handleLike}
-              variant="vertical"
-            />
-          ))}
-        </div>
+        <>
+          {layout === "list" ? (
+            /* Feed list */
+            <div className="space-y-4">
+              {filteredArticles.map((article) => (
+                <ArticleCard
+                  key={article.id}
+                  id={article.id}
+                  authorId={article.authorId}
+                  title={article.title}
+                  excerpt={article.excerpt}
+                  tagNames={article.tagNames}
+                  selectedTag={selectedCategory}
+                  onTagClick={(tag) =>
+                    setSelectedCategory((prev) =>
+                      prev.toLowerCase() === tag.toLowerCase() ? "All" : tag,
+                    )
+                  }
+                  coverImage={article.coverImage}
+                  authorName={article.authoruserName}
+                  authorAvatar={article.authorAvatar}
+                  authorRole={article.authorRole}
+                  createdAt={article.createdAt}
+                  readTimeMinutes={article.readTimeMinutes}
+                  likes={article.likes}
+                  comments={article.comments}
+                  isLiked={article.isLiked}
+                  isBookmarked={bookmarkedIds.has(article.id)}
+                  onBookmark={() => toggleBookmark(article.id)}
+                  onLike={handleLike}
+                  variant="horizontal"
+                />
+              ))}
+            </div>
+          ) : (
+            /* Grid */
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {filteredArticles.map((article) => (
+                <ArticleCard
+                  key={article.id}
+                  id={article.id}
+                  authorId={article.authorId}
+                  title={article.title}
+                  excerpt={article.excerpt}
+                  tagNames={article.tagNames}
+                  selectedTag={selectedCategory}
+                  onTagClick={(tag) =>
+                    setSelectedCategory((prev) =>
+                      prev.toLowerCase() === tag.toLowerCase() ? "All" : tag,
+                    )
+                  }
+                  coverImage={article.coverImage}
+                  authorName={article.authoruserName}
+                  authorAvatar={article.authorAvatar}
+                  authorRole={article.authorRole}
+                  createdAt={article.createdAt}
+                  readTimeMinutes={article.readTimeMinutes}
+                  likes={article.likes}
+                  comments={article.comments}
+                  isLiked={article.isLiked}
+                  isBookmarked={bookmarkedIds.has(article.id)}
+                  onBookmark={() => toggleBookmark(article.id)}
+                  onLike={handleLike}
+                  variant="vertical"
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Endless Scroll Sentinel & Indicators */}
+          <div className="pt-4">
+            <div ref={sentinelRef} className="h-4 w-full pointer-events-none" />
+
+            {isLoadingMore && (
+              <div className="py-6 flex flex-col items-center justify-center space-y-2 text-text/70">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  <span>Loading more articles...</span>
+                </div>
+              </div>
+            )}
+
+            {loadMoreError && !isLoadingMore && (
+              <div className="py-6 flex flex-col items-center justify-center space-y-2">
+                <p className="text-xs text-rose-500">{loadMoreError}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void loadMore()}
+                >
+                  Retry Loading
+                </Button>
+              </div>
+            )}
+
+            {!hasNextPage && !isLoading && (
+              <div className="py-8 flex items-center justify-center gap-3 text-xs text-text/50">
+                <div className="h-px w-16 bg-border" />
+                <span>You're all caught up!</span>
+                <div className="h-px w-16 bg-border" />
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );

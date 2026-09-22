@@ -14,17 +14,28 @@ import { getApiErrorMessage } from "@/lib/utils/apiError";
 export function ArticleEditorPage(): JSX.Element {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
+  const [prevId, setPrevId] = useState(id);
   const [initialData, setInitialData] = useState<Partial<ArticleFormData> | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(Boolean(id));
+
+  // Reset state during render if route id changes (React recommended pattern)
+  if (id !== prevId) {
+    setPrevId(id);
+    setInitialData(null);
+    setIsLoading(Boolean(id));
+  }
 
   const isEditing = Boolean(id);
 
   useEffect(() => {
     if (!id) return;
+    let isSubscribed = true;
+
     async function loadArticle() {
       try {
         setIsLoading(true);
         const article = await getArticleById(id as string);
+        if (!isSubscribed) return;
         setInitialData({
           title: article.title,
           slug: article.slug || "",
@@ -42,13 +53,21 @@ export function ArticleEditorPage(): JSX.Element {
           readingTime: article.readingTimeMinutes ?? article.readingTime ?? 0,
         });
       } catch (err: unknown) {
+        if (!isSubscribed) return;
         toast.error(getApiErrorMessage(err) || "Failed to load article");
         navigate("/playground");
       } finally {
-        setIsLoading(false);
+        if (isSubscribed) {
+          setIsLoading(false);
+        }
       }
     }
-    loadArticle();
+
+    void loadArticle();
+
+    return () => {
+      isSubscribed = false;
+    };
   }, [id, navigate]);
 
   const handleSaveDraft = async (
@@ -138,7 +157,7 @@ export function ArticleEditorPage(): JSX.Element {
     <div className="min-h-screen bg-background">
       <ArticleEditor
         key={id ?? "new"}
-        initialData={initialData ?? undefined}
+        initialData={isEditing ? (initialData ?? undefined) : undefined}
         isEditing={isEditing}
         onSaveDraft={handleSaveDraft}
         onPublish={handlePublish}

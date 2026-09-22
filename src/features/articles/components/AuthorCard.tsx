@@ -1,21 +1,13 @@
-import { useState, useEffect, type JSX } from "react";
+import { type JSX } from "react";
 import { Link } from "react-router-dom";
 
 import {
   Card,
   Avatar,
   Button,
-  Skeleton,
 } from "@/components/common";
 
-import {
-  getUserProfileById,
-  formatProfileName,
-  getProfileAvatar,
-  getProfileRole,
-  type UserProfile,
-} from "@/lib/api/user.api";
-import { getArticles, getMyPosts } from "@/features/articles/api/articleApi";
+import type { AuthorInfo } from "@/features/articles/api/articleApi";
 
 export interface AuthorCardProps {
   authorId?: string;
@@ -28,6 +20,7 @@ export interface AuthorCardProps {
   followersCount?: number | string;
   followingCount?: number | string;
   isAuthor?: boolean;
+  author?: AuthorInfo | null;
 }
 
 export function AuthorCard({
@@ -41,108 +34,25 @@ export function AuthorCard({
   followersCount,
   followingCount,
   isAuthor = false,
+  author,
 }: AuthorCardProps): JSX.Element {
-  const [profile, setProfile] =
-    useState<UserProfile | null>(null);
-  const [authorArticlesCount, setAuthorArticlesCount] =
-    useState<number | null>(null);
-
-  const [isLoading, setIsLoading] =
-    useState<boolean>(false);
-
-  useEffect(() => {
-    if (!authorId) {
-      return;
-    }
-
-    let isSubscribed = true;
-
-    async function loadAuthor(): Promise<void> {
-      try {
-        setIsLoading(true);
-
-        const [profileResult, articlesResult] =
-          await Promise.allSettled([
-            getUserProfileById(authorId as string),
-            isAuthor ? getMyPosts() : getArticles(),
-          ]);
-
-        if (!isSubscribed) {
-          return;
-        }
-
-        if (
-          profileResult.status === "fulfilled" &&
-          profileResult.value
-        ) {
-          setProfile(profileResult.value);
-        }
-
-        if (
-          articlesResult.status === "fulfilled" &&
-          Array.isArray(articlesResult.value)
-        ) {
-          const allArticles = articlesResult.value;
-          const userArticles = isAuthor
-            ? allArticles
-            : allArticles.filter(
-                (art) =>
-                  art.authorId === authorId ||
-                  art.author?.id === authorId ||
-                  (authorName &&
-                    authorName !== "DevSpace Author" &&
-                    (art.authorName === authorName ||
-                      art.author?.name === authorName))
-              );
-          setAuthorArticlesCount(userArticles.length);
-        }
-      } catch {
-        // Fallback gracefully
-      } finally {
-        if (isSubscribed) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    void loadAuthor();
-
-    return () => {
-      isSubscribed = false;
-    };
-  }, [authorId, isAuthor, authorName]);
-
   const displayName =
-    authorName &&
-      authorName !== "DevSpace Author"
-      ? authorName
-      : formatProfileName(
-        profile,
-        authorName || "DevSpace Author",
-      );
+    author?.name ||
+    author?.userName ||
+    (authorName && authorName !== "DevSpace Author" ? authorName : "DevSpace Author");
 
-  const displayAvatar =
-    authorAvatar ?? getProfileAvatar(profile);
+  const displayAvatar = author?.avatarUrl ?? authorAvatar;
 
-  const displayRole =
-    authorRole ??
-    getProfileRole(profile) ??
-    "Community Author";
+  const displayRole = authorRole ?? "Community Author";
 
-  const rawCompany =
-    company ||
-    (profile?.company as string | undefined) ||
-    "";
-
-  const displayCompany = rawCompany
-    ? rawCompany.startsWith("@")
-      ? rawCompany
-      : `@ ${rawCompany}`
+  const displayCompany = company
+    ? company.startsWith("@")
+      ? company
+      : `@ ${company}`
     : "";
 
   const displayBio =
     authorBio ||
-    (profile?.bio as string | undefined) ||
     "Building accessible, resilient, and performant web applications.";
 
   /**
@@ -179,182 +89,25 @@ export function AuthorCard({
     return 0;
   };
 
-  /**
-   * Followers
-   *
-   * Check all possible fields returned
-   * by the API, matching ProfilePage.
-   *
-   * The prop is used as a fallback when
-   * the profile endpoint doesn't provide
-   * a follower count.
-   */
   const totalFollowers = getStatNumber(
-    profile?.totalFollowers,
-    profile?.followersCount,
-    profile?.followers,
-    profile?.followerCount,
-    (
-      profile as Record<
-        string,
-        unknown
-      > | null
-    )?.totalFollowerCount,
+    author?.totalFollowers,
     followersCount,
   );
 
-  /**
-   * Following
-   *
-   * Same field resolution logic as
-   * ProfilePage.
-   */
   const totalFollowing = getStatNumber(
-    profile?.totalFollowed,
-    profile?.totalFollowing,
-    profile?.followingCount,
-    profile?.followedCount,
-    profile?.following,
-    (
-      profile as Record<
-        string,
-        unknown
-      > | null
-    )?.totalFollowedCount,
+    author?.totalFollowed,
     followingCount,
   );
 
-  /**
-   * Articles
-   *
-   * Matches the actual count of articles created by the author,
-   * falling back to all possible profile properties and props.
-   */
-  const totalArticles = getStatNumber(
-    authorArticlesCount,
-    profile?.articlesCount,
-    profile?.totalArticles,
-    profile?.totalPosts,
-    profile?.postsCount,
-    profile?.postCount,
-    profile?.articleCount,
-    (
-      profile as Record<
-        string,
-        unknown
-      > | null
-    )?.totalArticleCount,
-    (
-      profile as Record<
-        string,
-        unknown
-      > | null
-    )?.totalArticlesCount,
-    (
-      profile as Record<
-        string,
-        unknown
-      > | null
-    )?.totalPostCount,
-    (
-      profile as Record<
-        string,
-        unknown
-      > | null
-    )?.totalPostsCount,
-    articlesCount,
-  );
+  const totalArticles = getStatNumber(articlesCount);
+
+  const targetAuthorId = author?.id || authorId;
 
   const profileUrl = isAuthor
     ? "/profile"
-    : authorId
-      ? `/profile/${authorId}`
+    : targetAuthorId
+      ? `/profile/${targetAuthorId}`
       : "/profile";
-
-  if (isLoading) {
-    return (
-      <Card
-        variant="default"
-        padding="md"
-        className="
-          rounded-2xl
-          border-border/80
-          bg-white
-          shadow-xs
-        "
-      >
-        <Skeleton
-          variant="text"
-          width={140}
-          height={18}
-          className="mb-4"
-        />
-
-        <div className="mb-4 flex items-center gap-3.5">
-          <Skeleton
-            variant="circular"
-            width={56}
-            height={56}
-          />
-
-          <div className="flex-1 space-y-2">
-            <Skeleton
-              variant="text"
-              width="65%"
-              height={16}
-            />
-
-            <Skeleton
-              variant="text"
-              width="80%"
-              height={12}
-            />
-
-            <Skeleton
-              variant="text"
-              width="45%"
-              height={12}
-            />
-          </div>
-        </div>
-
-        <Skeleton
-          variant="text"
-          width="100%"
-          height={14}
-          count={2}
-          className="mb-4"
-        />
-
-        <div className="mb-5 flex gap-4">
-          <Skeleton
-            variant="text"
-            width={60}
-            height={14}
-          />
-
-          <Skeleton
-            variant="text"
-            width={60}
-            height={14}
-          />
-
-          <Skeleton
-            variant="text"
-            width={60}
-            height={14}
-          />
-        </div>
-
-        <Skeleton
-          variant="rounded"
-          width="100%"
-          height={40}
-          className="rounded-xl"
-        />
-      </Card>
-    );
-  }
 
   return (
     <Card

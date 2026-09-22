@@ -13,7 +13,7 @@ import { toast } from "@/hooks/useToast";
 import { cn } from "@/lib/utils/cn";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
 import { deleteArticle, getArticleById, getArticleComments, likeArticle, saveArticle, type Article } from "@/features/articles/api/articleApi";
-import { followAuthor, getUserProfileById, formatProfileName, getProfileAvatar, type UserProfile } from "@/lib/api/user.api";
+import { followAuthor } from "@/lib/api/user.api";
 import { useAuthStore } from "@/stores/useAuthStore";
 import ArticleComments, { countAllComments } from "@/features/articles/components/ArticleComments";
 import RelatedArticles from "@/features/articles/components/RelatedArticles";
@@ -39,9 +39,6 @@ const isAuthenticated = useAuthStore(
 
 const [article, setArticle] =
   useState<DisplayArticle | null>(null);
-
-const [authorProfile, setAuthorProfile] =
-  useState<UserProfile | null>(null);
 
 const [isLoading, setIsLoading] =
   useState(true);
@@ -91,19 +88,15 @@ useEffect(() => {
   const handleScroll = () => {
     const container = getScrollContainer();
 
-    let scrollTop = 0;
-    let clientHeight = window.innerHeight;
-    let scrollHeight = document.documentElement.scrollHeight;
-
-    if (container) {
-      scrollTop = container.scrollTop;
-      clientHeight = container.clientHeight;
-      scrollHeight = container.scrollHeight;
-    } else {
-      scrollTop = window.scrollY || document.documentElement.scrollTop;
-      clientHeight = window.innerHeight;
-      scrollHeight = document.documentElement.scrollHeight;
-    }
+    const scrollTop = container
+      ? container.scrollTop
+      : window.scrollY || document.documentElement.scrollTop;
+    const clientHeight = container
+      ? container.clientHeight
+      : window.innerHeight;
+    const scrollHeight = container
+      ? container.scrollHeight
+      : document.documentElement.scrollHeight;
 
     if (articleRef.current) {
       const articleEl = articleRef.current;
@@ -252,36 +245,15 @@ useEffect(() => {
 
       setCommentCount(resolvedCommentsCount);
       const initialFollowing =
-        typeof articleData.following ===
-          "boolean"
-          ? articleData.following
-          : typeof articleData.isFollowing ===
-            "boolean"
-            ? articleData.isFollowing
-            : false;
+        typeof data.author?.following === "boolean"
+          ? data.author.following
+          : typeof articleData.following === "boolean"
+            ? articleData.following
+            : typeof articleData.isFollowing === "boolean"
+              ? articleData.isFollowing
+              : false;
 
       setIsFollowing(initialFollowing);
-      if (data.authorId) {
-        try {
-          const profile =
-            await getUserProfileById(
-              data.authorId
-            );
-
-          if (
-            isSubscribed &&
-            profile
-          ) {
-            setAuthorProfile(profile);
-          }
-        } catch {
-          /**
-           * Do not prevent the article from
-           * rendering if the profile endpoint
-           * fails.
-           */
-        }
-      }
     } catch (error: unknown) {
       toast.error(
         getApiErrorMessage(error) ||
@@ -445,9 +417,13 @@ const handleBookmark = async (
 
 const handleFollowToggle =
   async (): Promise<void> => {
+    const targetAuthorId =
+      article?.author?.id ||
+      article?.authorId;
+
     if (
       isFollowLoading ||
-      !article?.authorId
+      !targetAuthorId
     ) {
       return;
     }
@@ -469,7 +445,7 @@ const handleFollowToggle =
 
     if (
       currentUser?.id &&
-      article.authorId ===
+      targetAuthorId ===
       currentUser.id
     ) {
       toast.info(
@@ -496,7 +472,7 @@ const handleFollowToggle =
     try {
       const res =
         await followAuthor(
-          article.authorId
+          targetAuthorId
         );
 
       if (
@@ -769,72 +745,43 @@ if (!article) {
   );
 }
 
-const isAuthor =
-  currentUser?.id ===
+const targetAuthorId =
+  article.author?.id ||
   article.authorId;
 
+const isAuthor =
+  Boolean(currentUser?.id && targetAuthorId && currentUser.id === targetAuthorId);
+
 /**
- * Resolve the author's display name
- * using the same helper as AuthorCard.
+ * Resolve the author's display name directly from the embedded author object.
  */
 const resolvedAuthorName =
-  formatProfileName(
-    authorProfile,
-    article.authorName ||
-    "DevSpace Author"
-  );
+  article.author?.name ||
+  article.author?.userName ||
+  article.authorName ||
+  "DevSpace Author";
 
 /**
- * Resolve the avatar using the same
- * helper as AuthorCard.
+ * Resolve the avatar directly from the embedded author object.
  */
 const resolvedAuthorAvatar =
-  getProfileAvatar(
-    authorProfile
-  ) ??
+  article.author?.avatarUrl ??
   article.authorAvatar;
-
-/**
- * UserProfile can expose username fields
- * with slightly different names depending
- * on the API response.
- *
- * Check the profile first because this is
- * the source of truth for the author.
- */
-const profileData =
-  authorProfile as
-  | (UserProfile &
-    Record<string, unknown>)
-  | null;
-
-const profileUser = profileData?.user as
-  | Record<string, unknown>
-  | undefined;
 
 const resolvedAuthorUsername =
   (
-    profileData?.userName ??
-    profileData?.username ??
-    profileData?.user_name ??
-    profileData?.handle ??
-    profileUser?.userName ??
-    profileUser?.username
-  )
-    ?.toString()
-    .trim()
-    .replace(/^@/, "") ||
-  "DevSpace Author";
-
-const authorProfileIdentifier =
-  resolvedAuthorUsername !==
+    article.author?.userName ??
+    article.author?.username ??
+    article.authorUserName ??
     "DevSpace Author"
-    ? resolvedAuthorUsername
-    : article.authorId;
+  )
+    .toString()
+    .trim()
+    .replace(/^@/, "");
 
 const authorProfileUrl =
-  authorProfileIdentifier
-    ? `/profile/${article.authorId}`
+  targetAuthorId
+    ? `/profile/${targetAuthorId}`
     : "/profile";
 
 const formattedDate =
@@ -1162,7 +1109,7 @@ return (
             </div>
 
             {!isAuthor &&
-              article.authorId && (
+              targetAuthorId && (
                 <Button
                   variant={
                     isFollowing
@@ -1300,11 +1247,13 @@ return (
           <div className="sticky top-8 flex flex-col gap-8">
             {/* Author Card */}
             <AuthorCard
-              authorId={article.authorId}
+              author={article.author}
+              authorId={targetAuthorId}
               authorName={resolvedAuthorName}
               authorAvatar={resolvedAuthorAvatar}
               isAuthor={isAuthor}
-              articlesCount={authorProfile?.articlesCount}
+              followersCount={article.author?.totalFollowers}
+              followingCount={article.author?.totalFollowed}
             />
 
             {/* Related articles */}

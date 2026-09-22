@@ -31,7 +31,6 @@ export const ENDPOINTS = {
     CREATE: `${API_BASE_URL}/api/posts`,
     DETAIL: (id: string) => `${API_BASE_URL}/api/posts/${id}`,
     LIKE: (id: string) => `${API_BASE_URL}/api/posts/${id}/like`,
-    INTERACTION: (id: string) => `${API_BASE_URL}/api/posts/${id}/interaction`,
     COMMENTS: (id: string) => `${API_BASE_URL}/api/posts/${id}/comments`,
 
     CREATE_COMMENT: (id: string) => `${API_BASE_URL}/api/posts/${id}/comment`,
