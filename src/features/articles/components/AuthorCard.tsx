@@ -1,4 +1,4 @@
-import { type JSX } from "react";
+import { useState, useEffect, type JSX } from "react";
 import { Link } from "react-router-dom";
 
 import {
@@ -8,6 +8,8 @@ import {
 } from "@/components/common";
 
 import type { AuthorInfo } from "@/features/articles/api/articleApi";
+import { getArticles, getMyPosts } from "@/features/articles/api/articleApi";
+import { getUserProfileById, type UserProfile } from "@/lib/api/user.api";
 
 export interface AuthorCardProps {
   authorId?: string;
@@ -16,7 +18,8 @@ export interface AuthorCardProps {
   authorRole?: string;
   company?: string;
   authorBio?: string;
-  articlesCount?: number | string;
+  articlesCount?: number | string | UserProfile;
+  articlesCounts?: number | string | UserProfile;
   followersCount?: number | string;
   followingCount?: number | string;
   isAuthor?: boolean;
@@ -31,11 +34,14 @@ export function AuthorCard({
   company,
   authorBio,
   articlesCount,
+  articlesCounts,
   followersCount,
   followingCount,
   isAuthor = false,
   author,
 }: AuthorCardProps): JSX.Element {
+  const [fetchedArticlesCount, setFetchedArticlesCount] = useState<number | null>(null);
+
   const displayName =
     author?.name ||
     author?.userName ||
@@ -84,10 +90,100 @@ export function AuthorCard({
           return parsed;
         }
       }
+
+      if (value && typeof value === "object") {
+        const obj = value as Record<string, unknown>;
+        for (const key of [
+          "articlesCount",
+          "totalArticles",
+          "totalPosts",
+          "postsCount",
+          "postCount",
+          "articleCount",
+          "totalArticleCount",
+          "totalPostsCount",
+          "totalArticlesCount",
+        ]) {
+          const v = obj[key];
+          if (typeof v === "number" && Number.isFinite(v)) return v;
+          if (typeof v === "string" && v.trim() !== "") {
+            const parsed = Number.parseInt(v, 10);
+            if (Number.isFinite(parsed)) return parsed;
+          }
+        }
+      }
     }
 
     return 0;
   };
+
+  const targetAuthorId = author?.id || authorId;
+
+  useEffect(() => {
+    if (!targetAuthorId) return;
+
+    // Check if article count was already provided via props or author object
+    const providedArticles = getStatNumber(
+      articlesCount,
+      articlesCounts,
+      author?.articlesCount,
+      author?.totalArticles,
+      author?.totalPosts,
+      author?.postsCount,
+      author?.postCount,
+    );
+
+    if (providedArticles > 0) return;
+
+    let cancelled = false;
+
+    async function loadArticlesCount(): Promise<void> {
+      try {
+        const profile = await getUserProfileById(targetAuthorId as string);
+        if (cancelled) return;
+
+        const countFromProfile = getStatNumber(
+          profile?.articlesCount,
+          profile?.totalArticles,
+          profile?.totalPosts,
+          profile?.postsCount,
+          profile?.postCount,
+          profile?.articleCount,
+        );
+
+        if (countFromProfile > 0) {
+          setFetchedArticlesCount(countFromProfile);
+          return;
+        }
+
+        const allArticles = isAuthor ? await getMyPosts() : await getArticles();
+        if (cancelled) return;
+
+        if (Array.isArray(allArticles)) {
+          const userArticles = isAuthor
+            ? allArticles
+            : allArticles.filter(
+                (art) =>
+                  art.authorId === targetAuthorId ||
+                  art.author?.id === targetAuthorId ||
+                  (authorName &&
+                    authorName !== "DevSpace Author" &&
+                    (art.authorName === authorName ||
+                      art.author?.name === authorName)),
+              );
+          setFetchedArticlesCount(userArticles.length);
+        }
+      } catch {
+        // Fallback gracefully
+      }
+    }
+
+    void loadArticlesCount();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [targetAuthorId, isAuthor, authorName, articlesCount, articlesCounts, author]);
 
   const totalFollowers = getStatNumber(
     author?.totalFollowers,
@@ -99,9 +195,16 @@ export function AuthorCard({
     followingCount,
   );
 
-  const totalArticles = getStatNumber(articlesCount);
-
-  const targetAuthorId = author?.id || authorId;
+  const totalArticles = getStatNumber(
+    articlesCount,
+    articlesCounts,
+    author?.articlesCount,
+    author?.totalArticles,
+    author?.totalPosts,
+    author?.postsCount,
+    author?.postCount,
+    fetchedArticlesCount,
+  );
 
   const profileUrl = isAuthor
     ? "/profile"

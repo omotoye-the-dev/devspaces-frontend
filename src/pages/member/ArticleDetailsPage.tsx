@@ -1254,6 +1254,11 @@ return (
               isAuthor={isAuthor}
               followersCount={article.author?.totalFollowers}
               followingCount={article.author?.totalFollowed}
+              articlesCount={
+                article.author?.articlesCount ??
+                article.author?.totalArticles ??
+                article.author?.totalPosts
+              }
             />
 
             {/* Related articles */}

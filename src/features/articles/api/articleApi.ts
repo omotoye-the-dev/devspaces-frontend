@@ -22,6 +22,11 @@ export interface AuthorInfo {
   totalFollowers?: number;
   totalFollowed?: number;
   following?: boolean;
+  articlesCount?: number;
+  totalArticles?: number;
+  totalPosts?: number;
+  postCount?: number;
+  postsCount?: number;
 }
 
 export interface Article
