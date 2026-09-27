@@ -39,6 +39,7 @@ export const ENDPOINTS = {
     SAVE: (id: string) => `${API_BASE_URL}/api/posts/${id}/save`,
     COVER_IMAGE: (id: string) => `${API_BASE_URL}/api/posts/${id}/cover-image`,
     TRENDING: `${API_BASE_URL}/api/posts/trending`,
+    FOLLOWING: `${API_BASE_URL}/api/posts/following`,
   },
   TAGS: {
     LIST: `${API_BASE_URL}/api/tags`,
