@@ -532,27 +532,63 @@ export async function likeComment(commentId: string): Promise<void> {
   );
 }
 
-export interface TrendingPost {
-  id: string;
-  authorId?: string;
-  author?: AuthorInfo | null;
-  title: string;
-  slug?: string;
-  content?: string;
-  excerpt?: string | null;
-  tags?: string[];
-  coverImageUrl?: string | null;
-  readingTimeMinutes?: number;
-  viewCount?: number;
-  likeCount?: number;
-  commentCount?: number;
-  createdAt?: string;
+/**
+ * GET /api/posts/following (paginated following posts feed)
+ */
+export async function getFollowingArticles(
+  params?: GetFeedParams,
+): Promise<{ data: Article[]; pagination?: Pagination }> {
+  const queryParams = params
+    ? {
+        ...params,
+        ...(params.page !== undefined ? { page: params.page, pageNumber: params.page } : {}),
+      }
+    : undefined;
+
+  try {
+    const response = await apiClient.get<
+      | FeedResponse
+      | Article[]
+      | {
+          data?: Article[];
+          pagination?: Pagination;
+        }
+    >(ENDPOINTS.POSTS.FOLLOWING, { params: queryParams });
+
+    if (Array.isArray(response.data)) {
+      return { data: response.data };
+    }
+
+    if (response.data && typeof response.data === "object") {
+      const res = response.data as FeedResponse;
+      if (Array.isArray(res.data)) {
+        return {
+          data: res.data,
+          pagination: res.pagination,
+        };
+      }
+    }
+
+    return { data: [] };
+  } catch {
+    return { data: [] };
+  }
 }
+
+/**
+ * GET /api/posts/following (returns array of articles)
+ */
+export async function getFollowingPosts(params?: GetFeedParams): Promise<Article[]> {
+  const result = await getFollowingArticles(params);
+  return result.data;
+}
+
+export type TrendingPost = Article;
 
 export interface TrendingResponse {
   success: boolean;
   message: string;
-  data: TrendingPost[];
+  data: Article[];
   pagination?: Pagination;
 }
 
@@ -562,23 +598,53 @@ export interface GetTrendingParams {
   search?: string;
 }
 
-/** GET /api/posts/trending — fetch trending posts */
-export async function getTrendingPosts(params?: GetTrendingParams): Promise<TrendingPost[]> {
+/**
+ * GET /api/posts/trending (paginated trending posts feed)
+ */
+export async function getTrendingArticles(
+  params?: GetTrendingParams,
+): Promise<{ data: Article[]; pagination?: Pagination }> {
+  const queryParams = params
+    ? {
+        ...params,
+        ...(params.page !== undefined ? { page: params.page, pageNumber: params.page } : {}),
+      }
+    : undefined;
+
   try {
     const response = await apiClient.get<
-      TrendingResponse | TrendingPost[] | { data?: TrendingPost[] }
-    >(ENDPOINTS.POSTS.TRENDING, { params });
+      | FeedResponse
+      | Article[]
+      | {
+          data?: Article[];
+          pagination?: Pagination;
+        }
+    >(ENDPOINTS.POSTS.TRENDING, { params: queryParams });
 
-    const body = response.data;
-    if (Array.isArray(body)) {
-      return body;
+    if (Array.isArray(response.data)) {
+      return { data: response.data };
     }
-    if (body && typeof body === "object" && "data" in body && Array.isArray(body.data)) {
-      return body.data;
+
+    if (response.data && typeof response.data === "object") {
+      const res = response.data as FeedResponse;
+      if (Array.isArray(res.data)) {
+        return {
+          data: res.data,
+          pagination: res.pagination,
+        };
+      }
     }
-    return [];
+
+    return { data: [] };
   } catch {
-    return [];
+    return { data: [] };
   }
 }
+
+/** GET /api/posts/trending — fetch trending posts */
+export async function getTrendingPosts(params?: GetTrendingParams): Promise<Article[]> {
+  const result = await getTrendingArticles(params);
+  return result.data;
+}
+
 
