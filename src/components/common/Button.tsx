@@ -111,7 +111,9 @@ export function Button({
         )
       )}
 
-      {children && <span>{children}</span>}
+      {children && (
+        <span className="inline-flex items-center justify-center gap-1.5">{children}</span>
+      )}
 
       {!isLoading && rightIcon && (
         <span className="inline-flex shrink-0 items-center justify-center">{rightIcon}</span>

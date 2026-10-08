@@ -44,4 +44,25 @@ export const ENDPOINTS = {
   TAGS: {
     LIST: `${API_BASE_URL}/api/tags`,
   },
+  RESOURCES: {
+    BASE: `${API_BASE_URL}/api/resources`,
+    UPLOAD_IMAGE: `${API_BASE_URL}/api/resources/upload-image`,
+    UPLOAD_FILE: `${API_BASE_URL}/api/resources/upload-file`,
+    CATEGORIES: `${API_BASE_URL}/api/resources/categories`,
+    PREVIEW_LINK: `${API_BASE_URL}/api/resources/preview-link`,
+    DETAIL: (id: string) => `${API_BASE_URL}/api/resources/${id}`,
+    PARTS: (id: string) => `${API_BASE_URL}/api/resources/${id}/parts`,
+    PART_DETAIL: (id: string, partId: string) =>
+      `${API_BASE_URL}/api/resources/${id}/parts/${partId}`,
+    REORDER_PARTS: (id: string) => `${API_BASE_URL}/api/resources/${id}/parts/reorder`,
+    VOTE: (id: string, value: number) => `${API_BASE_URL}/api/resources/${id}/vote?value=${value}`,
+    VOTE_BASE: (id: string) => `${API_BASE_URL}/api/resources/${id}/vote`,
+    UPVOTE: (id: string) => `${API_BASE_URL}/api/resources/${id}/upvote`,
+    DOWNVOTE: (id: string) => `${API_BASE_URL}/api/resources/${id}/downvote`,
+    SAVE: (id: string, saved: boolean) => `${API_BASE_URL}/api/resources/${id}/save?saved=${saved}`,
+    DOWNLOAD: (id: string, partId?: string) =>
+      partId
+        ? `${API_BASE_URL}/api/resources/${id}/download?partId=${encodeURIComponent(partId)}`
+        : `${API_BASE_URL}/api/resources/${id}/download`,
+  },
 } as const;

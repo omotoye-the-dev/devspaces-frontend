@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type JSX } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { MdOutlineSearch } from "react-icons/md";
 import { FiMenu, FiX } from "react-icons/fi";
 import { FaUser } from "react-icons/fa";
@@ -8,6 +8,7 @@ import { LuPenLine } from "react-icons/lu";
 import { Input, Button, Avatar, Skeleton } from "../common/index";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { getUserProfile, type UserProfile } from "@/lib/api/user.api";
+import { cn } from "@/lib/utils/cn";
 
 const searchSuggestions = [
   "React hooks",
@@ -62,6 +63,7 @@ export function NavBarSkeleton(): JSX.Element {
 
 export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Element {
   const navigate = useNavigate();
+  const location = useLocation();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [notifications] = useState(3);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -69,6 +71,9 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
   const [searchTerm, setSearchTerm] = useState("");
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [hasFetchedProfile, setHasFetchedProfile] = useState(false);
+
+  const isArticlesActive = location.pathname === "/articles" || location.pathname.startsWith("/articles/");
+  const isResourcesActive = location.pathname === "/resources" || location.pathname.startsWith("/resources/");
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -179,8 +184,11 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
             <div className="hidden md:flex items-center gap-4 shrink-0">
               <Button
                 type="button"
-                variant="ghost"
-                className="whitespace-nowrap"
+                variant={isArticlesActive ? "secondary" : "ghost"}
+                className={cn(
+                  "whitespace-nowrap transition-colors",
+                  isArticlesActive && "font-semibold text-primary bg-primary/10 border-primary/20",
+                )}
                 onClick={() => handleProtectedNavigation("/articles")}
               >
                 Articles
@@ -188,8 +196,11 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
 
               <Button
                 type="button"
-                variant="ghost"
-                className="whitespace-nowrap"
+                variant={isResourcesActive ? "secondary" : "ghost"}
+                className={cn(
+                  "whitespace-nowrap transition-colors",
+                  isResourcesActive && "font-semibold text-primary bg-primary/10 border-primary/20",
+                )}
                 onClick={() => handleProtectedNavigation("/resources")}
               >
                 Resources
@@ -377,7 +388,12 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
                   setMobileOpen(false);
                   handleProtectedNavigation("/articles");
                 }}
-                className="px-2 py-2 text-left text-text/80 hover:text-text hover:bg-slate-50 rounded-md transition-colors"
+                className={cn(
+                  "px-2 py-2 text-left rounded-md transition-colors",
+                  isArticlesActive
+                    ? "text-primary font-semibold bg-primary/10"
+                    : "text-text/80 hover:text-text hover:bg-slate-50",
+                )}
               >
                 Articles
               </button>
@@ -388,7 +404,12 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
                   setMobileOpen(false);
                   handleProtectedNavigation("/resources");
                 }}
-                className="px-2 py-2 text-left text-text/80 hover:text-text hover:bg-slate-50 rounded-md transition-colors"
+                className={cn(
+                  "px-2 py-2 text-left rounded-md transition-colors",
+                  isResourcesActive
+                    ? "text-primary font-semibold bg-primary/10"
+                    : "text-text/80 hover:text-text hover:bg-slate-50",
+                )}
               >
                 Resources
               </button>

@@ -247,6 +247,7 @@ export function Sidebar({
     if (!onSelect) {
       if (id === "home") navigate("/");
       else if (id === "my-feed") navigate("/articles");
+      else if (id === "resources") navigate("/resources");
       else if (id === "write") navigate("/articles/new");
       else if (id === "profile") navigate("/profile");
     }
