@@ -29,8 +29,14 @@ const PublicLayout = (): JSX.Element => {
   // Article view/details route: /articles/:id (excluding /articles listing page)
   const isArticleViewPage = /^\/articles\/[^/]+/.test(location.pathname);
 
-  // Hide sidebar completely on write article, profile, and article view pages
-  const shouldHideSidebar = isWriteArticlePage || isProfilePage || isArticleViewPage;
+  // Resources page route: /resources
+  const isResourcesPage =
+    location.pathname === "/resources" ||
+    location.pathname.startsWith("/resources");
+
+  // Hide sidebar completely on write article, profile, article view, and resources pages
+  const shouldHideSidebar =
+    isWriteArticlePage || isProfilePage || isArticleViewPage || isResourcesPage;
 
   // Home page route ("/")
   const isHomePage = location.pathname === "/";
@@ -58,9 +64,11 @@ const PublicLayout = (): JSX.Element => {
         <main
           ref={mainRef}
           className={
-            shouldHideSidebar
-              ? "flex-1 overflow-y-auto p-2 sm:p-4 md:p-6"
-              : "flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 pb-20 md:pb-8"
+            isResourcesPage
+              ? "flex-1 overflow-y-auto p-0"
+              : shouldHideSidebar
+                ? "flex-1 overflow-y-auto p-2 sm:p-4 md:p-6"
+                : "flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 pb-20 md:pb-8"
           }
         >
           <Outlet />

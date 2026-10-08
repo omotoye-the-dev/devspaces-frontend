@@ -27,11 +27,11 @@ export interface ModalProps {
 }
 
 const sizeStyles: Record<ModalSize, string> = {
-  sm: "max-w-sm",
-  md: "max-w-md",
-  lg: "max-w-lg",
-  xl: "max-w-2xl",
-  full: "max-w-4xl",
+  sm: "max-w-sm max-h-[90vh] rounded-lg",
+  md: "max-w-md max-h-[90vh] rounded-lg",
+  lg: "max-w-lg max-h-[90vh] rounded-lg",
+  xl: "max-w-2xl max-h-[90vh] rounded-lg",
+  full: "w-screen h-screen max-w-none max-h-none rounded-none border-0",
 };
 
 const FOCUSABLE_SELECTOR =
@@ -139,7 +139,10 @@ export function Modal({
     <div
       role="presentation"
       onClick={handleOverlayClick}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-200"
+      className={cn(
+        "fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-200",
+        size === "full" ? "p-0" : "p-4 sm:p-6",
+      )}
     >
       <div
         ref={modalRef}
@@ -150,9 +153,9 @@ export function Modal({
         aria-describedby={description ? descriptionId : undefined}
         onKeyDown={handleKeyDown}
         className={cn(
-          "relative w-full bg-white text-text font-inter rounded-lg border border-border shadow-xl overflow-hidden flex flex-col max-h-[90vh]",
+          "relative w-full bg-white text-text font-inter border border-border shadow-xl overflow-hidden flex flex-col",
           "animate-in zoom-in-95 duration-200 focus:outline-none",
-          sizeStyles[size],
+          size === "full" ? "w-screen h-screen max-w-none max-h-none rounded-none border-0" : sizeStyles[size],
           className,
         )}
       >

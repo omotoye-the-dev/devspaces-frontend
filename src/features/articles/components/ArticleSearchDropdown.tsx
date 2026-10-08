@@ -56,8 +56,9 @@ export function ArticleSearchDropdown({
     };
   }, [isOpen, onClose]);
 
-  // Fetch all popular tags once on mount
+  // Fetch all popular tags once opened
   useEffect(() => {
+    if (!isOpen) return;
     let cancelled = false;
 
     async function loadTags(): Promise<void> {
@@ -79,7 +80,7 @@ export function ArticleSearchDropdown({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isOpen]);
 
   // Fetch trending topics (with debounced search query support)
   useEffect(() => {

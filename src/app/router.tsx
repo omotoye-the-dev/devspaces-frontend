@@ -12,6 +12,9 @@ import NotFoundPage from "@/pages/NotFoundPage";
 import ArticleEditorPage from "@/pages/member/ArticleEditorPage";
 import ArticleDetailsPage from "@/pages/member/ArticleDetailsPage";
 import ArticlesPage from "@/pages/member/ArticlesPage";
+import ResourcesPage from "@/pages/member/ResourcesPage";
+import ResourceDetailsPage from "@/pages/member/ResourceDetailsPage";
+import ResourceEditorPage from "@/pages/member/ResourceEditorPage";
 import ProtectedRoute from "@/components/shared/ProtectedRoute";
 import ProfilePage from "@/pages/member/ProfilePage";
 
@@ -30,6 +33,18 @@ export const router = createBrowserRouter([
           {
             path: "articles",
             element: <ArticlesPage />,
+          },
+          {
+            path: "resources",
+            element: <ResourcesPage />,
+          },
+          {
+            path: "resources/:id",
+            element: <ResourceDetailsPage />,
+          },
+          {
+            path: "resources/:id/edit",
+            element: <ResourceEditorPage />,
           },
           {
             path: "articles/new",

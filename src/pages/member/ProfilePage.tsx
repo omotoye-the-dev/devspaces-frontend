@@ -1,5 +1,5 @@
-import { useState, useEffect, type JSX } from "react";
-import { useParams } from "react-router-dom";
+import { useState, useEffect, useMemo, type JSX, type MouseEvent } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   FiMapPin,
   FiLink,
@@ -15,6 +15,9 @@ import {
   FiUser,
   FiFolder,
   FiCheck,
+  FiArrowUp,
+  FiArrowDown,
+  FiDownload,
 } from "react-icons/fi";
 import { BsPatchCheckFill } from "react-icons/bs";
 import { Avatar, Button, Tabs, Skeleton, EmptyState, type TabItem } from "@/components/common";
@@ -27,26 +30,69 @@ import {
 } from "@/lib/api/user.api";
 import { getArticles, getMyPosts, type Article } from "@/features/articles/api/articleApi";
 import { ArticleCard } from "@/features/articles/components/ArticleCard";
+import {
+  getResources,
+  voteResource,
+  saveResource,
+} from "@/features/resources/api/resources.api";
+import { ResourceCard, type ResourceItem } from "@/features/resources/components/ResourceCard";
+import type { ResourceListItem } from "@/types/resources.types";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { toast } from "@/hooks/useToast";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
 
+function formatDate(dateStr?: string): string {
+  if (!dateStr) return "";
+  try {
+    const d = new Date(dateStr);
+    return new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }).format(d);
+  } catch {
+    return dateStr;
+  }
+}
+
+function mapToResourceCardItem(item: ResourceListItem): ResourceItem {
+  const upvotes = item.upvoteCount ?? 0;
+  const isUpvoted = Boolean(item.isUpvotedByMe) && upvotes > 0;
+  const isDownvoted = Boolean(item.isDownvotedByMe);
+
+  return {
+    id: item.id,
+    title: item.title,
+    description: item.description,
+    category: item.category,
+    icon: item.logoUrl || undefined,
+    url: item.externalUrl || undefined,
+    tags: (item.tags || []).map((t) => (typeof t === "string" ? t : t.name)),
+    author: {
+      id: item.uploader?.userId,
+      name: item.uploader?.name || item.uploader?.username || "DevSpace Contributor",
+      avatarUrl: item.uploader?.avatarUrl || undefined,
+    },
+    updatedAt: formatDate(item.createdAt),
+    upvotesCount: upvotes,
+    downvotesCount: item.downvoteCount ?? 0,
+    isUpvoted,
+    isDownvoted,
+    isBookmarked: item.isSavedByMe,
+  };
+}
+
 type ProfileTab = "articles" | "resources" | "activity" | "about";
 
-const PROFILE_TABS: TabItem[] = [
-  { id: "articles", label: "Articles", icon: <FiFileText className="w-4 h-4" /> },
-  { id: "resources", label: "Resources", icon: <FiFolder className="w-4 h-4" /> },
-  { id: "activity", label: "Activity", icon: <FiActivity className="w-4 h-4" /> },
-  { id: "about", label: "About", icon: <FiUser className="w-4 h-4" /> },
-];
-
 export default function ProfilePage(): JSX.Element {
+  const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
   const currentUser = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [articles, setArticles] = useState<Article[]>([]);
+  const [resources, setResources] = useState<ResourceListItem[]>([]);
   const [activeTab, setActiveTab] = useState<ProfileTab>("articles");
   const [isFollowing, setIsFollowing] = useState<boolean>(false);
   const [isFollowLoading, setIsFollowLoading] = useState<boolean>(false);
@@ -61,34 +107,139 @@ export default function ProfilePage(): JSX.Element {
       (currentUser?.username && id === currentUser.username),
   );
 
+  const [prevId, setPrevId] = useState<string | undefined>(id);
+  if (id !== prevId) {
+    setPrevId(id);
+    setIsLoading(true);
+  }
+
   useEffect(() => {
     let cancelled = false;
 
     async function loadData(): Promise<void> {
       try {
-        setIsLoading(true);
-        const [profileData, articlesData] = await Promise.allSettled([
-          getUserProfile(id),
-          isOwnProfile ? getMyPosts() : getArticles(),
-        ]);
+        const profileRes = await getUserProfile(id);
+        if (cancelled) return;
+
+        setProfile(profileRes);
+        const isFollowedInitial =
+          typeof profileRes.following === "boolean"
+            ? profileRes.following
+            : typeof profileRes.isFollowing === "boolean"
+              ? profileRes.isFollowing
+              : false;
+        setIsFollowing(isFollowedInitial);
+
+        // Determine if this is the logged-in user's own profile
+        const myId = currentUser?.id || (profileRes.id as string | undefined);
+        const myUsername = (
+          currentUser?.username ||
+          currentUser?.userName ||
+          (profileRes.username as string | undefined) ||
+          (profileRes.userName as string | undefined)
+        )?.toLowerCase();
+
+        const isViewingSelf = Boolean(
+          !id ||
+            id === "me" ||
+            (myId && id === myId) ||
+            (myUsername && id.toLowerCase() === myUsername) ||
+            (currentUser?.id && profileRes.id && currentUser.id === profileRes.id),
+        );
+
+        let userArticles: Article[] = [];
+        let userResources: ResourceListItem[] = [];
+
+        // ── 1. Fetch Articles ───────────────────────────────────────────
+        if (isViewingSelf) {
+          try {
+            const myPosts = await getMyPosts();
+            if (Array.isArray(myPosts) && myPosts.length > 0) {
+              userArticles = myPosts;
+            }
+          } catch {
+            // Fall back to feed filtering
+          }
+
+          if (userArticles.length === 0) {
+            try {
+              const allPosts = await getArticles();
+              if (Array.isArray(allPosts)) {
+                userArticles = allPosts.filter((art) => {
+                  const authorId = art.author?.id || art.authorId;
+                  const authorUsername = (art.author?.userName || art.author?.username)?.toLowerCase();
+                  if (myId && authorId && authorId === myId) return true;
+                  if (myUsername && authorUsername && authorUsername === myUsername) return true;
+                  return false;
+                });
+              }
+            } catch {
+              // Fallback silently
+            }
+          }
+        } else {
+          try {
+            const allPosts = await getArticles();
+            if (Array.isArray(allPosts)) {
+              const targetId = (profileRes.id as string | undefined) || id;
+              const targetUsername = (
+                (profileRes.userName || profileRes.username) as string | undefined
+              )?.toLowerCase();
+              const targetName = (profileRes.name || profileRes.fullName)?.toLowerCase();
+
+              userArticles = allPosts.filter((art) => {
+                const authorId = art.author?.id || art.authorId;
+                const authorUsername = (art.author?.userName || art.author?.username)?.toLowerCase();
+                const authorName = (art.author?.name || art.authorName)?.toLowerCase();
+
+                if (targetId && authorId && authorId === targetId) return true;
+                if (targetUsername && authorUsername && authorUsername === targetUsername) return true;
+                if (targetName && authorName && authorName === targetName) return true;
+                return false;
+              });
+            }
+          } catch {
+            // Fallback silently
+          }
+        }
+
+        // ── 2. Fetch Resources ──────────────────────────────────────────
+        try {
+          const targetResId = isViewingSelf ? myId : (profileRes.id as string | undefined) || id;
+          const targetResUsername = isViewingSelf
+            ? myUsername
+            : (
+                (profileRes.userName || profileRes.username) as string | undefined
+              )?.toLowerCase();
+
+          // Try querying getResources with uploaderId filter
+          const resQuery = await getResources({
+            uploaderId: targetResId,
+            pageSize: 50,
+          });
+
+          if (Array.isArray(resQuery.data) && resQuery.data.length > 0) {
+            userResources = resQuery.data;
+          } else {
+            // Fall back to querying feed and filtering by uploader
+            const allRes = await getResources({ pageSize: 50 });
+            if (Array.isArray(allRes.data)) {
+              userResources = allRes.data.filter((r) => {
+                const uploaderId = r.uploader?.userId;
+                const uploaderUsername = r.uploader?.username?.toLowerCase();
+                if (targetResId && uploaderId && uploaderId === targetResId) return true;
+                if (targetResUsername && uploaderUsername && uploaderUsername === targetResUsername) return true;
+                return false;
+              });
+            }
+          }
+        } catch {
+          // Fallback silently
+        }
 
         if (!cancelled) {
-          if (profileData.status === "fulfilled" && profileData.value) {
-            setProfile(profileData.value);
-            const isFollowedInitial =
-              typeof profileData.value.following === "boolean"
-                ? profileData.value.following
-                : typeof profileData.value.isFollowing === "boolean"
-                  ? profileData.value.isFollowing
-                  : false;
-            setIsFollowing(isFollowedInitial);
-          }
-          if (articlesData.status === "fulfilled" && Array.isArray(articlesData.value)) {
-            const fetchedArticles = articlesData.value;
-            setArticles(
-              isOwnProfile ? fetchedArticles : fetchedArticles.filter((art) => art.authorId === id),
-            );
-          }
+          setArticles(userArticles);
+          setResources(userResources);
         }
       } catch {
         // Keep fallback data gracefully on network error
@@ -103,7 +254,7 @@ export default function ProfilePage(): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [id, isOwnProfile]);
+  }, [id, isOwnProfile, currentUser?.id, currentUser?.username, currentUser?.userName]);
 
   const firstArticle = articles[0];
   const firstArticleAuthorName =
@@ -170,7 +321,191 @@ export default function ProfilePage(): JSX.Element {
   const followingCount = rawFollowing;
 
   const articlesCount = articles.length;
-  const resourcesCount = (profile?.resourcesCount as string | number | undefined) ?? 0;
+  const rawResourcesStat = getStatNumber(
+    profile?.resourcesCount,
+    profile?.totalResources,
+    (profile as Record<string, unknown> | null)?.resourceCount,
+    (profile as Record<string, unknown> | null)?.totalResourceCount,
+  );
+  const resourcesCount = resources.length > 0 ? resources.length : rawResourcesStat;
+
+  const totalResourceUpvotes = useMemo(
+    () => resources.reduce((acc, r) => acc + (r.upvoteCount || 0), 0),
+    [resources],
+  );
+  const totalResourceDownloads = useMemo(
+    () => resources.reduce((acc, r) => acc + (r.downloadCount || 0), 0),
+    [resources],
+  );
+  const totalResourceDownvotes = useMemo(
+    () => resources.reduce((acc, r) => acc + (r.downvoteCount || 0), 0),
+    [resources],
+  );
+
+  const profileTabs: TabItem[] = useMemo(
+    () => [
+      { id: "articles", label: "Articles", count: articlesCount, icon: <FiFileText className="w-4 h-4" /> },
+      { id: "resources", label: "Resources", count: resourcesCount, icon: <FiFolder className="w-4 h-4" /> },
+      { id: "activity", label: "Activity", icon: <FiActivity className="w-4 h-4" /> },
+      { id: "about", label: "About", icon: <FiUser className="w-4 h-4" /> },
+    ],
+    [articlesCount, resourcesCount],
+  );
+
+  const handleResourceClick = (cardItem: ResourceItem): void => {
+    if (isOwnProfile) {
+      navigate(`/resources/${cardItem.id}/edit`);
+    } else {
+      navigate(`/resources/${cardItem.id}`);
+    }
+  };
+
+  const handleResourceUpvote = async (
+    resId: string,
+    e: MouseEvent<HTMLButtonElement>,
+  ): Promise<void> => {
+    e.stopPropagation();
+    const target = resources.find((r) => r.id === resId);
+    if (!target) return;
+
+    const wasUpvoted = Boolean(target.isUpvotedByMe) && (target.upvoteCount ?? 0) > 0;
+    const wasDownvoted = Boolean(target.isDownvotedByMe);
+    const previousVote: -1 | 0 | 1 = wasUpvoted ? 1 : wasDownvoted ? -1 : 0;
+
+    // Toggle: if already upvoted, unvote to 0. Otherwise vote 1.
+    const nextVote: -1 | 0 | 1 = wasUpvoted ? 0 : 1;
+    const delta = wasUpvoted ? -1 : 1;
+
+    setResources((prev) =>
+      prev.map((r) =>
+        r.id === resId
+          ? {
+              ...r,
+              isUpvotedByMe: nextVote === 1,
+              isDownvotedByMe: false,
+              upvoteCount: Math.max(0, (r.upvoteCount || 0) + delta),
+            }
+          : r,
+      ),
+    );
+
+    try {
+      const res = await voteResource(resId, nextVote, previousVote);
+      setResources((prev) =>
+        prev.map((r) =>
+          r.id === resId
+            ? {
+                ...r,
+                isUpvotedByMe: res.data.isUpvoted,
+                isDownvotedByMe: res.data.isDownvoted ?? false,
+                upvoteCount: res.data.upvoteCount,
+                downvoteCount: res.data.downvoteCount,
+              }
+            : r,
+        ),
+      );
+    } catch (err: unknown) {
+      setResources((prev) =>
+        prev.map((r) =>
+          r.id === resId
+            ? {
+                ...r,
+                isUpvotedByMe: target.isUpvotedByMe,
+                isDownvotedByMe: target.isDownvotedByMe,
+                upvoteCount: target.upvoteCount,
+              }
+            : r,
+        ),
+      );
+      toast.error(getApiErrorMessage(err, "Failed to record vote"));
+    }
+  };
+
+  const handleResourceDownvote = async (
+    resId: string,
+    e: MouseEvent<HTMLButtonElement>,
+  ): Promise<void> => {
+    e.stopPropagation();
+    const target = resources.find((r) => r.id === resId);
+    if (!target) return;
+
+    const wasUpvoted = Boolean(target.isUpvotedByMe) && (target.upvoteCount ?? 0) > 0;
+    const wasDownvoted = Boolean(target.isDownvotedByMe);
+    const previousVote: -1 | 0 | 1 = wasUpvoted ? 1 : wasDownvoted ? -1 : 0;
+
+    // Toggle: if already downvoted, unvote to 0. Otherwise vote -1.
+    const nextVote: -1 | 0 | 1 = wasDownvoted ? 0 : -1;
+    const upvoteDelta = wasUpvoted ? -1 : 0;
+
+    setResources((prev) =>
+      prev.map((r) =>
+        r.id === resId
+          ? {
+              ...r,
+              isUpvotedByMe: false,
+              isDownvotedByMe: nextVote === -1,
+              upvoteCount: Math.max(0, (r.upvoteCount || 0) + upvoteDelta),
+            }
+          : r,
+      ),
+    );
+
+    try {
+      const res = await voteResource(resId, nextVote, previousVote);
+      setResources((prev) =>
+        prev.map((r) =>
+          r.id === resId
+            ? {
+                ...r,
+                isUpvotedByMe: res.data.isUpvoted,
+                isDownvotedByMe: res.data.isDownvoted ?? (nextVote === -1),
+                upvoteCount: res.data.upvoteCount,
+                downvoteCount: res.data.downvoteCount,
+              }
+            : r,
+        ),
+      );
+    } catch (err: unknown) {
+      setResources((prev) =>
+        prev.map((r) =>
+          r.id === resId
+            ? {
+                ...r,
+                isUpvotedByMe: target.isUpvotedByMe,
+                isDownvotedByMe: target.isDownvotedByMe,
+                upvoteCount: target.upvoteCount,
+              }
+            : r,
+        ),
+      );
+      toast.error(getApiErrorMessage(err, "Failed to record downvote"));
+    }
+  };
+
+  const handleResourceBookmark = async (
+    resId: string,
+    e: MouseEvent<HTMLButtonElement>,
+  ): Promise<void> => {
+    e.stopPropagation();
+    const target = resources.find((r) => r.id === resId);
+    if (!target) return;
+
+    const nextSaved = !target.isSavedByMe;
+
+    setResources((prev) =>
+      prev.map((r) => (r.id === resId ? { ...r, isSavedByMe: nextSaved } : r)),
+    );
+
+    try {
+      await saveResource(resId, nextSaved);
+      toast.success(nextSaved ? "Saved to your bookmarks" : "Removed from bookmarks");
+    } catch (err: unknown) {
+      setResources((prev) =>
+        prev.map((r) => (r.id === resId ? { ...r, isSavedByMe: !nextSaved } : r)),
+      );
+      toast.error(getApiErrorMessage(err, "Failed to update saved status"));
+    }
+  };
 
   const handleFollowToggle = async (): Promise<void> => {
     const targetId = id || (profile?.id as string | undefined);
@@ -479,7 +814,7 @@ export default function ProfilePage(): JSX.Element {
       <Tabs
         value={activeTab}
         onChange={(val) => setActiveTab(val as ProfileTab)}
-        items={PROFILE_TABS}
+        items={profileTabs}
         variant="line"
       />
 
@@ -499,13 +834,13 @@ export default function ProfilePage(): JSX.Element {
                   <ArticleCard
                     key={art.id}
                     id={art.id}
-                    authorId={art.authorId}
+                    authorId={art.author?.id || art.authorId}
                     title={art.title}
                     excerpt={art.excerpt || art.content.slice(0, 110) + "..."}
                     tagNames={art.tags || art.tagNames || []}
                     coverImage={art.coverImageUrl || art.coverImage}
-                    authorName={displayName}
-                    authorAvatar={avatarUrl}
+                    authorName={art.author?.name || art.author?.userName || art.authorName || displayName}
+                    authorAvatar={art.author?.avatarUrl || avatarUrl}
                     authorRole={profile?.role as string | undefined}
                     createdAt={art.createdAt}
                     readTimeMinutes={art.readingTimeMinutes ?? art.readingTime ?? 4}
@@ -540,42 +875,80 @@ export default function ProfilePage(): JSX.Element {
         )}
 
         {activeTab === "resources" && (
-          <div className="bg-white border border-border rounded-2xl p-8 sm:p-12 text-center space-y-3">
-            <FiBookOpen className="w-10 h-10 text-text/30 mx-auto" />
-            <h3 className="text-base font-semibold text-text">Curated Developer Resources</h3>
-            <p className="text-xs sm:text-sm text-text/50 max-w-md mx-auto">
-              Checklists, boilerplates, and recommended libraries shared by {displayName}.
-            </p>
-            <div className="pt-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-left max-w-3xl mx-auto">
-              {[
-                {
-                  title: "Modern React Architecture",
-                  type: "Guide & Cheatsheet",
-                  stars: "1.2k",
-                },
-                {
-                  title: "Accessible Design Tokens",
-                  type: "Tailwind UI Kit",
-                  stars: "840",
-                },
-                {
-                  title: "Frontend Testing Checklist",
-                  type: "Playwright & RTL",
-                  stars: "520",
-                },
-              ].map((res) => (
-                <div
-                  key={res.title}
-                  className="p-4 border border-border rounded-xl hover:border-primary/50 transition-colors bg-slate-50/50"
-                >
-                  <span className="text-[10px] font-semibold text-primary uppercase tracking-wider block mb-1">
-                    {res.type}
+          <div className="space-y-5">
+            {/* Resource Engagement Stats Strip */}
+            {!isLoading && resources.length > 0 && (
+              <div className="grid grid-cols-3 gap-3 p-3.5 sm:p-4 bg-white border border-border/80 rounded-2xl shadow-2xs text-center">
+                <div className="flex flex-col items-center justify-center gap-0.5">
+                  <div className="flex items-center gap-1.5 text-xs text-text/60 font-medium">
+                    <FiArrowUp className="w-3.5 h-3.5 text-primary" />
+                    <span>Upvotes</span>
+                  </div>
+                  <span className="text-lg sm:text-xl font-bold text-text">
+                    {totalResourceUpvotes}
                   </span>
-                  <h4 className="text-sm font-bold text-text line-clamp-1">{res.title}</h4>
-                  <p className="text-xs text-text/50 mt-1">★ {res.stars} saves</p>
                 </div>
-              ))}
-            </div>
+
+                <div className="flex flex-col items-center justify-center gap-0.5 border-x border-border/70">
+                  <div className="flex items-center gap-1.5 text-xs text-text/60 font-medium">
+                    <FiDownload className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Downloads</span>
+                  </div>
+                  <span className="text-lg sm:text-xl font-bold text-text">
+                    {totalResourceDownloads}
+                  </span>
+                </div>
+
+                <div className="flex flex-col items-center justify-center gap-0.5">
+                  <div className="flex items-center gap-1.5 text-xs text-text/60 font-medium">
+                    <FiArrowDown className="w-3.5 h-3.5 text-rose-500" />
+                    <span>Downvotes</span>
+                  </div>
+                  <span className="text-lg sm:text-xl font-bold text-text">
+                    {totalResourceDownvotes}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {isLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} variant="rounded" className="h-64 w-full rounded-2xl" />
+                ))}
+              </div>
+            ) : resources.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {resources.map((item) => (
+                  <ResourceCard
+                    key={item.id}
+                    resource={mapToResourceCardItem(item)}
+                    onClick={handleResourceClick}
+                    onUpvote={handleResourceUpvote}
+                    onDownvote={handleResourceDownvote}
+                    onBookmark={handleResourceBookmark}
+                  />
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                icon={<FiFolder className="w-10 h-10 text-text/30" />}
+                title="No resources shared yet"
+                description={
+                  isOwnProfile
+                    ? "You haven't shared any developer resources yet."
+                    : `${displayName} hasn't shared any developer resources yet.`
+                }
+                bordered
+                action={
+                  isOwnProfile ? (
+                    <Button href="/resources" size="sm" className="rounded-xl">
+                      Browse & Add Resources
+                    </Button>
+                  ) : undefined
+                }
+              />
+            )}
           </div>
         )}
 
