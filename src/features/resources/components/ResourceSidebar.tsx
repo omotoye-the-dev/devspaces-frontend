@@ -27,7 +27,7 @@ export function ResourceSidebar({
   return (
     <aside
       className={cn(
-        "hidden lg:flex w-64 flex-col justify-between shrink-0 bg-white border-r border-border h-full p-4 select-none overflow-y-auto slim-scrollbar",
+        "hidden lg:flex w-64 flex-col justify-between shrink-0 bg-white border-r border-border h-full p-4 select-none overflow-y-auto hover-scrollbar",
         className,
       )}
     >

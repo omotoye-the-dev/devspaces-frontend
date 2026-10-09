@@ -25,7 +25,7 @@ export function CategoryPills({
       role="tablist"
       aria-label="Category Filters"
       className={cn(
-        "flex items-center gap-1.5 sm:gap-2 overflow-x-auto slim-scrollbar pb-1 select-none w-full min-w-0 overscroll-x-contain",
+        "flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar pb-1 select-none w-full min-w-0 overscroll-x-contain",
         className,
       )}
     >
