@@ -50,7 +50,7 @@ export function SidebarSkeleton({ className }: { className?: string }): JSX.Elem
     <>
       <aside
         className={cn(
-          "hidden md:flex w-60 bg-white border-r border-border flex-col justify-between h-full max-h-screen shrink-0 p-3 overflow-y-auto overflow-x-hidden font-inter select-none slim-scrollbar",
+          "hidden md:flex w-60 bg-white border-r border-border flex-col justify-between h-full max-h-screen shrink-0 p-3 overflow-y-auto overflow-x-hidden font-inter select-none hover-scrollbar",
           className,
         )}
         aria-label="Loading Sidebar"
@@ -264,7 +264,7 @@ export function Sidebar({
           if (isHovered) setIsHovered(false);
         }}
         className={cn(
-          "hidden md:flex bg-white border-r border-border flex-col justify-between h-full max-h-screen shrink-0 overflow-y-auto overflow-x-hidden font-inter select-none transition-all duration-300 ease-in-out slim-scrollbar",
+          "hidden md:flex bg-white border-r border-border flex-col justify-between h-full max-h-screen shrink-0 overflow-y-auto overflow-x-hidden font-inter select-none transition-all duration-300 ease-in-out hover-scrollbar",
           isExpanded ? "w-60 p-3" : "w-16 p-2 items-center",
           className,
         )}
