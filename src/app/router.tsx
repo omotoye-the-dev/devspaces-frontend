@@ -18,6 +18,7 @@ import ResourceEditorPage from "@/pages/member/ResourceEditorPage";
 import ProtectedRoute from "@/components/shared/ProtectedRoute";
 import ProfilePage from "@/pages/member/ProfilePage";
 import DiscussionsPage from "@/pages/member/DiscussionsPage";
+import HistoryPage from "@/pages/member/HistoryPage";
 
 export const router = createBrowserRouter([
   {
