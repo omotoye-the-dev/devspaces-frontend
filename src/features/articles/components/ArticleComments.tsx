@@ -1,7 +1,8 @@
-import { useEffect, useState, type JSX } from "react";
+import { useEffect, useState, useCallback, type JSX } from "react";
 import { Avatar, Button, Skeleton } from "@/components/common";
 import { toast } from "@/hooks/useToast";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useLiveHub } from "@/hooks/useLiveHub";
 import { AiFillLike, AiOutlineLike } from "react-icons/ai";
 import {
   getArticleComments,
@@ -549,6 +550,32 @@ export function ArticleComments({
       onCommentCountChange?.(countAllComments(comments));
     }
   }, [comments, isLoading, onCommentCountChange]);
+
+  const refreshComments = useCallback(async (): Promise<void> => {
+    try {
+      const data = await getArticleComments(articleId);
+      const commentsList = Array.isArray(data)
+        ? data
+        : Array.isArray((data as unknown as { data?: Comment[] })?.data)
+          ? (data as unknown as { data: Comment[] }).data
+          : [];
+
+      const displayComments = commentsList.map(normalizeComment);
+      setComments(displayComments);
+      onCommentCountChange?.(countAllComments(displayComments));
+    } catch {
+      // Silently ignore real-time refresh failures
+    }
+  }, [articleId, onCommentCountChange]);
+
+  // Real-time comment updates via SignalR (/ws/hub/posts/comments/{id}/live)
+  useLiveHub({
+    type: "comment",
+    id: articleId,
+    onUpdate: () => {
+      void refreshComments();
+    },
+  });
 
   useEffect(() => {
     let isMounted = true;

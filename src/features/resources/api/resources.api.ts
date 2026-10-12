@@ -14,6 +14,7 @@ import type {
   AddResourcePartInput,
   UpdateResourcePartInput,
   ReorderPartItem,
+  VoteAction,
   VoteResourceResponseData,
   DownloadResourceResponseData,
   LinkPreviewResponseData,
@@ -244,52 +245,19 @@ export async function deleteResource(
 }
 
 /**
- * Casts, modifies, or clears a vote for a resource.
- * - Adding vote (0 -> 1 or 0 -> -1): Uses POST /api/resources/{id}/vote?value={value}
- * - Removing vote (1 -> 0 or -1 -> 0): Uses DELETE /api/resources/{id}/vote (fallback to POST ?value=0)
- * - Changing vote (1 -> -1 or -1 -> 1): Uses PUT /api/resources/{id}/vote (fallback to POST ?value={value})
+ * Casts or toggles a vote for a resource.
+ * Only a single POST /api/resources/{id}/vote endpoint exists.
+ * - action 0 = Upvote
+ * - action 1 = Downvote
+ * - Sending the action integer again resets/removes the vote.
  */
 export async function voteResource(
   id: string,
-  value: -1 | 0 | 1,
-  previousVote: -1 | 0 | 1 = 0,
+  action: VoteAction,
 ): Promise<ApiResponse<VoteResourceResponseData>> {
-  // Case 1: Removing vote to 0 -> USE DELETE
-  if (value === 0) {
-    try {
-      const response = await apiClient.delete<ApiResponse<VoteResourceResponseData>>(
-        ENDPOINTS.RESOURCES.VOTE_BASE(id),
-      );
-      return response.data;
-    } catch {
-      // Fallback to POST /vote?value=0
-      const fallback = await apiClient.post<ApiResponse<VoteResourceResponseData>>(
-        ENDPOINTS.RESOURCES.VOTE(id, 0),
-      );
-      return fallback.data;
-    }
-  }
-
-  // Case 2: Changing between upvote and downvote (1 -> -1 or -1 -> 1) -> USE PUT
-  if (previousVote !== 0 && previousVote !== value) {
-    try {
-      const response = await apiClient.put<ApiResponse<VoteResourceResponseData>>(
-        ENDPOINTS.RESOURCES.VOTE_BASE(id),
-        { value },
-      );
-      return response.data;
-    } catch {
-      // Fallback to POST /vote?value={value}
-      const fallback = await apiClient.post<ApiResponse<VoteResourceResponseData>>(
-        ENDPOINTS.RESOURCES.VOTE(id, value),
-      );
-      return fallback.data;
-    }
-  }
-
-  // Case 3: Adding a vote from neutral 0 -> USE POST
   const response = await apiClient.post<ApiResponse<VoteResourceResponseData>>(
-    ENDPOINTS.RESOURCES.VOTE(id, value),
+    ENDPOINTS.RESOURCES.VOTE(id, action),
+    { action },
   );
 
   return response.data;

@@ -17,6 +17,10 @@ import {
   voteResource,
   saveResource,
 } from "../api/resources.api";
+import {
+  calculateVoteTransition,
+  applyVoteResponse,
+} from "../utils/voteHelper";
 import { ResourceLinkPreviewCard } from "./ResourceLinkPreviewCard";
 import {
   isPartAFile,
@@ -31,7 +35,13 @@ export interface ResourceDetailModalProps {
   resourceId: string | null;
   open: boolean;
   onClose: () => void;
-  onVoteChange?: (resourceId: string, isUpvoted: boolean, newCount: number) => void;
+  onVoteChange?: (
+    resourceId: string,
+    isUpvoted: boolean,
+    newCount: number,
+    isDownvoted?: boolean,
+    newDownvoteCount?: number,
+  ) => void;
   onSaveChange?: (resourceId: string, isSaved: boolean) => void;
 }
 
@@ -113,49 +123,66 @@ export function ResourceDetailModal({
 
   const handleVoteToggle = async (): Promise<void> => {
     if (!detail) return;
-    const wasUpvoted = Boolean(detail.isUpvotedByMe) && detail.upvoteCount > 0;
-    const wasDownvoted = Boolean(detail.isDownvotedByMe);
-    const previousVote: -1 | 0 | 1 = wasUpvoted ? 1 : wasDownvoted ? -1 : 0;
 
-    const nextVote: -1 | 0 | 1 = wasUpvoted ? 0 : 1;
-    const voteDelta = wasUpvoted ? -1 : 1;
-    const nextCount = Math.max(0, detail.upvoteCount + voteDelta);
+    const currentVoteState = {
+      upvoteCount: detail.upvoteCount ?? 0,
+      downvoteCount: detail.downvoteCount ?? 0,
+      isUpvotedByMe: Boolean(detail.isUpvotedByMe),
+      isDownvotedByMe: Boolean(detail.isDownvotedByMe),
+    };
+
+    const transition = calculateVoteTransition(currentVoteState, 0);
+    if (!transition.allowed) {
+      if (transition.reason) {
+        toast.info(transition.reason);
+      }
+      return;
+    }
 
     // Optimistic update
     setDetail((prev) =>
       prev
         ? {
             ...prev,
-            isUpvotedByMe: nextVote === 1,
-            isDownvotedByMe: false,
-            upvoteCount: nextCount,
+            isUpvotedByMe: transition.optimisticState.isUpvotedByMe,
+            isDownvotedByMe: transition.optimisticState.isDownvotedByMe,
+            upvoteCount: transition.optimisticState.upvoteCount,
+            downvoteCount: transition.optimisticState.downvoteCount,
           }
         : null,
     );
 
     try {
-      const res = await voteResource(detail.id, nextVote, previousVote);
+      const res = await voteResource(detail.id, 0);
+      const reconciled = applyVoteResponse(transition.optimisticState, res.data);
       setDetail((prev) =>
         prev
           ? {
               ...prev,
-              isUpvotedByMe: res.data.isUpvoted,
-              isDownvotedByMe: res.data.isDownvoted ?? false,
-              upvoteCount: res.data.upvoteCount,
-              downvoteCount: res.data.downvoteCount,
+              isUpvotedByMe: reconciled.isUpvotedByMe,
+              isDownvotedByMe: reconciled.isDownvotedByMe,
+              upvoteCount: reconciled.upvoteCount,
+              downvoteCount: reconciled.downvoteCount,
             }
           : null,
       );
-      onVoteChange?.(detail.id, res.data.isUpvoted, res.data.upvoteCount);
+      onVoteChange?.(
+        detail.id,
+        reconciled.isUpvotedByMe,
+        reconciled.upvoteCount,
+        reconciled.isDownvotedByMe,
+        reconciled.downvoteCount,
+      );
     } catch (err: unknown) {
       // Rollback
       setDetail((prev) =>
         prev
           ? {
               ...prev,
-              isUpvotedByMe: detail.isUpvotedByMe,
-              isDownvotedByMe: detail.isDownvotedByMe,
-              upvoteCount: detail.upvoteCount,
+              isUpvotedByMe: currentVoteState.isUpvotedByMe,
+              isDownvotedByMe: currentVoteState.isDownvotedByMe,
+              upvoteCount: currentVoteState.upvoteCount,
+              downvoteCount: currentVoteState.downvoteCount,
             }
           : null,
       );
@@ -165,38 +192,55 @@ export function ResourceDetailModal({
 
   const handleDownvoteToggle = async (): Promise<void> => {
     if (!detail) return;
-    const wasUpvoted = Boolean(detail.isUpvotedByMe) && detail.upvoteCount > 0;
-    const wasDownvoted = Boolean(detail.isDownvotedByMe);
-    const previousVote: -1 | 0 | 1 = wasUpvoted ? 1 : wasDownvoted ? -1 : 0;
 
-    const nextVote: -1 | 0 | 1 = wasDownvoted ? 0 : -1;
-    const upvoteDelta = wasUpvoted ? -1 : 0;
-    const nextCount = Math.max(0, detail.upvoteCount + upvoteDelta);
+    const currentVoteState = {
+      upvoteCount: detail.upvoteCount ?? 0,
+      downvoteCount: detail.downvoteCount ?? 0,
+      isUpvotedByMe: Boolean(detail.isUpvotedByMe),
+      isDownvotedByMe: Boolean(detail.isDownvotedByMe),
+    };
+
+    const transition = calculateVoteTransition(currentVoteState, 1);
+    if (!transition.allowed) {
+      if (transition.reason) {
+        toast.info(transition.reason);
+      }
+      return;
+    }
 
     // Optimistic update
     setDetail((prev) =>
       prev
         ? {
             ...prev,
-            isUpvotedByMe: false,
-            isDownvotedByMe: nextVote === -1,
-            upvoteCount: nextCount,
+            isUpvotedByMe: transition.optimisticState.isUpvotedByMe,
+            isDownvotedByMe: transition.optimisticState.isDownvotedByMe,
+            upvoteCount: transition.optimisticState.upvoteCount,
+            downvoteCount: transition.optimisticState.downvoteCount,
           }
         : null,
     );
 
     try {
-      const res = await voteResource(detail.id, nextVote, previousVote);
+      const res = await voteResource(detail.id, 1);
+      const reconciled = applyVoteResponse(transition.optimisticState, res.data);
       setDetail((prev) =>
         prev
           ? {
               ...prev,
-              isUpvotedByMe: res.data.isUpvoted,
-              isDownvotedByMe: res.data.isDownvoted ?? (nextVote === -1),
-              upvoteCount: res.data.upvoteCount,
-              downvoteCount: res.data.downvoteCount,
+              isUpvotedByMe: reconciled.isUpvotedByMe,
+              isDownvotedByMe: reconciled.isDownvotedByMe,
+              upvoteCount: reconciled.upvoteCount,
+              downvoteCount: reconciled.downvoteCount,
             }
           : null,
+      );
+      onVoteChange?.(
+        detail.id,
+        reconciled.isUpvotedByMe,
+        reconciled.upvoteCount,
+        reconciled.isDownvotedByMe,
+        reconciled.downvoteCount,
       );
     } catch (err: unknown) {
       // Rollback
@@ -204,9 +248,10 @@ export function ResourceDetailModal({
         prev
           ? {
               ...prev,
-              isUpvotedByMe: detail.isUpvotedByMe,
-              isDownvotedByMe: detail.isDownvotedByMe,
-              upvoteCount: detail.upvoteCount,
+              isUpvotedByMe: currentVoteState.isUpvotedByMe,
+              isDownvotedByMe: currentVoteState.isDownvotedByMe,
+              upvoteCount: currentVoteState.upvoteCount,
+              downvoteCount: currentVoteState.downvoteCount,
             }
           : null,
       );
@@ -499,11 +544,12 @@ export function ResourceDetailModal({
                 onClick={() => void handleVoteToggle()}
                 className={cn(
                   "inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-all",
-                  detail?.isUpvotedByMe && (detail.upvoteCount ?? 0) > 0
+                  detail?.isUpvotedByMe
                     ? "bg-primary text-white"
                     : "bg-white text-text/80 hover:text-primary hover:bg-slate-50",
                 )}
                 aria-label={`Upvote (${detail?.upvoteCount ?? 0})`}
+                title={detail?.isDownvotedByMe ? "Remove downvote first before upvoting" : undefined}
               >
                 <FiArrowUp className="w-3.5 h-3.5" />
                 <span>Upvote ({detail?.upvoteCount ?? 0})</span>
@@ -515,14 +561,16 @@ export function ResourceDetailModal({
                 type="button"
                 onClick={() => void handleDownvoteToggle()}
                 className={cn(
-                  "inline-flex items-center px-2 py-1.5 text-xs font-semibold transition-all",
+                  "inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-all",
                   detail?.isDownvotedByMe
                     ? "bg-rose-600 text-white"
                     : "bg-white text-text/50 hover:text-rose-600 hover:bg-slate-50",
                 )}
-                aria-label="Downvote"
+                aria-label={`Downvote (${detail?.downvoteCount ?? 0})`}
+                title={detail?.isUpvotedByMe ? "Remove upvote first before downvoting" : undefined}
               >
                 <FiArrowDown className="w-3.5 h-3.5" />
+                <span>Downvote ({detail?.downvoteCount ?? 0})</span>
               </button>
             </div>
 

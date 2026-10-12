@@ -21,6 +21,10 @@ import {
   voteResource,
   saveResource,
 } from "@/features/resources/api/resources.api";
+import {
+  calculateVoteTransition,
+  applyVoteResponse,
+} from "@/features/resources/utils/voteHelper";
 import type { ResourceListItem } from "@/types/resources.types";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
 import { toast } from "@/hooks/useToast";
@@ -65,7 +69,8 @@ function formatDate(dateStr?: string): string {
 
 function mapToResourceCardItem(item: ResourceListItem): ResourceItem {
   const upvotes = item.upvoteCount ?? 0;
-  const isUpvoted = Boolean(item.isUpvotedByMe) && upvotes > 0;
+  const downvotes = item.downvoteCount ?? 0;
+  const isUpvoted = Boolean(item.isUpvotedByMe);
   const isDownvoted = Boolean(item.isDownvotedByMe);
 
   return {
@@ -83,7 +88,7 @@ function mapToResourceCardItem(item: ResourceListItem): ResourceItem {
     },
     updatedAt: formatDate(item.createdAt),
     upvotesCount: upvotes,
-    downvotesCount: item.downvoteCount ?? 0,
+    downvotesCount: downvotes,
     isUpvoted,
     isDownvoted,
     isBookmarked: item.isSavedByMe,
@@ -247,43 +252,54 @@ export default function ResourcesPage(): JSX.Element {
     };
   }, [selectedCategory, sortBy, debouncedSearch, page, refreshKey]);
 
-  // Optimistic upvoting
+  // Upvoting handler (action 0)
   const handleUpvote = async (id: string, e: MouseEvent<HTMLButtonElement>): Promise<void> => {
     e.stopPropagation();
     const target = resources.find((r) => r.id === id);
     if (!target) return;
 
-    const wasUpvoted = Boolean(target.isUpvotedByMe) && (target.upvoteCount ?? 0) > 0;
-    const wasDownvoted = Boolean(target.isDownvotedByMe);
-    const previousVote: -1 | 0 | 1 = wasUpvoted ? 1 : wasDownvoted ? -1 : 0;
+    const currentVoteState = {
+      upvoteCount: target.upvoteCount ?? 0,
+      downvoteCount: target.downvoteCount ?? 0,
+      isUpvotedByMe: Boolean(target.isUpvotedByMe),
+      isDownvotedByMe: Boolean(target.isDownvotedByMe),
+    };
 
-    const nextVote: -1 | 0 | 1 = wasUpvoted ? 0 : 1;
-    const delta = wasUpvoted ? -1 : 1;
+    const transition = calculateVoteTransition(currentVoteState, 0);
+    if (!transition.allowed) {
+      if (transition.reason) {
+        toast.info(transition.reason);
+      }
+      return;
+    }
 
+    // Optimistic update
     setResources((prev) =>
       prev.map((r) =>
         r.id === id
           ? {
               ...r,
-              isUpvotedByMe: nextVote === 1,
-              isDownvotedByMe: false,
-              upvoteCount: Math.max(0, target.upvoteCount + delta),
+              isUpvotedByMe: transition.optimisticState.isUpvotedByMe,
+              isDownvotedByMe: transition.optimisticState.isDownvotedByMe,
+              upvoteCount: transition.optimisticState.upvoteCount,
+              downvoteCount: transition.optimisticState.downvoteCount,
             }
           : r,
       ),
     );
 
     try {
-      const res = await voteResource(id, nextVote, previousVote);
+      const res = await voteResource(id, 0);
+      const reconciled = applyVoteResponse(transition.optimisticState, res.data);
       setResources((prev) =>
         prev.map((r) =>
           r.id === id
             ? {
                 ...r,
-                isUpvotedByMe: res.data.isUpvoted,
-                isDownvotedByMe: res.data.isDownvoted ?? false,
-                upvoteCount: res.data.upvoteCount,
-                downvoteCount: res.data.downvoteCount,
+                isUpvotedByMe: reconciled.isUpvotedByMe,
+                isDownvotedByMe: reconciled.isDownvotedByMe,
+                upvoteCount: reconciled.upvoteCount,
+                downvoteCount: reconciled.downvoteCount,
               }
             : r,
         ),
@@ -295,9 +311,10 @@ export default function ResourcesPage(): JSX.Element {
           r.id === id
             ? {
                 ...r,
-                isUpvotedByMe: target.isUpvotedByMe,
-                isDownvotedByMe: target.isDownvotedByMe,
-                upvoteCount: target.upvoteCount,
+                isUpvotedByMe: currentVoteState.isUpvotedByMe,
+                isDownvotedByMe: currentVoteState.isDownvotedByMe,
+                upvoteCount: currentVoteState.upvoteCount,
+                downvoteCount: currentVoteState.downvoteCount,
               }
             : r,
         ),
@@ -306,43 +323,54 @@ export default function ResourcesPage(): JSX.Element {
     }
   };
 
-  // Optimistic downvoting
+  // Downvoting handler (action 1)
   const handleDownvote = async (id: string, e: MouseEvent<HTMLButtonElement>): Promise<void> => {
     e.stopPropagation();
     const target = resources.find((r) => r.id === id);
     if (!target) return;
 
-    const wasUpvoted = Boolean(target.isUpvotedByMe) && (target.upvoteCount ?? 0) > 0;
-    const wasDownvoted = Boolean(target.isDownvotedByMe);
-    const previousVote: -1 | 0 | 1 = wasUpvoted ? 1 : wasDownvoted ? -1 : 0;
+    const currentVoteState = {
+      upvoteCount: target.upvoteCount ?? 0,
+      downvoteCount: target.downvoteCount ?? 0,
+      isUpvotedByMe: Boolean(target.isUpvotedByMe),
+      isDownvotedByMe: Boolean(target.isDownvotedByMe),
+    };
 
-    const nextVote: -1 | 0 | 1 = wasDownvoted ? 0 : -1;
-    const upvoteDelta = wasUpvoted ? -1 : 0;
+    const transition = calculateVoteTransition(currentVoteState, 1);
+    if (!transition.allowed) {
+      if (transition.reason) {
+        toast.info(transition.reason);
+      }
+      return;
+    }
 
+    // Optimistic update
     setResources((prev) =>
       prev.map((r) =>
         r.id === id
           ? {
               ...r,
-              isUpvotedByMe: false,
-              isDownvotedByMe: nextVote === -1,
-              upvoteCount: Math.max(0, target.upvoteCount + upvoteDelta),
+              isUpvotedByMe: transition.optimisticState.isUpvotedByMe,
+              isDownvotedByMe: transition.optimisticState.isDownvotedByMe,
+              upvoteCount: transition.optimisticState.upvoteCount,
+              downvoteCount: transition.optimisticState.downvoteCount,
             }
           : r,
       ),
     );
 
     try {
-      const res = await voteResource(id, nextVote, previousVote);
+      const res = await voteResource(id, 1);
+      const reconciled = applyVoteResponse(transition.optimisticState, res.data);
       setResources((prev) =>
         prev.map((r) =>
           r.id === id
             ? {
                 ...r,
-                isUpvotedByMe: res.data.isUpvoted,
-                isDownvotedByMe: res.data.isDownvoted ?? (nextVote === -1),
-                upvoteCount: res.data.upvoteCount,
-                downvoteCount: res.data.downvoteCount,
+                isUpvotedByMe: reconciled.isUpvotedByMe,
+                isDownvotedByMe: reconciled.isDownvotedByMe,
+                upvoteCount: reconciled.upvoteCount,
+                downvoteCount: reconciled.downvoteCount,
               }
             : r,
         ),
@@ -354,9 +382,10 @@ export default function ResourcesPage(): JSX.Element {
           r.id === id
             ? {
                 ...r,
-                isUpvotedByMe: target.isUpvotedByMe,
-                isDownvotedByMe: target.isDownvotedByMe,
-                upvoteCount: target.upvoteCount,
+                isUpvotedByMe: currentVoteState.isUpvotedByMe,
+                isDownvotedByMe: currentVoteState.isDownvotedByMe,
+                upvoteCount: currentVoteState.upvoteCount,
+                downvoteCount: currentVoteState.downvoteCount,
               }
             : r,
         ),
@@ -397,6 +426,8 @@ export default function ResourcesPage(): JSX.Element {
     resId: string,
     isUpvoted: boolean,
     newCount: number,
+    isDownvoted?: boolean,
+    newDownvoteCount?: number,
   ): void => {
     setResources((prev) =>
       prev.map((r) =>
@@ -405,6 +436,8 @@ export default function ResourcesPage(): JSX.Element {
               ...r,
               isUpvotedByMe: isUpvoted,
               upvoteCount: newCount,
+              ...(isDownvoted !== undefined ? { isDownvotedByMe: isDownvoted } : {}),
+              ...(newDownvoteCount !== undefined ? { downvoteCount: newDownvoteCount } : {}),
             }
           : r,
       ),

@@ -55,10 +55,11 @@ export const ENDPOINTS = {
     PART_DETAIL: (id: string, partId: string) =>
       `${API_BASE_URL}/api/resources/${id}/parts/${partId}`,
     REORDER_PARTS: (id: string) => `${API_BASE_URL}/api/resources/${id}/parts/reorder`,
-    VOTE: (id: string, value: number) => `${API_BASE_URL}/api/resources/${id}/vote?value=${value}`,
+    VOTE: (id: string, action?: number) =>
+      action !== undefined
+        ? `${API_BASE_URL}/api/resources/${id}/vote?action=${action}`
+        : `${API_BASE_URL}/api/resources/${id}/vote`,
     VOTE_BASE: (id: string) => `${API_BASE_URL}/api/resources/${id}/vote`,
-    UPVOTE: (id: string) => `${API_BASE_URL}/api/resources/${id}/upvote`,
-    DOWNVOTE: (id: string) => `${API_BASE_URL}/api/resources/${id}/downvote`,
     SAVE: (id: string, saved: boolean) => `${API_BASE_URL}/api/resources/${id}/save?saved=${saved}`,
     DOWNLOAD: (id: string, partId?: string) =>
       partId

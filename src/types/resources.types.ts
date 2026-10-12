@@ -180,16 +180,33 @@ export interface ResourceCategoryItem {
 }
 
 /**
+ * Vote action integer parameter:
+ * 0 = Upvote
+ * 1 = Downvote
+ */
+export const VoteAction = {
+  Upvote: 0,
+  Downvote: 1,
+} as const;
+
+export type VoteAction = (typeof VoteAction)[keyof typeof VoteAction];
+
+/**
  * Vote response data
  */
 export interface VoteResourceResponseData {
-  resourceId: string;
-  upvoteCount: number;
+  resourceId?: string;
+  upvoteCount?: number;
   downvoteCount?: number;
-  saveCount: number;
-  isSaved: boolean;
-  isUpvoted: boolean;
+  upvotesCount?: number;
+  downvotesCount?: number;
+  saveCount?: number;
+  isSaved?: boolean;
+  isUpvoted?: boolean;
   isDownvoted?: boolean;
+  isUpvotedByMe?: boolean;
+  isDownvotedByMe?: boolean;
+  action?: number;
 }
 
 /**

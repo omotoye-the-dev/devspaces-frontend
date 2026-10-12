@@ -24,15 +24,15 @@ import {
   voteResource,
   saveResource,
 } from "@/features/resources/api/resources.api";
-import { ResourceLinkPreviewCard } from "@/features/resources/components/ResourceLinkPreviewCard";
 import {
-  isPartAFile,
-  type ResourceDetail,
-  type ResourcePart,
-  type LinkPreviewResponseData,
-} from "@/types/resources.types";
+  calculateVoteTransition,
+  applyVoteResponse,
+} from "@/features/resources/utils/voteHelper";
+import { ResourceLinkPreviewCard } from "@/features/resources/components/ResourceLinkPreviewCard";
+import { isPartAFile, type ResourceDetail, type ResourcePart, type LinkPreviewResponseData } from "@/types/resources.types";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useLiveHub } from "@/hooks/useLiveHub";
 import { toast } from "@/hooks/useToast";
 import { cn } from "@/lib/utils/cn";
 
@@ -118,39 +118,107 @@ export function ResourceDetailsPage(): JSX.Element {
     };
   }, [id]);
 
+  // Real-time updates via SignalR (/ws/hub/resources/{id}/live)
+  useLiveHub({
+    type: "resource",
+    id,
+    onUpdate: (data: unknown) => {
+      if (!data || typeof data !== "object") return;
+      const update = data as Record<string, unknown>;
+
+      setResource((prev) => {
+        if (!prev) return prev;
+
+        const upvoteCount =
+          typeof update.upvoteCount === "number"
+            ? update.upvoteCount
+            : typeof update.upvotesCount === "number"
+              ? update.upvotesCount
+              : prev.upvoteCount;
+
+        const downvoteCount =
+          typeof update.downvoteCount === "number"
+            ? update.downvoteCount
+            : typeof update.downvotesCount === "number"
+              ? update.downvotesCount
+              : prev.downvoteCount;
+
+        const downloadCount =
+          typeof update.downloadCount === "number"
+            ? update.downloadCount
+            : prev.downloadCount;
+
+        const saveCount =
+          typeof update.saveCount === "number"
+            ? update.saveCount
+            : prev.saveCount;
+
+        return {
+          ...prev,
+          ...(update as Partial<ResourceDetail>),
+          upvoteCount,
+          downvoteCount,
+          downloadCount,
+          saveCount,
+          isUpvotedByMe:
+            typeof update.isUpvotedByMe === "boolean"
+              ? update.isUpvotedByMe
+              : prev.isUpvotedByMe,
+          isDownvotedByMe:
+            typeof update.isDownvotedByMe === "boolean"
+              ? update.isDownvotedByMe
+              : prev.isDownvotedByMe,
+          isSavedByMe:
+            typeof update.isSavedByMe === "boolean"
+              ? update.isSavedByMe
+              : prev.isSavedByMe,
+        };
+      });
+    },
+  });
+
   const handleVoteToggle = async (): Promise<void> => {
     if (!resource) return;
 
-    const wasUpvoted = Boolean(resource.isUpvotedByMe) && resource.upvoteCount > 0;
-    const wasDownvoted = Boolean(resource.isDownvotedByMe);
-    const previousVote: -1 | 0 | 1 = wasUpvoted ? 1 : wasDownvoted ? -1 : 0;
+    const currentVoteState = {
+      upvoteCount: resource.upvoteCount ?? 0,
+      downvoteCount: resource.downvoteCount ?? 0,
+      isUpvotedByMe: Boolean(resource.isUpvotedByMe),
+      isDownvotedByMe: Boolean(resource.isDownvotedByMe),
+    };
 
-    const nextVote: -1 | 0 | 1 = wasUpvoted ? 0 : 1;
-    const delta = wasUpvoted ? -1 : 1;
-    const nextCount = Math.max(0, resource.upvoteCount + delta);
+    const transition = calculateVoteTransition(currentVoteState, 0);
+    if (!transition.allowed) {
+      if (transition.reason) {
+        toast.info(transition.reason);
+      }
+      return;
+    }
 
     // Optimistic update
     setResource((prev) =>
       prev
         ? {
             ...prev,
-            isUpvotedByMe: nextVote === 1,
-            isDownvotedByMe: false,
-            upvoteCount: nextCount,
+            isUpvotedByMe: transition.optimisticState.isUpvotedByMe,
+            isDownvotedByMe: transition.optimisticState.isDownvotedByMe,
+            upvoteCount: transition.optimisticState.upvoteCount,
+            downvoteCount: transition.optimisticState.downvoteCount,
           }
         : null,
     );
 
     try {
-      const res = await voteResource(resource.id, nextVote, previousVote);
+      const res = await voteResource(resource.id, 0);
+      const reconciled = applyVoteResponse(transition.optimisticState, res.data);
       setResource((prev) =>
         prev
           ? {
               ...prev,
-              isUpvotedByMe: res.data.isUpvoted,
-              isDownvotedByMe: res.data.isDownvoted ?? false,
-              upvoteCount: res.data.upvoteCount,
-              downvoteCount: res.data.downvoteCount,
+              isUpvotedByMe: reconciled.isUpvotedByMe,
+              isDownvotedByMe: reconciled.isDownvotedByMe,
+              upvoteCount: reconciled.upvoteCount,
+              downvoteCount: reconciled.downvoteCount,
             }
           : null,
       );
@@ -160,9 +228,10 @@ export function ResourceDetailsPage(): JSX.Element {
         prev
           ? {
               ...prev,
-              isUpvotedByMe: resource.isUpvotedByMe,
-              isDownvotedByMe: resource.isDownvotedByMe,
-              upvoteCount: resource.upvoteCount,
+              isUpvotedByMe: currentVoteState.isUpvotedByMe,
+              isDownvotedByMe: currentVoteState.isDownvotedByMe,
+              upvoteCount: currentVoteState.upvoteCount,
+              downvoteCount: currentVoteState.downvoteCount,
             }
           : null,
       );
@@ -173,36 +242,45 @@ export function ResourceDetailsPage(): JSX.Element {
   const handleDownvoteToggle = async (): Promise<void> => {
     if (!resource) return;
 
-    const wasUpvoted = Boolean(resource.isUpvotedByMe) && resource.upvoteCount > 0;
-    const wasDownvoted = Boolean(resource.isDownvotedByMe);
-    const previousVote: -1 | 0 | 1 = wasUpvoted ? 1 : wasDownvoted ? -1 : 0;
+    const currentVoteState = {
+      upvoteCount: resource.upvoteCount ?? 0,
+      downvoteCount: resource.downvoteCount ?? 0,
+      isUpvotedByMe: Boolean(resource.isUpvotedByMe),
+      isDownvotedByMe: Boolean(resource.isDownvotedByMe),
+    };
 
-    const nextVote: -1 | 0 | 1 = wasDownvoted ? 0 : -1;
-    const upvoteDelta = wasUpvoted ? -1 : 0;
-    const nextCount = Math.max(0, resource.upvoteCount + upvoteDelta);
+    const transition = calculateVoteTransition(currentVoteState, 1);
+    if (!transition.allowed) {
+      if (transition.reason) {
+        toast.info(transition.reason);
+      }
+      return;
+    }
 
     // Optimistic update
     setResource((prev) =>
       prev
         ? {
             ...prev,
-            isUpvotedByMe: false,
-            isDownvotedByMe: nextVote === -1,
-            upvoteCount: nextCount,
+            isUpvotedByMe: transition.optimisticState.isUpvotedByMe,
+            isDownvotedByMe: transition.optimisticState.isDownvotedByMe,
+            upvoteCount: transition.optimisticState.upvoteCount,
+            downvoteCount: transition.optimisticState.downvoteCount,
           }
         : null,
     );
 
     try {
-      const res = await voteResource(resource.id, nextVote, previousVote);
+      const res = await voteResource(resource.id, 1);
+      const reconciled = applyVoteResponse(transition.optimisticState, res.data);
       setResource((prev) =>
         prev
           ? {
               ...prev,
-              isUpvotedByMe: res.data.isUpvoted,
-              isDownvotedByMe: res.data.isDownvoted ?? (nextVote === -1),
-              upvoteCount: res.data.upvoteCount,
-              downvoteCount: res.data.downvoteCount,
+              isUpvotedByMe: reconciled.isUpvotedByMe,
+              isDownvotedByMe: reconciled.isDownvotedByMe,
+              upvoteCount: reconciled.upvoteCount,
+              downvoteCount: reconciled.downvoteCount,
             }
           : null,
       );
@@ -212,9 +290,10 @@ export function ResourceDetailsPage(): JSX.Element {
         prev
           ? {
               ...prev,
-              isUpvotedByMe: resource.isUpvotedByMe,
-              isDownvotedByMe: resource.isDownvotedByMe,
-              upvoteCount: resource.upvoteCount,
+              isUpvotedByMe: currentVoteState.isUpvotedByMe,
+              isDownvotedByMe: currentVoteState.isDownvotedByMe,
+              upvoteCount: currentVoteState.upvoteCount,
+              downvoteCount: currentVoteState.downvoteCount,
             }
           : null,
       );
@@ -424,15 +503,15 @@ export function ResourceDetailsPage(): JSX.Element {
                 onClick={() => void handleVoteToggle()}
                 className={cn(
                   "inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-2 text-xs sm:text-sm font-bold transition-all",
-                  resource.isUpvotedByMe && resource.upvoteCount > 0
+                  resource.isUpvotedByMe
                     ? "bg-primary text-white"
                     : "bg-white text-text hover:text-primary hover:bg-slate-50",
                 )}
-                aria-label={`Upvote (${resource.upvoteCount})`}
+                aria-label={`Upvote (${resource.upvoteCount ?? 0})`}
+                title={resource.isDownvotedByMe ? "Remove downvote first before upvoting" : undefined}
               >
                 <FiArrowUp className="w-4 h-4" />
-                <span>Upvote</span>
-                {resource.upvoteCount > 0 && <span>({resource.upvoteCount})</span>}
+                <span>Upvote ({resource.upvoteCount ?? 0})</span>
               </button>
 
               <div className="w-px h-5 bg-border/80" />
@@ -441,17 +520,16 @@ export function ResourceDetailsPage(): JSX.Element {
                 type="button"
                 onClick={() => void handleDownvoteToggle()}
                 className={cn(
-                  "inline-flex items-center gap-1 px-2.5 sm:px-3 py-2 text-xs sm:text-sm font-bold transition-all",
+                  "inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-2 text-xs sm:text-sm font-bold transition-all",
                   resource.isDownvotedByMe
                     ? "bg-rose-600 text-white"
                     : "bg-white text-text/50 hover:text-rose-600 hover:bg-slate-50",
                 )}
                 aria-label={`Downvote (${resource.downvoteCount ?? 0})`}
+                title={resource.isUpvotedByMe ? "Remove upvote first before downvoting" : undefined}
               >
                 <FiArrowDown className="w-4 h-4" />
-                {(resource.downvoteCount ?? 0) > 0 && (
-                  <span>({resource.downvoteCount})</span>
-                )}
+                <span>Downvote ({resource.downvoteCount ?? 0})</span>
               </button>
             </div>
 

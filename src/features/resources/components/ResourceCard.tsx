@@ -87,8 +87,7 @@ export function ResourceCard({
     onBookmark?.(id, e);
   };
 
-  // Prevent false active upvote indicator when resource has 0 upvotes
-  const activeUpvoted = Boolean(isUpvoted) && upvotesCount > 0;
+  const activeUpvoted = Boolean(isUpvoted);
   const activeDownvoted = Boolean(isDownvoted);
 
   const isImageIcon =
@@ -176,6 +175,7 @@ export function ResourceCard({
               type="button"
               onClick={handleUpvoteClick}
               aria-label={`Upvote (${upvotesCount})`}
+              title={activeDownvoted ? "Remove downvote first before upvoting" : undefined}
               className={cn(
                 "flex items-center gap-1 px-2 py-1 text-xs font-semibold transition-all duration-150",
                 activeUpvoted
@@ -184,7 +184,7 @@ export function ResourceCard({
               )}
             >
               <FiArrowUp className="w-3.5 h-3.5" />
-              {upvotesCount > 0 && <span>{formatUpvotes(upvotesCount)}</span>}
+              <span>{formatUpvotes(upvotesCount)}</span>
             </button>
 
             <div className="w-px h-3.5 bg-border/80" />
@@ -193,6 +193,7 @@ export function ResourceCard({
               type="button"
               onClick={handleDownvoteClick}
               aria-label={`Downvote (${downvotesCount ?? 0})`}
+              title={activeUpvoted ? "Remove upvote first before downvoting" : undefined}
               className={cn(
                 "flex items-center gap-1 px-2 py-1 text-xs font-semibold transition-all duration-150",
                 activeDownvoted
@@ -201,7 +202,7 @@ export function ResourceCard({
               )}
             >
               <FiArrowDown className="w-3.5 h-3.5" />
-              {(downvotesCount ?? 0) > 0 && <span>{formatUpvotes(downvotesCount ?? 0)}</span>}
+              <span>{formatUpvotes(downvotesCount ?? 0)}</span>
             </button>
           </div>
 
