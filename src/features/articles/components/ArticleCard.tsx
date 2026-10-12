@@ -1,4 +1,4 @@
-import { useState, type JSX } from "react";
+import { useState, useEffect, type JSX } from "react";
 import { useNavigate } from "react-router-dom";
 import { AiOutlineHeart, AiFillHeart } from "react-icons/ai";
 import { FiMessageCircle, FiMoreHorizontal } from "react-icons/fi";
@@ -8,6 +8,7 @@ import { Avatar } from "@/components/common";
 import { toast } from "@/hooks/useToast";
 import articlePlaceholder from "@/assets/images/article-placeholder.jpg";
 import { likeArticle } from "@/features/articles/api/articleApi";
+import { useLiveHub } from "@/hooks/useLiveHub";
 
 export interface ArticleCardProps {
   id: string;
@@ -129,6 +130,49 @@ export function ArticleCard({
   const [likeOffset, setLikeOffset] = useState<number>(0);
   const [isLiking, setIsLiking] = useState<boolean>(false);
 
+  // Live counts — seeded from props, updated via SignalR
+  const [liveLikes, setLiveLikes] = useState<number>(likes);
+  const [liveComments, setLiveComments] = useState<number>(comments);
+
+  // Re-sync if parent updates props (e.g. after a refetch)
+  useEffect(() => {
+    setLiveLikes(likes);
+  }, [likes]);
+
+  useEffect(() => {
+    setLiveComments(comments);
+  }, [comments]);
+
+  // Subscribe to real-time article (post) updates
+  useLiveHub<Record<string, unknown>>({
+    type: "post",
+    id,
+    onUpdate: (data) => {
+      if (!data || typeof data !== "object") return;
+
+      const nextLikes =
+        typeof data.likesCount === "number"
+          ? data.likesCount
+          : typeof data.likes === "number"
+            ? data.likes
+            : typeof data.likeCount === "number"
+              ? data.likeCount
+              : null;
+
+      const nextComments =
+        typeof data.commentCount === "number"
+          ? data.commentCount
+          : typeof data.commentsCount === "number"
+            ? data.commentsCount
+            : typeof data.comments === "number"
+              ? data.comments
+              : null;
+
+      if (nextLikes !== null) setLiveLikes(nextLikes);
+      if (nextComments !== null) setLiveComments(nextComments);
+    },
+  });
+
   const statusLabel = getStatusLabel(status);
 
   const isAvatarLinkEnabled = Boolean(isAvatarLink || authorLink);
@@ -136,7 +180,8 @@ export function ArticleCard({
   const destinationHref = targetHref || (isEditable ? `/articles/${id}/edit` : `/articles/${id}`);
 
   const hasLiked = onLike ? isLiked : (likedOverride !== null ? likedOverride : isLiked);
-  const localLikes = onLike ? likes : Math.max(0, likes + likeOffset);
+  // Apply optimistic offset on top of live count
+  const localLikes = onLike ? liveLikes : Math.max(0, liveLikes + likeOffset);
 
   const displayAuthorName = authorName || "DevSpace Author";
   const displayAuthorAvatar = authorAvatar;
@@ -330,7 +375,7 @@ export function ArticleCard({
                 aria-label="View comments"
               >
                 <FiMessageCircle className="w-3.5 h-3.5" />
-                <span>{comments}</span>
+                <span>{liveComments}</span>
               </button>
 
               {/* Bookmark */}
@@ -506,7 +551,7 @@ export function ArticleCard({
             aria-label="View comments"
           >
             <FiMessageCircle className="w-4 h-4" />
-            <span className="text-xs font-medium">{comments}</span>
+            <span className="text-xs font-medium">{liveComments}</span>
           </button>
 
           {/* Bookmark */}
