@@ -1,23 +1,23 @@
 import { useState, type JSX } from "react";
 import {
   HiHome,
-  HiOutlineNewspaper,
+  // HiOutlineNewspaper,
   HiOutlineBookmark,
-  HiOutlineBookOpen,
+  // HiOutlineBookOpen,
   HiOutlineClock,
   HiOutlineChatBubbleLeftRight,
   HiOutlineUserGroup,
   HiOutlineTrophy,
   HiOutlineGlobeAlt,
-  HiOutlineChevronDown,
-  HiOutlineCircleStack,
+  // HiOutlineChevronDown,
+  // HiOutlineCircleStack,
   HiOutlinePencilSquare,
   HiOutlineUser,
   HiOutlineChevronLeft,
   HiOutlineChevronRight,
 } from "react-icons/hi2";
-import { SiJavascript, SiTypescript, SiReact, SiNodedotjs, SiPython } from "react-icons/si";
-import { FaInfinity } from "react-icons/fa6";
+// import { SiJavascript, SiTypescript, SiReact, SiNodedotjs, SiPython } from "react-icons/si";
+// import { FaInfinity } from "react-icons/fa6";
 import { useNavigate, useLocation } from "react-router-dom";
 import { FiLogOut, FiLogIn } from "react-icons/fi";
 import { cn } from "@/lib/utils/cn";
@@ -56,33 +56,35 @@ export function SidebarSkeleton({ className }: { className?: string }): JSX.Elem
         aria-label="Loading Sidebar"
       >
         <div className="flex flex-col min-h-full justify-between space-y-4">
-          {/* Main Nav Items Skeleton */}
-          <div className="space-y-2">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-3 px-3 py-1.5">
-                <Skeleton variant="circular" width={18} height={18} />
-                <Skeleton variant="text" width={`${65 + (i % 3) * 10}%`} height={16} />
-              </div>
-            ))}
+          <div className="space-y-4">
+            {/* Main Nav Items Skeleton */}
+            <div className="space-y-2">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 px-3 py-1.5">
+                  <Skeleton variant="circular" width={18} height={18} />
+                  <Skeleton variant="text" width={`${65 + (i % 3) * 10}%`} height={16} />
+                </div>
+              ))}
+            </div>
+
+            <div className="my-2 border-t border-border" />
+
+            {/* Community Section Skeleton */}
+            <div className="space-y-2">
+              <Skeleton variant="text" width={70} height={12} className="px-3 mb-1" />
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 px-3 py-1.5">
+                  <Skeleton variant="circular" width={18} height={18} />
+                  <Skeleton variant="text" width={`${55 + (i % 3) * 15}%`} height={16} />
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="my-2 border-t border-border" />
-
-          {/* Community Section Skeleton */}
-          <div className="space-y-2">
-            <Skeleton variant="text" width={70} height={12} className="px-3 mb-1" />
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-3 px-3 py-1.5">
-                <Skeleton variant="circular" width={18} height={18} />
-                <Skeleton variant="text" width={`${55 + (i % 3) * 15}%`} height={16} />
-              </div>
-            ))}
-          </div>
-
-          <div className="my-2 border-t border-border" />
+          {/* <div className="my-2 border-t border-border" /> */}
 
           {/* Topics Section Skeleton */}
-          <div className="space-y-2 flex-1">
+          {/* <div className="space-y-2 flex-1">
             <Skeleton variant="text" width={55} height={12} className="px-3 mb-1" />
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="flex items-center gap-3 px-3 py-1">
@@ -90,7 +92,7 @@ export function SidebarSkeleton({ className }: { className?: string }): JSX.Elem
                 <Skeleton variant="text" width={`${50 + (i % 4) * 10}%`} height={14} />
               </div>
             ))}
-          </div>
+          </div> */}
 
           {/* Footer Skeleton */}
           <div className="pt-3 border-t border-border">
@@ -104,7 +106,7 @@ export function SidebarSkeleton({ className }: { className?: string }): JSX.Elem
         aria-label="Loading Mobile Navigation"
         className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-border flex items-center justify-around py-2 px-3 md:hidden font-inter shadow-md"
       >
-        {Array.from({ length: 5 }).map((_, i) => (
+        {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="flex flex-col items-center gap-1.5 min-w-14">
             <Skeleton variant="circular" width={20} height={20} />
             <Skeleton variant="text" width={32} height={10} />
@@ -116,15 +118,16 @@ export function SidebarSkeleton({ className }: { className?: string }): JSX.Elem
 }
 
 const MAIN_NAV_ITEMS: NavItem[] = [
-  { id: "home", label: "Home", icon: <HiHome className="w-4.5 h-4.5" /> },
-  { id: "my-feed", label: "My Feed", icon: <HiOutlineNewspaper className="w-4.5 h-4.5" /> },
-  { id: "bookmarks", label: "Bookmarks", icon: <HiOutlineBookmark className="w-4.5 h-4.5" /> },
-  {
-    id: "reading-list",
-    label: "Reading List",
-    icon: <HiOutlineBookOpen className="w-4.5 h-4.5" />,
-  },
+  { id: "feed", label: "Feed", icon: <HiHome className="w-4.5 h-4.5" /> },
+ 
+  { id: "bookmarks", label: "Saved", icon: <HiOutlineBookmark className="w-4.5 h-4.5" /> },
+  // {
+  //   id: "reading-list",
+  //   label: "Reading List",
+  //   icon: <HiOutlineBookOpen className="w-4.5 h-4.5" />,
+  // },
   { id: "history", label: "History", icon: <HiOutlineClock className="w-4.5 h-4.5" /> },
+   { id: "explore", label: "Explore", icon: <HiOutlineGlobeAlt className="w-4.5 h-4.5" /> },  
 ];
 
 const COMMUNITY_NAV_ITEMS: NavItem[] = [
@@ -135,50 +138,48 @@ const COMMUNITY_NAV_ITEMS: NavItem[] = [
   },
   { id: "people", label: "People", icon: <HiOutlineUserGroup className="w-4.5 h-4.5" /> },
   { id: "leaderboard", label: "Leaderboard", icon: <HiOutlineTrophy className="w-4.5 h-4.5" /> },
-  { id: "explore", label: "Explore", icon: <HiOutlineGlobeAlt className="w-4.5 h-4.5" /> },
 ];
 
-const TOPIC_ITEMS: TopicItem[] = [
-  {
-    id: "javascript",
-    label: "JavaScript",
-    icon: <SiJavascript className="w-3.5 h-3.5 text-[#F7DF1E]" />,
-  },
-  {
-    id: "typescript",
-    label: "TypeScript",
-    icon: <SiTypescript className="w-3.5 h-3.5 text-[#3178C6]" />,
-  },
-  {
-    id: "react",
-    label: "React",
-    icon: <SiReact className="w-3.5 h-3.5 text-[#61DAFB]" />,
-  },
-  {
-    id: "nodejs",
-    label: "Node.js",
-    icon: <SiNodedotjs className="w-3.5 h-3.5 text-[#5FA04E]" />,
-  },
-  {
-    id: "python",
-    label: "Python",
-    icon: <SiPython className="w-3.5 h-3.5 text-[#3776AB]" />,
-  },
-  {
-    id: "devops",
-    label: "DevOps",
-    icon: <FaInfinity className="w-3.5 h-3.5 text-[#0078D4]" />,
-  },
-  {
-    id: "databases",
-    label: "Databases",
-    icon: <HiOutlineCircleStack className="w-3.5 h-3.5 text-text/50" />,
-  },
-];
+// const TOPIC_ITEMS: TopicItem[] = [
+//   {
+//     id: "javascript",
+//     label: "JavaScript",
+//     icon: <SiJavascript className="w-3.5 h-3.5 text-[#F7DF1E]" />,
+//   },
+//   {
+//     id: "typescript",
+//     label: "TypeScript",
+//     icon: <SiTypescript className="w-3.5 h-3.5 text-[#3178C6]" />,
+//   },
+//   {
+//     id: "react",
+//     label: "React",
+//     icon: <SiReact className="w-3.5 h-3.5 text-[#61DAFB]" />,
+//   },
+//   {
+//     id: "nodejs",
+//     label: "Node.js",
+//     icon: <SiNodedotjs className="w-3.5 h-3.5 text-[#5FA04E]" />,
+//   },
+//   {
+//     id: "python",
+//     label: "Python",
+//     icon: <SiPython className="w-3.5 h-3.5 text-[#3776AB]" />,
+//   },
+//   {
+//     id: "devops",
+//     label: "DevOps",
+//     icon: <FaInfinity className="w-3.5 h-3.5 text-[#0078D4]" />,
+//   },
+//   {
+//     id: "databases",
+//     label: "Databases",
+//     icon: <HiOutlineCircleStack className="w-3.5 h-3.5 text-text/50" />,
+//   },
+// ];
 
 const MOBILE_NAV_ITEMS: NavItem[] = [
-  { id: "home", label: "Home", icon: <HiHome className="w-5 h-5" /> },
-  { id: "resources", label: "Resources", icon: <HiOutlineBookOpen className="w-5 h-5" /> },
+  { id: "feed", label: "Feed", icon: <HiHome className="w-5 h-5" /> },
   { id: "write", label: "Write", icon: <HiOutlinePencilSquare className="w-5 h-5" /> },
   { id: "saved", label: "Saved", icon: <HiOutlineBookmark className="w-5 h-5" /> },
   { id: "profile", label: "Profile", icon: <HiOutlineUser className="w-5 h-5" /> },
@@ -195,7 +196,7 @@ export function Sidebar({
   const location = useLocation();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const logout = useAuthStore((state) => state.logout);
-  const [internalActiveItem, setInternalActiveItem] = useState("home");
+  const [internalActiveItem, setInternalActiveItem] = useState("feed");
   const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -209,12 +210,16 @@ export function Sidebar({
 
   const routeActiveItem =
     location.pathname === "/"
-      ? "home"
+      ? "feed"
       : location.pathname.startsWith("/articles")
-        ? "my-feed"
-        : location.pathname.startsWith("/profile")
-          ? "profile"
-          : undefined;
+        ? "explore"
+        : location.pathname.startsWith("/discussions")
+          ? "discussions"
+          : location.pathname.startsWith("/profile")
+            ? "profile"
+            : location.pathname.startsWith("/resources")
+              ? "resources"
+              : undefined;
 
   const currentActive = activeItemProp ?? routeActiveItem ?? internalActiveItem;
 
@@ -245,11 +250,12 @@ export function Sidebar({
       setIsHovered(false);
     }
     if (!onSelect) {
-      if (id === "home") navigate("/");
-      else if (id === "my-feed") navigate("/articles");
+      if (id === "feed" || id === "Feed" || id === "home") navigate("/");
+      else if (id === "explore") navigate("/articles");
+      else if (id === "discussions") navigate("/discussions");
       else if (id === "resources") navigate("/resources");
       else if (id === "write") navigate("/articles/new");
-      else if (id === "profile") navigate("/profile");
+      else if (id === "profile" || id === "saved" || id === "bookmarks") navigate("/profile");
     }
   };
 
@@ -270,84 +276,50 @@ export function Sidebar({
         )}
       >
         <div className="flex flex-col min-h-full justify-between w-full">
-          {/* Header with Collapse / Expand Toggle Button */}
-          <div
-            className={cn(
-              "flex items-center pb-2 mb-1 border-b border-border/60 transition-colors",
-              isExpanded ? "justify-between px-1" : "justify-center w-full",
-            )}
-          >
-            {isExpanded && (
-              <span className="text-[11px] font-extrabold text-text/40 uppercase tracking-wider truncate">
-                Menu
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={handleToggleCollapse}
-              aria-label={
-                !isCollapsed
-                  ? "Collapse sidebar"
-                  : isHovered
-                    ? "Pin sidebar open"
-                    : "Expand sidebar"
-              }
-              title={
-                !isCollapsed
-                  ? "Collapse sidebar"
-                  : isHovered
-                    ? "Pin sidebar open"
-                    : "Expand sidebar"
-              }
-              className="p-1.5 rounded-lg text-text/60 hover:text-text hover:bg-border/50 transition-colors cursor-pointer shrink-0"
-            >
-              {!isCollapsed ? (
-                <HiOutlineChevronLeft className="w-4 h-4" />
-              ) : (
-                <HiOutlineChevronRight className="w-4 h-4" />
+          {/* Top navigation container */}
+          <div className="w-full space-y-1">
+            {/* Header with Collapse / Expand Toggle Button */}
+            <div
+              className={cn(
+                "flex items-center pb-2 mb-1 border-b border-border/60 transition-colors",
+                isExpanded ? "justify-between px-1" : "justify-center w-full",
               )}
-            </button>
-          </div>
+            >
+              {isExpanded && (
+                <span className="text-[11px] font-extrabold text-text/40 uppercase tracking-wider truncate">
+                  Menu
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={handleToggleCollapse}
+                aria-label={
+                  !isCollapsed
+                    ? "Collapse sidebar"
+                    : isHovered
+                      ? "Pin sidebar open"
+                      : "Expand sidebar"
+                }
+                title={
+                  !isCollapsed
+                    ? "Collapse sidebar"
+                    : isHovered
+                      ? "Pin sidebar open"
+                      : "Expand sidebar"
+                }
+                className="p-1.5 rounded-lg text-text/60 hover:text-text hover:bg-border/50 transition-colors cursor-pointer shrink-0"
+              >
+                {!isCollapsed ? (
+                  <HiOutlineChevronLeft className="w-4 h-4" />
+                ) : (
+                  <HiOutlineChevronRight className="w-4 h-4" />
+                )}
+              </button>
+            </div>
 
-          {/* Main Navigation */}
-          <nav aria-label="Main Navigation" className="space-y-0.5 w-full">
-            {MAIN_NAV_ITEMS.map((item) => {
-              const isActive = currentActive === item.id;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  title={!isExpanded ? item.label : undefined}
-                  onClick={() => handleItemClick(item.id)}
-                  className={cn(
-                    "flex items-center rounded-lg text-[13px] transition-colors duration-150 cursor-pointer",
-                    isExpanded ? "w-full gap-2.5 px-3 py-1.5" : "justify-center p-2.5 w-full",
-                    isActive
-                      ? "bg-primary/10 text-primary font-semibold"
-                      : "text-text/70 hover:bg-border/40 hover:text-text font-medium",
-                  )}
-                >
-                  <span className={cn("shrink-0", isActive ? "text-primary" : "text-text/50")}>
-                    {item.icon}
-                  </span>
-                  {isExpanded && <span className="truncate whitespace-nowrap">{item.label}</span>}
-                </button>
-              );
-            })}
-          </nav>
-
-          {/* Divider */}
-          <div className="my-2 border-t border-border w-full" />
-
-          {/* Community Section */}
-          <div className="space-y-0.5 w-full">
-            {isExpanded && (
-              <span className="px-3 text-[10px] font-bold tracking-wider text-text/40 uppercase block mb-1 truncate whitespace-nowrap">
-                Community
-              </span>
-            )}
-            <nav aria-label="Community Navigation" className="space-y-0.5">
-              {COMMUNITY_NAV_ITEMS.map((item) => {
+            {/* Main Navigation */}
+            <nav aria-label="Main Navigation" className="space-y-0.5 w-full">
+              {MAIN_NAV_ITEMS.map((item) => {
                 const isActive = currentActive === item.id;
                 return (
                   <button
@@ -371,12 +343,50 @@ export function Sidebar({
                 );
               })}
             </nav>
+
+            {/* Divider */}
+            <div className="my-2 border-t border-border w-full" />
+
+            {/* Community Section */}
+            <div className="space-y-0.5 w-full">
+              {isExpanded && (
+                <span className="px-3 text-[10px] font-bold tracking-wider text-text/40 uppercase block mb-1 truncate whitespace-nowrap">
+                  Community
+                </span>
+              )}
+              <nav aria-label="Community Navigation" className="space-y-0.5">
+                {COMMUNITY_NAV_ITEMS.map((item) => {
+                  const isActive = currentActive === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      title={!isExpanded ? item.label : undefined}
+                      onClick={() => handleItemClick(item.id)}
+                      className={cn(
+                        "flex items-center rounded-lg text-[13px] transition-colors duration-150 cursor-pointer",
+                        isExpanded ? "w-full gap-2.5 px-3 py-1.5" : "justify-center p-2.5 w-full",
+                        isActive
+                          ? "bg-primary/10 text-primary font-semibold"
+                          : "text-text/70 hover:bg-border/40 hover:text-text font-medium",
+                      )}
+                    >
+                      <span className={cn("shrink-0", isActive ? "text-primary" : "text-text/50")}>
+                        {item.icon}
+                      </span>
+                      {isExpanded && <span className="truncate whitespace-nowrap">{item.label}</span>}
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
           </div>
 
           {/* Divider */}
-          <div className="my-2 border-t border-border w-full" />
+          {/* <div className="my-2 border-t border-border w-full" /> */}
 
           {/* Topics Section */}
+          {/*
           <div className="space-y-0.5 flex-1 flex flex-col justify-between w-full">
             <div>
               {isExpanded && (
@@ -424,6 +434,7 @@ export function Sidebar({
               </button>
             )}
           </div>
+          */}
 
           {/* Sidebar Auth Footer Action */}
           <div

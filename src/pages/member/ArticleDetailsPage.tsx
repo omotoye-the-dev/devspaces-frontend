@@ -15,6 +15,7 @@ import { getApiErrorMessage } from "@/lib/utils/apiError";
 import { deleteArticle, getArticleById, getArticleComments, likeArticle, saveArticle, type Article } from "@/features/articles/api/articleApi";
 import { followAuthor } from "@/lib/api/user.api";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useLiveHub } from "@/hooks/useLiveHub";
 import ArticleComments, { countAllComments } from "@/features/articles/components/ArticleComments";
 import RelatedArticles from "@/features/articles/components/RelatedArticles";
 import AuthorCard from "@/features/articles/components/AuthorCard";
@@ -276,6 +277,34 @@ useEffect(() => {
     isSubscribed = false;
   };
 }, [id, navigate]);
+
+// Real-time updates via SignalR (/ws/hub/posts/{id}/live)
+useLiveHub({
+  type: "post",
+  id,
+  onUpdate: (data: unknown) => {
+    if (!data || typeof data !== "object") return;
+    const update = data as Record<string, unknown>;
+
+    if (typeof update.likesCount === "number") {
+      setLikeCount(update.likesCount);
+    } else if (typeof update.likes === "number") {
+      setLikeCount(update.likes);
+    } else if (typeof update.likeCount === "number") {
+      setLikeCount(update.likeCount);
+    }
+
+    if (typeof update.commentCount === "number") {
+      setCommentCount(update.commentCount);
+    } else if (typeof update.commentsCount === "number") {
+      setCommentCount(update.commentsCount);
+    } else if (typeof update.comments === "number") {
+      setCommentCount(update.comments);
+    }
+
+    setArticle((prev) => (prev ? { ...prev, ...update } : null));
+  },
+});
 
 const handleLike = async (
   event?: React.MouseEvent

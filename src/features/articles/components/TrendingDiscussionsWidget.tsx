@@ -1,4 +1,5 @@
 import type { JSX } from "react";
+import { useNavigate } from "react-router-dom";
 import { HiOutlineArrowTrendingUp, HiOutlineChatBubbleOvalLeft } from "react-icons/hi2";
 
 export interface TrendingDiscussion {
@@ -58,6 +59,7 @@ export function TrendingDiscussionsWidget({
 }: {
   discussions?: TrendingDiscussion[];
 }): JSX.Element {
+  const navigate = useNavigate();
   const items = discussions && discussions.length > 0 ? discussions : MOCK_TRENDING_DISCUSSIONS;
 
   return (
@@ -69,6 +71,7 @@ export function TrendingDiscussionsWidget({
         </h3>
         <button
           type="button"
+          onClick={() => navigate("/discussions")}
           className="text-[11px] text-primary font-medium hover:underline cursor-pointer"
         >
           View all
@@ -79,6 +82,7 @@ export function TrendingDiscussionsWidget({
         {items.map((discussion) => (
           <div
             key={discussion.id}
+            onClick={() => navigate("/discussions")}
             className="flex items-start gap-2.5 py-2 px-1 rounded-md hover:bg-background cursor-pointer transition-colors group/item"
           >
             <div

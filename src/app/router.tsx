@@ -17,6 +17,7 @@ import ResourceDetailsPage from "@/pages/member/ResourceDetailsPage";
 import ResourceEditorPage from "@/pages/member/ResourceEditorPage";
 import ProtectedRoute from "@/components/shared/ProtectedRoute";
 import ProfilePage from "@/pages/member/ProfilePage";
+import DiscussionsPage from "@/pages/member/DiscussionsPage";
 
 export const router = createBrowserRouter([
   {
@@ -65,6 +66,10 @@ export const router = createBrowserRouter([
           {
             path: "articles/:id",
             element: <ArticleDetailsPage />,
+          },
+          {
+            path: "discussions",
+            element: <DiscussionsPage />,
           },
         ],
       },
