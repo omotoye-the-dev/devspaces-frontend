@@ -361,6 +361,7 @@ export function HomePage(): JSX.Element {
           setTrendingSidebarItems(mapped);
         }
       } catch {
+         // errors 
       }
     }
     void loadSidebarTrending();
@@ -370,13 +371,21 @@ export function HomePage(): JSX.Element {
   }, []);
 
   useEffect(() => {
-    setCurrentPage(1);
-    void fetchArticles(activeTab, 1);
+    queueMicrotask(() => {
+      void fetchArticles(activeTab, 1);
+    });
   }, [activeTab, fetchArticles]);
+
+  const handleTabChange = (tab: string): void => {
+    setActiveTab(tab);
+    setCurrentPage(1);
+  };
 
   const handlePageChange = (page: number): void => {
     setCurrentPage(page);
-    void fetchArticles(activeTab, page);
+    queueMicrotask(() => {
+      void fetchArticles(activeTab, page);
+    });
   };
 
   const handleLike = async (id: string): Promise<void> => {
@@ -390,6 +399,7 @@ export function HomePage(): JSX.Element {
     try {
       await likeArticle(id);
     } catch {
+       // errors 
     }
   };
 
@@ -400,6 +410,7 @@ export function HomePage(): JSX.Element {
     try {
       await saveArticle(id);
     } catch {
+      // errors 
     }
   };
 
@@ -407,13 +418,13 @@ export function HomePage(): JSX.Element {
   const activePageIndex = (pagination?.currentPage || currentPage) - 1;
 
   return (
-    <div className="w-full max-w-[1200px] mx-auto font-inter">
+    <div className="w-full max-w-300 mx-auto font-inter">
       <div className="flex gap-6">
         <div className="flex-1 min-w-0 space-y-4">
           <HeroBanner />
-          <FeedTabs activeTab={activeTab} onTabChange={setActiveTab} />
+          <FeedTabs activeTab={activeTab} onTabChange={handleTabChange} />
 
-          <div className="space-y-4 min-h-[300px]">
+          <div className="space-y-4 min-h-75">
             {isLoading ? (
               <div className="space-y-4">
                 {Array.from({ length: 3 }).map((_, idx) => (

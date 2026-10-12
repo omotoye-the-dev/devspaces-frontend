@@ -214,7 +214,9 @@ export function Sidebar({
         ? "my-feed"
         : location.pathname.startsWith("/profile")
           ? "profile"
-          : undefined;
+          : location.pathname.startsWith("/history")
+            ? "history"
+            : undefined;
 
   const currentActive = activeItemProp ?? routeActiveItem ?? internalActiveItem;
 
@@ -248,6 +250,7 @@ export function Sidebar({
       if (id === "home") navigate("/");
       else if (id === "my-feed") navigate("/articles");
       else if (id === "resources") navigate("/resources");
+      else if (id === "history") navigate("/history");
       else if (id === "write") navigate("/articles/new");
       else if (id === "profile") navigate("/profile");
     }

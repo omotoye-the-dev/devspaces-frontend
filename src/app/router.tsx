@@ -17,6 +17,7 @@ import ResourceDetailsPage from "@/pages/member/ResourceDetailsPage";
 import ResourceEditorPage from "@/pages/member/ResourceEditorPage";
 import ProtectedRoute from "@/components/shared/ProtectedRoute";
 import ProfilePage from "@/pages/member/ProfilePage";
+import HistoryPage from "@/pages/member/HistoryPage";
 
 export const router = createBrowserRouter([
   {
@@ -45,6 +46,10 @@ export const router = createBrowserRouter([
           {
             path: "resources/:id/edit",
             element: <ResourceEditorPage />,
+          },
+          {
+            path: "history",
+            element: <HistoryPage />,
           },
           {
             path: "articles/new",
