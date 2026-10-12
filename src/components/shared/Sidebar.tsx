@@ -254,6 +254,7 @@ export function Sidebar({
       else if (id === "explore") navigate("/articles");
       else if (id === "discussions") navigate("/discussions");
       else if (id === "resources") navigate("/resources");
+      else if (id === "history") navigate("/history");
       else if (id === "write") navigate("/articles/new");
       else if (id === "profile" || id === "saved" || id === "bookmarks") navigate("/profile");
     }

@@ -48,6 +48,10 @@ export const router = createBrowserRouter([
             element: <ResourceEditorPage />,
           },
           {
+            path: "history",
+            element: <HistoryPage />,
+          },
+          {
             path: "articles/new",
             element: <ArticleEditorPage />,
           },
