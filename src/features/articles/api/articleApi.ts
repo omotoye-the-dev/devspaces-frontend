@@ -212,6 +212,45 @@ export async function getMyPosts(): Promise<Article[]> {
 }
 
 /**
+ * GET /api/posts/saved (paginated saved/bookmarked articles)
+ */
+export async function getSavedArticles(
+  params?: GetFeedParams,
+): Promise<{ data: Article[]; pagination?: Pagination }> {
+  const queryParams = params
+    ? {
+        ...params,
+        ...(params.page !== undefined ? { page: params.page, pageNumber: params.page } : {}),
+      }
+    : undefined;
+
+  const response = await apiClient.get<
+    | FeedResponse
+    | Article[]
+    | {
+        data?: Article[];
+        pagination?: Pagination;
+      }
+  >(ENDPOINTS.POSTS.SAVED, { params: queryParams });
+
+  if (Array.isArray(response.data)) {
+    return { data: response.data };
+  }
+
+  if (response.data && typeof response.data === "object") {
+    const res = response.data as FeedResponse;
+    if (Array.isArray(res.data)) {
+      return {
+        data: res.data,
+        pagination: res.pagination,
+      };
+    }
+  }
+
+  return { data: [] };
+}
+
+/**
  * GET /api/posts/{id}
  */
 export async function getArticleById(

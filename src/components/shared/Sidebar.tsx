@@ -1,4 +1,4 @@
-import { useState, type JSX } from "react";
+import { useEffect, useRef, useState, type JSX } from "react";
 import {
   HiHome,
   // HiOutlineNewspaper,
@@ -24,6 +24,8 @@ import { cn } from "@/lib/utils/cn";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { toast } from "@/hooks/useToast";
 import { Button, Skeleton } from "@/components/common";
+import { getTags, type Tag } from "@/features/articles/api/tagApi";
+import { FiHash } from "react-icons/fi";
 
 export interface NavItem {
   id: string;
@@ -200,6 +202,10 @@ export function Sidebar({
   const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
   const [isHovered, setIsHovered] = useState(false);
 
+  const [popularTags, setPopularTags] = useState<Tag[]>([]);
+  const [isTagsLoading, setIsTagsLoading] = useState(false);
+  const hasFetchedTagsRef = useRef(false);
+
   const [prevDefaultCollapsed, setPrevDefaultCollapsed] = useState(defaultCollapsed);
   if (prevDefaultCollapsed !== defaultCollapsed) {
     setPrevDefaultCollapsed(defaultCollapsed);
@@ -207,6 +213,29 @@ export function Sidebar({
   }
 
   const isExpanded = !isCollapsed || isHovered;
+
+  // Lazily load the top 5 most-used tags the first time the sidebar is opened/expanded.
+  // The sidebar only toggles visibility here (it never unmounts while hovering), so the
+  // fetch is allowed to resolve and update state even if the user has since moved away.
+  useEffect(() => {
+    if (!isExpanded || hasFetchedTagsRef.current) return;
+    hasFetchedTagsRef.current = true;
+    setIsTagsLoading(true);
+
+    getTags({ pageSize: 50 })
+      .then((tags) => {
+        const top5 = [...tags]
+          .sort((a, b) => (b.usageCount ?? 0) - (a.usageCount ?? 0))
+          .slice(0, 5);
+        setPopularTags(top5);
+      })
+      .catch(() => {
+        hasFetchedTagsRef.current = false;
+      })
+      .finally(() => {
+        setIsTagsLoading(false);
+      });
+  }, [isExpanded]);
 
   const routeActiveItem =
     location.pathname === "/"
@@ -219,7 +248,9 @@ export function Sidebar({
             ? "profile"
             : location.pathname.startsWith("/resources")
               ? "resources"
-              : undefined;
+              : location.pathname.startsWith("/saved")
+                ? "bookmarks"
+                : undefined;
 
   const currentActive = activeItemProp ?? routeActiveItem ?? internalActiveItem;
 
@@ -256,8 +287,13 @@ export function Sidebar({
       else if (id === "resources") navigate("/resources");
       else if (id === "history") navigate("/history");
       else if (id === "write") navigate("/articles/new");
-      else if (id === "profile" || id === "saved" || id === "bookmarks") navigate("/profile");
+      else if (id === "saved" || id === "bookmarks") navigate("/saved");
+      else if (id === "profile") navigate("/profile");
     }
+  };
+
+  const handleTagClick = (tag: Tag): void => {
+    navigate(`/articles?tag=${encodeURIComponent(tag.slug || tag.name)}`);
   };
 
   return (
@@ -381,6 +417,50 @@ export function Sidebar({
                 })}
               </nav>
             </div>
+
+            {/* Popular Tags Section */}
+            {isExpanded && (
+              <div className="space-y-0.5 w-full pt-2">
+                <span className="px-3 text-[10px] font-bold tracking-wider text-text/40 uppercase block mb-1 truncate whitespace-nowrap">
+                  Popular Tags
+                </span>
+                {isTagsLoading ? (
+                  <div className="space-y-2 px-3 py-1">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Skeleton
+                        key={i}
+                        variant="text"
+                        width={`${55 + (i % 3) * 15}%`}
+                        height={14}
+                      />
+                    ))}
+                  </div>
+                ) : popularTags.length > 0 ? (
+                  <nav aria-label="Popular Tags" className="space-y-0.5">
+                    {popularTags.map((tag) => (
+                      <button
+                        key={tag.id || tag.slug || tag.name}
+                        type="button"
+                        onClick={() => handleTagClick(tag)}
+                        className="flex items-center w-full gap-2.5 px-3 py-1 rounded-lg text-[13px] text-text/70 hover:bg-border/40 hover:text-text font-medium transition-colors duration-150 cursor-pointer"
+                      >
+                        <FiHash className="w-3.5 h-3.5 text-text/40 shrink-0" />
+                        <span className="truncate whitespace-nowrap flex-1 text-left">
+                          {tag.name}
+                        </span>
+                        {typeof tag.usageCount === "number" && (
+                          <span className="text-[11px] text-text/40 shrink-0">
+                            {tag.usageCount}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </nav>
+                ) : (
+                  <p className="px-3 text-[11px] text-text/40">No tags yet</p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Divider */}

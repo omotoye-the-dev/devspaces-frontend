@@ -1,8 +1,7 @@
-import { useState, useEffect, type JSX, type MouseEvent } from "react";
+import type { JSX, MouseEvent } from "react";
 import { FiBookmark, FiArrowUp, FiArrowDown } from "react-icons/fi";
 import { Avatar } from "@/components/common";
 import { cn } from "@/lib/utils/cn";
-import { useLiveHub } from "@/hooks/useLiveHub";
 
 export interface ResourceAuthor {
   id?: string;
@@ -68,45 +67,6 @@ export function ResourceCard({
     isDownvoted = false,
     isBookmarked = false,
   } = resource;
-
-  // Local state seeded from props — updated via SignalR live hub
-  const [liveUpvotes, setLiveUpvotes] = useState<number>(upvotesCount);
-  const [liveDownvotes, setLiveDownvotes] = useState<number>(downvotesCount);
-
-  // Sync prop changes into local state (e.g. after a fresh API fetch)
-  useEffect(() => {
-    setLiveUpvotes(upvotesCount);
-  }, [upvotesCount]);
-
-  useEffect(() => {
-    setLiveDownvotes(downvotesCount);
-  }, [downvotesCount]);
-
-  // Subscribe to real-time resource updates
-  useLiveHub<Record<string, unknown>>({
-    type: "resource",
-    id,
-    onUpdate: (data) => {
-      if (!data || typeof data !== "object") return;
-
-      const nextUpvotes =
-        typeof data.upvoteCount === "number"
-          ? data.upvoteCount
-          : typeof data.upvotesCount === "number"
-            ? data.upvotesCount
-            : null;
-
-      const nextDownvotes =
-        typeof data.downvoteCount === "number"
-          ? data.downvoteCount
-          : typeof data.downvotesCount === "number"
-            ? data.downvotesCount
-            : null;
-
-      if (nextUpvotes !== null) setLiveUpvotes(nextUpvotes);
-      if (nextDownvotes !== null) setLiveDownvotes(nextDownvotes);
-    },
-  });
 
   const handleCardClick = (): void => {
     onClick?.(resource);
@@ -214,7 +174,7 @@ export function ResourceCard({
             <button
               type="button"
               onClick={handleUpvoteClick}
-              aria-label={`Upvote (${liveUpvotes})`}
+              aria-label={`Upvote (${upvotesCount})`}
               title={activeDownvoted ? "Remove downvote first before upvoting" : undefined}
               className={cn(
                 "flex items-center gap-1 px-2 py-1 text-xs font-semibold transition-all duration-150",
@@ -224,7 +184,7 @@ export function ResourceCard({
               )}
             >
               <FiArrowUp className="w-3.5 h-3.5" />
-              <span>{formatUpvotes(liveUpvotes)}</span>
+              <span>{formatUpvotes(upvotesCount)}</span>
             </button>
 
             <div className="w-px h-3.5 bg-border/80" />
@@ -232,7 +192,7 @@ export function ResourceCard({
             <button
               type="button"
               onClick={handleDownvoteClick}
-              aria-label={`Downvote (${liveDownvotes})`}
+              aria-label={`Downvote (${downvotesCount ?? 0})`}
               title={activeUpvoted ? "Remove upvote first before downvoting" : undefined}
               className={cn(
                 "flex items-center gap-1 px-2 py-1 text-xs font-semibold transition-all duration-150",
@@ -242,7 +202,7 @@ export function ResourceCard({
               )}
             >
               <FiArrowDown className="w-3.5 h-3.5" />
-              <span>{formatUpvotes(liveDownvotes)}</span>
+              <span>{formatUpvotes(downvotesCount ?? 0)}</span>
             </button>
           </div>
 

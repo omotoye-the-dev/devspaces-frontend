@@ -129,6 +129,23 @@ export async function getResources(
 }
 
 /**
+ * Fetches the current user's saved (bookmarked) resources.
+ * GET /api/resources/saved
+ */
+export async function getSavedResources(
+  params?: ResourceQueryParams,
+): Promise<PaginatedResponse<ResourceListItem>> {
+  const response = await apiClient.get<PaginatedResponse<ResourceListItem>>(
+    ENDPOINTS.RESOURCES.SAVED,
+    {
+      params,
+    },
+  );
+
+  return response.data;
+}
+
+/**
  * Fetches full resource details by ID including sub-parts.
  * GET /api/resources/{id}
  */

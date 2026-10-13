@@ -28,6 +28,7 @@ import {
   calculateVoteTransition,
   applyVoteResponse,
 } from "@/features/resources/utils/voteHelper";
+import { normalizeResourceUpdate } from "@/features/resources/utils/liveUpdate";
 import { ResourceLinkPreviewCard } from "@/features/resources/components/ResourceLinkPreviewCard";
 import { isPartAFile, type ResourceDetail, type ResourcePart, type LinkPreviewResponseData } from "@/types/resources.types";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
@@ -122,58 +123,10 @@ export function ResourceDetailsPage(): JSX.Element {
   useLiveHub({
     type: "resource",
     id,
-    onUpdate: (data: unknown) => {
-      if (!data || typeof data !== "object") return;
-      const update = data as Record<string, unknown>;
-
-      setResource((prev) => {
-        if (!prev) return prev;
-
-        const upvoteCount =
-          typeof update.upvoteCount === "number"
-            ? update.upvoteCount
-            : typeof update.upvotesCount === "number"
-              ? update.upvotesCount
-              : prev.upvoteCount;
-
-        const downvoteCount =
-          typeof update.downvoteCount === "number"
-            ? update.downvoteCount
-            : typeof update.downvotesCount === "number"
-              ? update.downvotesCount
-              : prev.downvoteCount;
-
-        const downloadCount =
-          typeof update.downloadCount === "number"
-            ? update.downloadCount
-            : prev.downloadCount;
-
-        const saveCount =
-          typeof update.saveCount === "number"
-            ? update.saveCount
-            : prev.saveCount;
-
-        return {
-          ...prev,
-          ...(update as Partial<ResourceDetail>),
-          upvoteCount,
-          downvoteCount,
-          downloadCount,
-          saveCount,
-          isUpvotedByMe:
-            typeof update.isUpvotedByMe === "boolean"
-              ? update.isUpvotedByMe
-              : prev.isUpvotedByMe,
-          isDownvotedByMe:
-            typeof update.isDownvotedByMe === "boolean"
-              ? update.isDownvotedByMe
-              : prev.isDownvotedByMe,
-          isSavedByMe:
-            typeof update.isSavedByMe === "boolean"
-              ? update.isSavedByMe
-              : prev.isSavedByMe,
-        };
-      });
+    onUpdate: (data) => {
+      const counts = normalizeResourceUpdate(data);
+      if (!counts) return;
+      setResource((prev) => (prev ? { ...prev, ...counts } : prev));
     },
   });
 

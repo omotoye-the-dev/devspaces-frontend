@@ -37,6 +37,7 @@ export const ENDPOINTS = {
     LIKE_COMMENT: (commentId: string) => `${API_BASE_URL}/api/posts/comments/${commentId}/like`,
 
     SAVE: (id: string) => `${API_BASE_URL}/api/posts/${id}/save`,
+    SAVED: `${API_BASE_URL}/api/posts/saved`,
     COVER_IMAGE: (id: string) => `${API_BASE_URL}/api/posts/${id}/cover-image`,
     TRENDING: `${API_BASE_URL}/api/posts/trending`,
     FOLLOWING: `${API_BASE_URL}/api/posts/feed/following`,
@@ -46,6 +47,7 @@ export const ENDPOINTS = {
   },
   RESOURCES: {
     BASE: `${API_BASE_URL}/api/resources`,
+    SAVED: `${API_BASE_URL}/api/resources/saved`,
     UPLOAD_IMAGE: `${API_BASE_URL}/api/resources/upload-image`,
     UPLOAD_FILE: `${API_BASE_URL}/api/resources/upload-file`,
     CATEGORIES: `${API_BASE_URL}/api/resources/categories`,

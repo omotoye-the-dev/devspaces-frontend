@@ -19,6 +19,7 @@ import ProtectedRoute from "@/components/shared/ProtectedRoute";
 import ProfilePage from "@/pages/member/ProfilePage";
 import DiscussionsPage from "@/pages/member/DiscussionsPage";
 import HistoryPage from "@/pages/member/HistoryPage";
+import SavedPage from "@/pages/member/SavedPage";
 
 export const router = createBrowserRouter([
   {
@@ -75,6 +76,10 @@ export const router = createBrowserRouter([
           {
             path: "discussions",
             element: <DiscussionsPage />,
+          },
+          {
+            path: "saved",
+            element: <SavedPage />,
           },
         ],
       },

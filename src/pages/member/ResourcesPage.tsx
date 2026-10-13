@@ -1,4 +1,4 @@
-import { useState, useEffect, type JSX, type MouseEvent } from "react";
+import { useState, useEffect, useCallback, Fragment, type JSX, type MouseEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Button,
@@ -28,6 +28,11 @@ import {
 import type { ResourceListItem } from "@/types/resources.types";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
 import { toast } from "@/hooks/useToast";
+import { useLiveHub } from "@/hooks/useLiveHub";
+import {
+  normalizeResourceUpdate,
+  type ResourceCounts,
+} from "@/features/resources/utils/liveUpdate";
 
 const SORT_OPTIONS: SelectOption[] = [
   { label: "Sort by: Most Upvoted", value: "most_upvoted" },
@@ -95,6 +100,31 @@ function mapToResourceCardItem(item: ResourceListItem): ResourceItem {
   };
 }
 
+/**
+ * Render-null component that subscribes to the SignalR live hub for a single
+ * resource and forwards normalised count updates to the parent page.
+ *
+ * One instance is mounted next to each ResourceCard in the grid so the page
+ * owns a single list-state and cards stay purely prop-driven.
+ */
+function ResourceLiveSync({
+  id,
+  onCounts,
+}: {
+  id: string;
+  onCounts: (id: string, counts: ResourceCounts) => void;
+}): null {
+  useLiveHub({
+    type: "resource",
+    id,
+    onUpdate: (data) => {
+      const counts = normalizeResourceUpdate(data);
+      if (counts) onCounts(id, counts);
+    },
+  });
+  return null;
+}
+
 export default function ResourcesPage(): JSX.Element {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -132,6 +162,13 @@ export default function ResourcesPage(): JSX.Element {
     setSortBy(sortValue);
     setPage(1);
   };
+
+  // Patch live count updates from SignalR into the resource list state
+  const handleLiveCounts = useCallback((id: string, counts: ResourceCounts): void => {
+    setResources((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, ...counts } : r)),
+    );
+  }, []);
 
   const [refreshKey, setRefreshKey] = useState<number>(0);
 
@@ -608,14 +645,16 @@ export default function ResourcesPage(): JSX.Element {
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
                 {resources.map((item) => (
-                  <ResourceCard
-                    key={item.id}
-                    resource={mapToResourceCardItem(item)}
-                    onUpvote={handleUpvote}
-                    onDownvote={handleDownvote}
-                    onBookmark={handleBookmark}
-                    onClick={handleCardClick}
-                  />
+                  <Fragment key={item.id}>
+                    <ResourceLiveSync id={item.id} onCounts={handleLiveCounts} />
+                    <ResourceCard
+                      resource={mapToResourceCardItem(item)}
+                      onUpvote={handleUpvote}
+                      onDownvote={handleDownvote}
+                      onBookmark={handleBookmark}
+                      onClick={handleCardClick}
+                    />
+                  </Fragment>
                 ))}
               </div>
 
