@@ -6,9 +6,24 @@ import { ArticleCard } from "@/features/articles/components/ArticleCard";
 import { ResourceCard, type ResourceItem } from "@/features/resources/components/ResourceCard";
 import { getSavedArticles, saveArticle, type Article } from "@/features/articles/api/articleApi";
 import { getSavedResources, saveResource } from "@/features/resources/api/resources.api";
+import {
+  getSavedDiscussions,
+  getDiscussionById,
+  likeDiscussion,
+  saveDiscussion,
+  deleteDiscussion,
+  createDiscussionReply,
+  voteDiscussionReply,
+} from "@/features/discussions/api/discussionApi";
+import {
+  DiscussionCard,
+  DiscussionDetailModal,
+} from "@/features/discussions/components";
+import type { Discussion } from "@/types/discussions.types";
 import type { ResourceListItem } from "@/types/resources.types";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
 import { toast } from "@/hooks/useToast";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 type SavedTab = "all" | "articles" | "resources" | "discussions";
 
@@ -49,11 +64,14 @@ function mapToResourceCardItem(item: ResourceListItem): ResourceItem {
 }
 
 export default function SavedPage(): JSX.Element {
+  const currentUserId = useAuthStore((state) => state.user?.id);
   const [activeTab, setActiveTab] = useState<SavedTab>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
 
   const [articles, setArticles] = useState<Article[]>([]);
   const [resources, setResources] = useState<ResourceListItem[]>([]);
+  const [discussions, setDiscussions] = useState<Discussion[]>([]);
+  const [selectedDiscussionId, setSelectedDiscussionId] = useState<string | null>(null);
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,9 +83,10 @@ export default function SavedPage(): JSX.Element {
       setIsLoading(true);
       setError(null);
       try {
-        const [articlesRes, resourcesRes] = await Promise.allSettled([
+        const [articlesRes, resourcesRes, discussionsRes] = await Promise.allSettled([
           getSavedArticles(),
           getSavedResources(),
+          getSavedDiscussions(),
         ]);
 
         if (!isMounted) return;
@@ -78,8 +97,15 @@ export default function SavedPage(): JSX.Element {
         if (resourcesRes.status === "fulfilled") {
           setResources(resourcesRes.value.data || []);
         }
+        if (discussionsRes.status === "fulfilled") {
+          setDiscussions(discussionsRes.value);
+        }
 
-        if (articlesRes.status === "rejected" && resourcesRes.status === "rejected") {
+        if (
+          articlesRes.status === "rejected" &&
+          resourcesRes.status === "rejected" &&
+          discussionsRes.status === "rejected"
+        ) {
           setError(getApiErrorMessage(resourcesRes.reason, "Failed to load saved items."));
         }
       } finally {
@@ -118,6 +144,105 @@ export default function SavedPage(): JSX.Element {
     }
   };
 
+  const selectedDiscussion = useMemo(
+    () => discussions.find((d) => d.id === selectedDiscussionId) ?? null,
+    [discussions, selectedDiscussionId],
+  );
+
+  const handleUnsaveDiscussion = async (id: string): Promise<void> => {
+    const prev = discussions;
+    setDiscussions((p) => p.filter((d) => d.id !== id));
+    try {
+      await saveDiscussion(id);
+      toast.success("Removed from saved discussions");
+    } catch (err: unknown) {
+      setDiscussions(prev);
+      toast.error(getApiErrorMessage(err, "Failed to remove saved discussion"));
+    }
+  };
+
+  const handleVoteDiscussion = async (
+    discussionId: string,
+    direction: "up" | "down",
+  ): Promise<void> => {
+    if (direction === "down") return;
+
+    const prev = discussions;
+    setDiscussions((current) =>
+      current.map((d) =>
+        d.id === discussionId
+          ? { ...d, isLiked: !d.isLiked, likeCount: (d.likeCount ?? 0) + (d.isLiked ? -1 : 1) }
+          : d,
+      ),
+    );
+
+    try {
+      await likeDiscussion(discussionId);
+    } catch {
+      setDiscussions(prev);
+      toast.error("Unable to like this discussion.");
+    }
+  };
+
+  const handleOpenDiscussionDetails = async (discussion: Discussion): Promise<void> => {
+    setSelectedDiscussionId(discussion.id);
+    try {
+      const fullDiscussion = await getDiscussionById(discussion.id);
+      setDiscussions((current) =>
+        current.map((item) => (item.id === discussion.id ? fullDiscussion : item)),
+      );
+    } catch {
+      toast.error("Unable to load the discussion details.");
+    }
+  };
+
+  const handleAddDiscussionComment = async (
+    discussionId: string,
+    content: string,
+  ): Promise<void> => {
+    try {
+      await createDiscussionReply(discussionId, { content });
+      const updatedDiscussion = await getDiscussionById(discussionId);
+      setDiscussions((current) =>
+        current.map((d) => (d.id === discussionId ? updatedDiscussion : d)),
+      );
+    } catch {
+      toast.error("Unable to post your reply.");
+    }
+  };
+
+  const handleDeleteDiscussion = async (discussionId: string): Promise<void> => {
+    const prev = discussions;
+    setDiscussions((p) => p.filter((d) => d.id !== discussionId));
+    if (selectedDiscussionId === discussionId) {
+      setSelectedDiscussionId(null);
+    }
+
+    try {
+      await deleteDiscussion(discussionId);
+      toast.success("Discussion deleted");
+    } catch {
+      setDiscussions(prev);
+      toast.error("Unable to delete this discussion.");
+    }
+  };
+
+  const handleVoteDiscussionComment = async (
+    discussionId: string,
+    commentId: string,
+    direction: "up" | "down",
+  ): Promise<void> => {
+    try {
+      await voteDiscussionReply(discussionId, commentId, direction === "up" ? 0 : 1);
+      const updatedDiscussion = await getDiscussionById(discussionId);
+      setDiscussions((current) =>
+        current.map((d) => (d.id === discussionId ? updatedDiscussion : d)),
+      );
+    } catch {
+      toast.error("Unable to vote on this reply.");
+    }
+  };
+
   const search = searchQuery.trim().toLowerCase();
 
   const filteredArticles = useMemo(
@@ -144,21 +269,35 @@ export default function SavedPage(): JSX.Element {
     [resources, search],
   );
 
-  const totalCount = articles.length + resources.length;
+  const filteredDiscussions = useMemo(
+    () =>
+      search
+        ? discussions.filter(
+            (d) =>
+              d.title.toLowerCase().includes(search) ||
+              d.content.toLowerCase().includes(search),
+          )
+        : discussions,
+    [discussions, search],
+  );
+
+  const totalCount = articles.length + resources.length + discussions.length;
 
   const tabItems = [
     { id: "all", label: "All", count: totalCount },
     { id: "articles", label: "Articles", count: articles.length },
     { id: "resources", label: "Resources", count: resources.length },
-    { id: "discussions", label: "Discussions", count: 0 },
+    { id: "discussions", label: "Discussions", count: discussions.length },
   ];
 
   const showArticles = activeTab === "all" || activeTab === "articles";
   const showResources = activeTab === "all" || activeTab === "resources";
-  const showDiscussions = activeTab === "discussions";
+  const showDiscussions = activeTab === "all" || activeTab === "discussions";
 
   const visibleCount =
-    (showArticles ? filteredArticles.length : 0) + (showResources ? filteredResources.length : 0);
+    (showArticles ? filteredArticles.length : 0) +
+    (showResources ? filteredResources.length : 0) +
+    (showDiscussions ? filteredDiscussions.length : 0);
 
   return (
     <div className="min-h-full bg-background overflow-y-auto">
@@ -230,65 +369,97 @@ export default function SavedPage(): JSX.Element {
           <div className="py-12 text-center bg-white border border-border rounded-2xl p-8 space-y-3">
             <p className="text-rose-600 font-semibold text-sm">{error}</p>
           </div>
-        ) : showDiscussions ? (
-          <EmptyState
-            size="lg"
-            bordered
-            icon={<FiMessageSquare className="w-8 h-8 text-primary" />}
-            title="Saved discussions aren't available yet"
-            description="We're still building the ability to save discussions. Check back soon."
-            className="py-16 sm:py-20 bg-white"
-          />
         ) : visibleCount > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-            {showArticles &&
-              filteredArticles.map((article) => (
-                <ArticleCard
-                  key={`article-${article.id}`}
-                  id={article.id}
-                  authorId={article.authorId}
-                  title={article.title}
-                  excerpt={article.excerpt || ""}
-                  tagNames={article.tagNames || article.tags || []}
-                  coverImage={article.coverImageUrl || article.coverImage || undefined}
-                  authorName={
-                    article.author?.name || article.author?.username || article.authorName
-                  }
-                  authorAvatar={article.author?.avatarUrl || undefined}
-                  createdAt={article.createdAt}
-                  readTimeMinutes={article.readingTimeMinutes || article.readingTime}
-                  likes={article.likeCount ?? article.likes ?? 0}
-                  comments={article.commentCount ?? article.comments ?? 0}
-                  isBookmarked
-                  onBookmark={() => void handleUnsaveArticle(article.id)}
-                  variant="vertical"
-                />
-              ))}
+          <div className="space-y-5">
+            {showDiscussions && filteredDiscussions.length > 0 && (
+              <div className="space-y-3">
+                {filteredDiscussions.map((discussion) => (
+                  <DiscussionCard
+                    key={`discussion-${discussion.id}`}
+                    discussion={discussion}
+                    onOpenDetails={(d) => void handleOpenDiscussionDetails(d)}
+                    onVote={(id, direction) => void handleVoteDiscussion(id, direction)}
+                    onToggleBookmark={(id) => void handleUnsaveDiscussion(id)}
+                    onDelete={(id) => void handleDeleteDiscussion(id)}
+                    isOwner={Boolean(currentUserId) && discussion.author.id === currentUserId}
+                  />
+                ))}
+              </div>
+            )}
 
-            {showResources &&
-              filteredResources.map((resource) => (
-                <ResourceCard
-                  key={`resource-${resource.id}`}
-                  resource={mapToResourceCardItem(resource)}
-                  onBookmark={() => void handleUnsaveResource(resource.id)}
-                />
-              ))}
+            {(showArticles || showResources) && (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                {showArticles &&
+                  filteredArticles.map((article) => (
+                    <ArticleCard
+                      key={`article-${article.id}`}
+                      id={article.id}
+                      authorId={article.authorId}
+                      title={article.title}
+                      excerpt={article.excerpt || ""}
+                      tagNames={article.tagNames || article.tags || []}
+                      coverImage={article.coverImageUrl || article.coverImage || undefined}
+                      authorName={
+                        article.author?.name || article.author?.username || article.authorName
+                      }
+                      authorAvatar={article.author?.avatarUrl || undefined}
+                      createdAt={article.createdAt}
+                      readTimeMinutes={article.readingTimeMinutes || article.readingTime}
+                      likes={article.likeCount ?? article.likes ?? 0}
+                      comments={article.commentCount ?? article.comments ?? 0}
+                      isBookmarked
+                      onBookmark={() => void handleUnsaveArticle(article.id)}
+                      variant="vertical"
+                    />
+                  ))}
+
+                {showResources &&
+                  filteredResources.map((resource) => (
+                    <ResourceCard
+                      key={`resource-${resource.id}`}
+                      resource={mapToResourceCardItem(resource)}
+                      onBookmark={() => void handleUnsaveResource(resource.id)}
+                    />
+                  ))}
+              </div>
+            )}
           </div>
         ) : (
           <EmptyState
             size="lg"
             bordered
-            icon={<FiBookmark className="w-8 h-8 text-primary" />}
+            icon={
+              activeTab === "discussions" ? (
+                <FiMessageSquare className="w-8 h-8 text-primary" />
+              ) : (
+                <FiBookmark className="w-8 h-8 text-primary" />
+              )
+            }
             title={search ? "No matching saved items" : "Nothing saved yet"}
             description={
               search
                 ? `No saved items match "${search}". Try a different search.`
-                : "Bookmark articles and resources to find them here later."
+                : "Bookmark articles, resources and discussions to find them here later."
             }
             className="py-16 sm:py-20 bg-white"
           />
         )}
       </div>
+
+      {/* Discussion Detail Modal */}
+      <DiscussionDetailModal
+        discussion={selectedDiscussion}
+        open={Boolean(selectedDiscussion)}
+        onClose={() => setSelectedDiscussionId(null)}
+        onVote={(id, direction) => void handleVoteDiscussion(id, direction)}
+        onAddComment={(id, content) => void handleAddDiscussionComment(id, content)}
+        onVoteComment={(discussionId, commentId, direction) =>
+          void handleVoteDiscussionComment(discussionId, commentId, direction)
+        }
+        onToggleBookmark={(id) => void handleUnsaveDiscussion(id)}
+        onDelete={(id) => void handleDeleteDiscussion(id)}
+        isOwner={Boolean(selectedDiscussion) && selectedDiscussion?.author.id === currentUserId}
+      />
     </div>
   );
 }

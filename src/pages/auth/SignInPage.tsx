@@ -11,6 +11,7 @@ import { FormInput, Button } from "@/components/common";
 import { toast } from "@/hooks/useToast";
 import { initiateOAuth, signIn } from "@/features/auth/api/auth.api";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { getApiErrorMessage } from "@/lib/utils/apiError";
 
 const signInSchema = z.object({
   usernameOrEmail: z
@@ -73,10 +74,8 @@ export default function SignInPage() {
       } else {
         toast.error(res.message ?? "Sign in failed. Check your credentials.");
       }
-    } catch (error) {
-      // log for debugging and show a user-friendly message
-      console.error(error);
-      toast.error("Failed to sign in. Please try again.");
+    } catch (error: unknown) {
+      toast.error(getApiErrorMessage(error, "Failed to sign in. Please try again."));
     }
   };
 

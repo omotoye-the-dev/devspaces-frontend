@@ -43,6 +43,8 @@ export {
   type ToastAction,
 } from "./Toast";
 export { useToast, toast } from "@/hooks/useToast";
+export { ConfirmDialogProvider, type ConfirmDialogProviderProps } from "./ConfirmDialog";
+export { useConfirmDialog, confirmDialog, type ConfirmOptions, type ConfirmVariant } from "@/hooks/useConfirmDialog";
 export { Skeleton, type SkeletonProps, type SkeletonVariant } from "./Skeleton";
 export { EmptyState, type EmptyStateProps, type EmptyStateSize } from "./EmptyState";
 export { ErrorState, type ErrorStateProps, type ErrorStateSize } from "./ErrorState";

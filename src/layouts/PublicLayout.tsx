@@ -65,10 +65,10 @@ const PublicLayout = (): JSX.Element => {
           ref={mainRef}
           className={
             isResourcesPage
-              ? "flex-1 overflow-y-auto p-0"
+              ? "flex-1 overflow-y-auto hover-scrollbar p-0"
               : shouldHideSidebar
-                ? "flex-1 overflow-y-auto p-2 sm:p-4 md:p-6"
-                : "flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 pb-20 md:pb-8"
+                ? "flex-1 overflow-y-auto hover-scrollbar p-2 sm:p-4 md:p-6"
+                : "flex-1 overflow-y-auto hover-scrollbar p-4 sm:p-6 md:p-8 pb-20 md:pb-8"
           }
         >
           <Outlet />

@@ -7,7 +7,7 @@ import { HiOutlineBell } from "react-icons/hi";
 import { LuPenLine } from "react-icons/lu";
 import { Input, Button, Avatar, Skeleton } from "../common/index";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { getUserProfile, type UserProfile } from "@/lib/api/user.api";
+import { getUserProfile, getProfileAvatar, type UserProfile } from "@/lib/api/user.api";
 import { cn } from "@/lib/utils/cn";
 
 const searchSuggestions = [
@@ -105,20 +105,26 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
 
   const currentProfile = isAuthenticated ? profile : null;
 
-  const rawAvatarUrl =
-    (currentProfile?.avatarUrl as string | undefined | null) ??
-    (currentProfile?.avatar as string | undefined | null) ??
-    (currentProfile?.profilePictureUrl as string | undefined | null);
-
-  const avatarUrl = rawAvatarUrl && rawAvatarUrl.trim().length > 0 ? rawAvatarUrl : undefined;
+  const avatarUrl = getProfileAvatar(currentProfile);
 
   const displayName = currentProfile
-    ? [currentProfile.firstName, currentProfile.lastName].filter(Boolean).join(" ") ||
-    (currentProfile.name as string | undefined) ||
-    (currentProfile.fullName as string | undefined) ||
-    (currentProfile.userName as string | undefined) ||
-    (currentProfile.username as string | undefined) ||
-    undefined
+    ? (() => {
+        const p = currentProfile as Record<string, unknown>;
+        return (
+          [currentProfile.firstName || p.FirstName, currentProfile.lastName || p.LastName]
+            .filter(Boolean)
+            .join(" ") ||
+          (currentProfile.name as string | undefined) ||
+          (p.Name as string | undefined) ||
+          (currentProfile.fullName as string | undefined) ||
+          (p.FullName as string | undefined) ||
+          (currentProfile.userName as string | undefined) ||
+          (p.UserName as string | undefined) ||
+          (currentProfile.username as string | undefined) ||
+          (p.Username as string | undefined) ||
+          undefined
+        );
+      })()
     : undefined;
 
   const filteredSuggestions = useMemo(() => {
@@ -365,11 +371,11 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
           <div className="absolute inset-0 bg-black/10" />
 
           <div
-            className={`absolute inset-y-0 right-0 w-[82%] max-w-sm bg-white border-l border-border shadow-2xl transition-transform duration-300 ease-out ${mobileOpen ? "translate-x-0" : "translate-x-full"
+            className={`absolute inset-y-0 right-0 w-[82%] max-w-sm bg-white border-l border-border shadow-2xl flex flex-col transition-transform duration-300 ease-out ${mobileOpen ? "translate-x-0" : "translate-x-full"
               }`}
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border/60 shrink-0">
               <span className="font-semibold text-text">Menu</span>
               <button
                 type="button"
@@ -381,7 +387,7 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
               </button>
             </div>
 
-            <div className="flex flex-col gap-2 p-4">
+            <div className="flex flex-col gap-2 p-4 overflow-y-auto hover-scrollbar">
               <button
                 type="button"
                 onClick={() => {

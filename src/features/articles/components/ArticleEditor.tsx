@@ -42,6 +42,7 @@ import {
 
 import { Button } from "@/components/common";
 import { toast } from "@/hooks/useToast";
+import { getApiErrorMessage } from "@/lib/utils/apiError";
 import { articleSchema, type ArticleFormData } from "../schemas/articleSchema";
 import { getTags, type Tag } from "../api/tagApi";
 
@@ -322,7 +323,7 @@ export function ArticleEditor({
         await onSaveDraft({ ...data, status: "draft" }, coverImageFile);
       }
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to save draft");
+      toast.error(getApiErrorMessage(err, "Failed to save draft"));
     } finally {
       setIsSaving(false);
     }
@@ -339,7 +340,7 @@ export function ArticleEditor({
         await onPublish(data, coverImageFile);
       }
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to publish article");
+      toast.error(getApiErrorMessage(err, "Failed to publish article"));
     } finally {
       setIsPublishing(false);
     }

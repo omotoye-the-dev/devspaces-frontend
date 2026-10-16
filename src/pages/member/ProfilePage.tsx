@@ -5,6 +5,7 @@ import {
   FiLink,
   FiGithub,
   FiTwitter,
+  FiLinkedin,
   FiShare2,
   FiMail,
   FiUsers,
@@ -25,6 +26,7 @@ import {
   getUserProfile,
   formatProfileName,
   getProfileAvatar,
+  getProfileLinks,
   followAuthor,
   type UserProfile,
 } from "@/lib/api/user.api";
@@ -271,29 +273,32 @@ export default function ProfilePage(): JSX.Element {
     firstArticle?.author?.avatarUrl ||
     (firstArticle as unknown as { authorAvatar?: string })?.authorAvatar;
 
-  const defaultName = isOwnProfile
-    ? currentUser?.username || "DevSpace Member"
-    : firstArticleAuthorName || "DevSpace Author";
-
-  const displayName = formatProfileName(profile, defaultName);
-
   const username =
     (profile?.userName as string | undefined) ||
     (profile?.username as string | undefined) ||
     (isOwnProfile ? currentUser?.username : firstArticleUserName) ||
-    "member";
+    undefined;
 
-  const bio =
-    (profile?.bio as string | undefined) ||
-    (profile?.role as string | undefined) ||
-    "Software Engineer building on DevSpace.";
+  const defaultName = isOwnProfile
+    ? currentUser?.username
+    : firstArticleAuthorName || firstArticleUserName;
+
+  const displayName = formatProfileName(profile, defaultName || username || "");
+
+  const bio = (profile?.bio as string | undefined) || "";
 
   const avatarUrl = getProfileAvatar(profile) || (isOwnProfile ? undefined : firstArticleAvatar);
 
+  const isVerified = Boolean(
+    profile?.isEmailVerified ||
+    (profile as Record<string, unknown> | null)?.IsEmailVerified ||
+    profile?.isVerified ||
+    (profile as Record<string, unknown> | null)?.IsVerified,
+  );
+
   const location = (profile?.location as string | undefined) || "";
-  const website = (profile?.website as string | undefined) || "";
-  const github = (profile?.github as string | undefined) || "";
-  const twitter = (profile?.twitter as string | undefined) || "";
+  const { websiteUrl: website, githubUrl: github, xUrl: twitter, linkedInUrl } =
+    getProfileLinks(profile);
 
   const getStatNumber = (...candidates: unknown[]): number => {
     for (const val of candidates) {
@@ -622,7 +627,7 @@ export default function ProfilePage(): JSX.Element {
                 </div>
               </div>
               <div className="lg:pl-8 lg:border-l lg:border-border/60 shrink-0 w-full sm:w-auto">
-                <div className="grid grid-cols-2 divide-x divide-y divide-border/60 border rounded-2xl bg-white/80 overflow-hidden text-center min-w-60 sm:min-w-67.5">
+                <div className="grid grid-cols-2 divide-x divide-y divide-border/60 border border-border/60 rounded-2xl bg-white/80 overflow-hidden text-center min-w-60 sm:min-w-67.5">
                   {Array.from({ length: 4 }).map((_, i) => (
                     <div
                       key={i}
@@ -665,16 +670,22 @@ export default function ProfilePage(): JSX.Element {
                       <h1 className="text-2xl sm:text-3xl font-extrabold text-text tracking-tight">
                         {displayName}
                       </h1>
-                      <BsPatchCheckFill
-                        className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-blue-600 shrink-0"
-                        title="Verified member"
-                        aria-label="Verified member"
-                      />
+                      {isVerified && (
+                        <BsPatchCheckFill
+                          className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-blue-600 shrink-0"
+                          title="Verified member"
+                          aria-label="Verified member"
+                        />
+                      )}
                     </div>
-                    <p className="text-xs sm:text-sm font-medium text-text/50">@{username}</p>
+                    {username && (
+                      <p className="text-xs sm:text-sm font-medium text-text/50">@{username}</p>
+                    )}
                   </div>
 
-                  <p className="text-xs sm:text-sm text-text/80 leading-relaxed max-w-2xl">{bio}</p>
+                  {bio && (
+                    <p className="text-xs sm:text-sm text-text/80 leading-relaxed max-w-2xl">{bio}</p>
+                  )}
 
                   {/* Social & Meta Links */}
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-text/60 pt-0.5">
@@ -723,13 +734,30 @@ export default function ProfilePage(): JSX.Element {
                           <span className="text-border/80 hidden sm:inline">|</span>
                         )}
                         <a
-                          href={`https://x.com/${twitter.replace("@", "")}`}
+                          href={twitter.startsWith("http") ? twitter : `https://x.com/${twitter.replace("@", "")}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center gap-1 text-[#1DA1F2] hover:underline font-medium"
                         >
                           <FiTwitter className="w-3.5 h-3.5 shrink-0" />
                           <span>{twitter}</span>
+                        </a>
+                      </>
+                    )}
+
+                    {linkedInUrl && (
+                      <>
+                        {(location || website || github || twitter) && (
+                          <span className="text-border/80 hidden sm:inline">|</span>
+                        )}
+                        <a
+                          href={linkedInUrl.startsWith("http") ? linkedInUrl : `https://${linkedInUrl}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-[#0A66C2] hover:underline font-medium"
+                        >
+                          <FiLinkedin className="w-3.5 h-3.5 shrink-0" />
+                          <span>LinkedIn</span>
                         </a>
                       </>
                     )}
@@ -1019,37 +1047,66 @@ export default function ProfilePage(): JSX.Element {
           <div className="bg-white border border-border rounded-2xl p-6 sm:p-8 space-y-6">
             <div>
               <h3 className="text-base font-bold text-text mb-2">About {displayName}</h3>
-              <p className="text-sm text-text/70 leading-relaxed max-w-3xl">
-                {bio} Passionate about building fast, accessible web applications and developer
-                tooling. Writing regularly about React, TypeScript, design systems, and software
-                craftsmanship.
-              </p>
+              {bio ? (
+                <p className="text-sm text-text/70 leading-relaxed max-w-3xl">{bio}</p>
+              ) : (
+                <p className="text-sm text-text/40 italic">No bio provided yet.</p>
+              )}
             </div>
 
-            <div className="border-t border-border/60 pt-4">
-              <h4 className="text-xs font-bold text-text/50 uppercase tracking-wider mb-2.5">
-                Skills & Technologies
-              </h4>
-              <div className="flex flex-wrap gap-2">
-                {[
-                  "React",
-                  "TypeScript",
-                  "Next.js",
-                  "Tailwind CSS",
-                  "Node.js",
-                  "Accessibility (a11y)",
-                  "State Management",
-                  "GraphQL",
-                ].map((skill) => (
-                  <span
-                    key={skill}
-                    className="px-3 py-1 rounded-lg text-xs font-medium bg-slate-100 text-text border border-border/60"
-                  >
-                    {skill}
-                  </span>
-                ))}
+            {(website || github || twitter || linkedInUrl) && (
+              <div className="border-t border-border/60 pt-4">
+                <h4 className="text-xs font-bold text-text/50 uppercase tracking-wider mb-2.5">
+                  Links
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {website && (
+                    <a
+                      href={website.startsWith("http") ? website : `https://${website}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-blue-600 border border-border/60 hover:border-blue-300 transition-colors"
+                    >
+                      <FiLink className="w-3.5 h-3.5" />
+                      <span>Website</span>
+                    </a>
+                  )}
+                  {github && (
+                    <a
+                      href={github.startsWith("http") ? github : `https://${github}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-text border border-border/60 hover:border-text/30 transition-colors"
+                    >
+                      <FiGithub className="w-3.5 h-3.5" />
+                      <span>GitHub</span>
+                    </a>
+                  )}
+                  {twitter && (
+                    <a
+                      href={twitter.startsWith("http") ? twitter : `https://x.com/${twitter.replace("@", "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-[#1DA1F2] border border-border/60 hover:border-sky-300 transition-colors"
+                    >
+                      <FiTwitter className="w-3.5 h-3.5" />
+                      <span>X (Twitter)</span>
+                    </a>
+                  )}
+                  {linkedInUrl && (
+                    <a
+                      href={linkedInUrl.startsWith("http") ? linkedInUrl : `https://${linkedInUrl}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-[#0A66C2] border border-border/60 hover:border-blue-300 transition-colors"
+                    >
+                      <FiLinkedin className="w-3.5 h-3.5" />
+                      <span>LinkedIn</span>
+                    </a>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
       </section>

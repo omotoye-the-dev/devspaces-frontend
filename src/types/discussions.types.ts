@@ -25,6 +25,9 @@ export interface Discussion {
   createdAt: string;
   upvotes: number;
   downvotes: number;
+  likeCount?: number;
+  saveCount?: number;
+  isLiked?: boolean;
   userVote?: "up" | "down" | null;
   commentsCount: number;
   comments: DiscussionComment[];

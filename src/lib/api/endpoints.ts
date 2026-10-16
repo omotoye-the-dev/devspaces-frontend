@@ -17,9 +17,10 @@ export const ENDPOINTS = {
   },
 
   USER: {
-    PROFILE: `${API_BASE_URL}/api/User/profile`,
-    LIST: `${API_BASE_URL}/api/User/list`,
-    ALL: `${API_BASE_URL}/api/User/all`,
+    PROFILE: `${API_BASE_URL}/api/v1/users/profile`,
+    LIST: `${API_BASE_URL}/api/v1/users/list`,
+    ALL: `${API_BASE_URL}/api/v1/users/all`,
+    INTERESTED_TAGS: `${API_BASE_URL}/api/v1/users/me/interested-tags`,
   },
   LEADERBOARD: `${API_BASE_URL}/api/v1/leaderboard`,
   AUTHORS: {
@@ -75,5 +76,18 @@ export const ENDPOINTS = {
       partId
         ? `${API_BASE_URL}/api/resources/${id}/download?partId=${encodeURIComponent(partId)}`
         : `${API_BASE_URL}/api/resources/${id}/download`,
+  },
+  DISCUSSIONS: {
+    BASE: `${API_BASE_URL}/api/discussions`,
+    SAVED: `${API_BASE_URL}/api/discussions/saved`,
+    HISTORY: `${API_BASE_URL}/api/discussions/history`,
+    DETAIL: (id: string) => `${API_BASE_URL}/api/discussions/${id}`,
+    REPLIES: (id: string) => `${API_BASE_URL}/api/discussions/${id}/replies`,
+    REPLY_DETAIL: (id: string, replyId: string) =>
+      `${API_BASE_URL}/api/discussions/${id}/replies/${replyId}`,
+    REPLY_VOTE: (id: string, replyId: string, action: number) =>
+      `${API_BASE_URL}/api/discussions/${id}/replies/${replyId}/vote?action=${action}`,
+    SAVE: (id: string) => `${API_BASE_URL}/api/discussions/${id}/save`,
+    LIKE: (id: string) => `${API_BASE_URL}/api/discussions/${id}/like`,
   },
 } as const;

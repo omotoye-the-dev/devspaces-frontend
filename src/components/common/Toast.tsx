@@ -229,7 +229,7 @@ export function ToastProvider({
           <div
             aria-live="polite"
             className={cn(
-              "fixed z-50 flex flex-col gap-2.5 pointer-events-none max-w-full p-2",
+              "fixed z-100 flex flex-col gap-2.5 pointer-events-none max-w-full p-2",
               positionStyles[position],
             )}
           >
