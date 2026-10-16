@@ -1,4 +1,4 @@
-import { useState, useMemo, type JSX } from "react";
+import { useState, useMemo, useEffect, type JSX } from "react";
 import {
   HiPlus,
   HiOutlineChatBubbleLeftRight,
@@ -7,11 +7,21 @@ import {
   HiOutlineLightBulb,
 } from "react-icons/hi2";
 import { Button, EmptyState } from "@/components/common";
-import { useAuthStore } from "@/stores/useAuthStore";
 import { toast } from "@/hooks/useToast";
+import { getApiErrorMessage } from "@/lib/utils/apiError";
+import { useAuthStore } from "@/stores/useAuthStore";
+import {
+  createDiscussion,
+  createDiscussionReply,
+  deleteDiscussion,
+  getDiscussionById,
+  getDiscussions,
+  likeDiscussion,
+  saveDiscussion,
+  voteDiscussionReply,
+} from "@/features/discussions/api/discussionApi";
 import type {
   Discussion,
-  DiscussionComment,
   DiscussionSortOption,
   CreateDiscussionDto,
 } from "@/types/discussions.types";
@@ -23,25 +33,9 @@ import {
 } from "@/features/discussions/components";
 
 export default function DiscussionsPage(): JSX.Element {
-  const user = useAuthStore((state) => state.user);
-
-  // Discussions state starts empty with zero dummy data as per requirement
-  const [discussions, setDiscussions] = useState<Discussion[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const stored = localStorage.getItem("devspace_local_discussions");
-        if (stored) {
-          const parsed = JSON.parse(stored) as Discussion[];
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            return parsed;
-          }
-        }
-      } catch {
-        // Fallback to empty
-      }
-    }
-    return [];
-  });
+  const currentUserId = useAuthStore((state) => state.user?.id);
+  const [discussions, setDiscussions] = useState<Discussion[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [activeSort, setActiveSort] = useState<DiscussionSortOption>("trending");
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
@@ -49,17 +43,38 @@ export default function DiscussionsPage(): JSX.Element {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedDiscussionId, setSelectedDiscussionId] = useState<string | null>(null);
 
-  // Synchronize discussions to storage so newly created discussions persist during session
-  const saveDiscussions = (newDiscussions: Discussion[]): void => {
-    setDiscussions(newDiscussions);
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem("devspace_local_discussions", JSON.stringify(newDiscussions));
-      } catch {
-        // Ignore storage errors
-      }
+  const refreshDiscussions = async (): Promise<void> => {
+    try {
+      const data = await getDiscussions();
+      setDiscussions(data);
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, "Unable to load discussions. Please try again."));
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadDiscussions(): Promise<void> {
+      try {
+        const data = await getDiscussions();
+        if (active) setDiscussions(data);
+      } catch (err: unknown) {
+        if (active) {
+          toast.error(getApiErrorMessage(err, "Unable to load discussions. Please try again."));
+        }
+      } finally {
+        if (active) setIsLoading(false);
+      }
+    }
+
+    void loadDiscussions();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Find currently active discussion for detail modal
   const selectedDiscussion = useMemo(() => {
@@ -77,154 +92,130 @@ export default function DiscussionsPage(): JSX.Element {
   }, [discussions]);
 
   // Handle discussion vote (up / down)
-  const handleVote = (discussionId: string, direction: "up" | "down"): void => {
-    const updated = discussions.map((disc) => {
-      if (disc.id !== discussionId) return disc;
+  const handleVote = async (
+    discussionId: string,
+    direction: "up" | "down",
+  ): Promise<void> => {
+    if (direction === "down") {
+      toast.info("Discussions support likes; replies support upvotes and downvotes.");
+      return;
+    }
 
-      let upvotes = disc.upvotes;
-      let downvotes = disc.downvotes;
-      let newVote: "up" | "down" | null = direction;
+    const previous = discussions;
+    setDiscussions((current) =>
+      current.map((d) =>
+        d.id === discussionId
+          ? {
+              ...d,
+              isLiked: !d.isLiked,
+              likeCount: (d.likeCount ?? 0) + (d.isLiked ? -1 : 1),
+            }
+          : d,
+      ),
+    );
 
-      if (disc.userVote === direction) {
-        // Remove vote
-        newVote = null;
-        if (direction === "up") upvotes -= 1;
-        else downvotes -= 1;
-      } else {
-        // Switching or new vote
-        if (disc.userVote === "up") upvotes -= 1;
-        if (disc.userVote === "down") downvotes -= 1;
-
-        if (direction === "up") upvotes += 1;
-        else downvotes += 1;
-      }
-
-      return {
-        ...disc,
-        upvotes: Math.max(0, upvotes),
-        downvotes: Math.max(0, downvotes),
-        userVote: newVote,
-      };
-    });
-
-    saveDiscussions(updated);
+    try {
+      await likeDiscussion(discussionId);
+    } catch (err: unknown) {
+      setDiscussions(previous);
+      toast.error(getApiErrorMessage(err, "Unable to like this discussion."));
+    }
   };
 
   // Handle bookmark toggle
-  const handleToggleBookmark = (discussionId: string): void => {
-    const updated = discussions.map((disc) => {
-      if (disc.id !== discussionId) return disc;
-      const nextBookmarked = !disc.isBookmarked;
-      if (nextBookmarked) {
-        toast.success("Discussion saved to bookmarks");
-      } else {
-        toast.info("Discussion removed from bookmarks");
-      }
-      return {
-        ...disc,
-        isBookmarked: nextBookmarked,
-      };
-    });
+  const handleToggleBookmark = async (discussionId: string): Promise<void> => {
+    const previous = discussions;
+    setDiscussions((current) =>
+      current.map((d) =>
+        d.id === discussionId ? { ...d, isBookmarked: !d.isBookmarked } : d,
+      ),
+    );
 
-    saveDiscussions(updated);
+    try {
+      await saveDiscussion(discussionId);
+    } catch (err: unknown) {
+      setDiscussions(previous);
+      toast.error(getApiErrorMessage(err, "Unable to update the saved discussion."));
+    }
   };
 
   // Handle adding comment
-  const handleAddComment = (discussionId: string, content: string): void => {
-    const authorName = [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim() ||
-      user?.userName ||
-      user?.username ||
-      "DevSpace Developer";
-
-    const authorUsername = user?.userName || user?.username || "developer";
-
-    const newComment: DiscussionComment = {
-      id: `comment-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      discussionId,
-      content,
-      createdAt: "Just now",
-      upvotes: 0,
-      isUpvoted: false,
-      author: {
-        id: user?.id || `user-${Date.now()}`,
-        name: authorName,
-        username: authorUsername,
-        avatarUrl: user?.avatarUrl ?? undefined,
-        role: "Community Member",
-      },
-    };
-
-    const updated = discussions.map((disc) => {
-      if (disc.id !== discussionId) return disc;
-      return {
-        ...disc,
-        commentsCount: disc.commentsCount + 1,
-        comments: [newComment, ...disc.comments],
-      };
-    });
-
-    saveDiscussions(updated);
+  const handleAddComment = async (
+    discussionId: string,
+    content: string,
+  ): Promise<void> => {
+    try {
+      await createDiscussionReply(discussionId, { content });
+      const updatedDiscussion = await getDiscussionById(discussionId);
+      setDiscussions((current) =>
+        current.map((discussion) =>
+          discussion.id === discussionId ? updatedDiscussion : discussion,
+        ),
+      );
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, "Unable to post your reply."));
+    }
   };
 
   // Handle voting on a comment
-  const handleVoteComment = (discussionId: string, commentId: string): void => {
-    const updated = discussions.map((disc) => {
-      if (disc.id !== discussionId) return disc;
-
-      const updatedComments = disc.comments.map((c) => {
-        if (c.id !== commentId) return c;
-        const nextUpvoted = !c.isUpvoted;
-        return {
-          ...c,
-          isUpvoted: nextUpvoted,
-          upvotes: nextUpvoted ? c.upvotes + 1 : Math.max(0, c.upvotes - 1),
-        };
-      });
-
-      return {
-        ...disc,
-        comments: updatedComments,
-      };
-    });
-
-    saveDiscussions(updated);
+  const handleVoteComment = async (
+    discussionId: string,
+    commentId: string,
+    direction: "up" | "down",
+  ): Promise<void> => {
+    try {
+      await voteDiscussionReply(discussionId, commentId, direction === "up" ? 0 : 1);
+      const updatedDiscussion = await getDiscussionById(discussionId);
+      setDiscussions((current) =>
+        current.map((discussion) =>
+          discussion.id === discussionId ? updatedDiscussion : discussion,
+        ),
+      );
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, "Unable to vote on this reply."));
+    }
   };
 
   // Handle creating a new discussion
-  const handleCreateDiscussion = (data: CreateDiscussionDto): void => {
-    const authorName = [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim() ||
-      user?.userName ||
-      user?.username ||
-      "DevSpace Developer";
+  const handleCreateDiscussion = async (data: CreateDiscussionDto): Promise<void> => {
+    try {
+      const newDiscussion = await createDiscussion(data);
+      await refreshDiscussions();
+      toast.success("Your discussion was posted successfully!");
+      setSelectedDiscussionId(newDiscussion.id);
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, "Unable to post your discussion."));
+    }
+  };
 
-    const authorUsername = user?.userName || user?.username || "developer";
+  // Handle deleting a discussion (only the author can do this)
+  const handleDeleteDiscussion = async (discussionId: string): Promise<void> => {
+    const previous = discussions;
+    setDiscussions((current) => current.filter((d) => d.id !== discussionId));
+    if (selectedDiscussionId === discussionId) {
+      setSelectedDiscussionId(null);
+    }
 
-    const newDiscussion: Discussion = {
-      id: `disc-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      title: data.title,
-      content: data.content,
-      tags: data.tags,
-      createdAt: "Just now",
-      upvotes: 1, // Author automatic upvote
-      downvotes: 0,
-      userVote: "up",
-      commentsCount: 0,
-      comments: [],
-      author: {
-        id: user?.id || `user-${Date.now()}`,
-        name: authorName,
-        username: authorUsername,
-        avatarUrl: user?.avatarUrl ?? undefined,
-        role: "Developer",
-      },
-      isBookmarked: false,
-    };
+    try {
+      await deleteDiscussion(discussionId);
+      toast.success("Discussion deleted");
+    } catch (err: unknown) {
+      setDiscussions(previous);
+      toast.error(getApiErrorMessage(err, "Unable to delete this discussion."));
+    }
+  };
 
-    const updated = [newDiscussion, ...discussions];
-    saveDiscussions(updated);
-    toast.success("Your discussion was posted successfully!");
-    // Automatically select the new discussion so user sees the detail modal immediately
-    setSelectedDiscussionId(newDiscussion.id);
+  const handleOpenDetails = async (discussion: Discussion): Promise<void> => {
+    setSelectedDiscussionId(discussion.id);
+
+    try {
+      const fullDiscussion = await getDiscussionById(discussion.id);
+      setDiscussions((current) =>
+        current.map((item) => (item.id === discussion.id ? fullDiscussion : item)),
+      );
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, "Unable to load the discussion details."));
+    }
   };
 
   // Filter & sort discussions
@@ -258,8 +249,8 @@ export default function DiscussionsPage(): JSX.Element {
       })
       .sort((a, b) => {
         if (activeSort === "trending") {
-          const scoreA = (a.upvotes - a.downvotes) * 2 + a.commentsCount;
-          const scoreB = (b.upvotes - b.downvotes) * 2 + b.commentsCount;
+          const scoreA = (a.likeCount ?? a.upvotes) * 2 + a.commentsCount;
+          const scoreB = (b.likeCount ?? b.upvotes) * 2 + b.commentsCount;
           return scoreB - scoreA;
         }
 
@@ -272,7 +263,7 @@ export default function DiscussionsPage(): JSX.Element {
         }
 
         // Default: latest
-        return 0;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       });
   }, [discussions, selectedTag, searchQuery, activeSort]);
 
@@ -328,7 +319,11 @@ export default function DiscussionsPage(): JSX.Element {
       <div className="flex flex-col lg:flex-row items-start gap-6">
         {/* Left / Center: Discussions Sequence */}
         <section className="flex-1 w-full space-y-3 min-w-0" aria-label="Discussions List">
-          {discussions.length === 0 ? (
+          {isLoading ? (
+            <div className="bg-white border border-border rounded-lg p-10 text-center text-sm text-text/60">
+              Loading discussions...
+            </div>
+          ) : discussions.length === 0 ? (
             /* Empty state when no discussions exist at all */
             <div className="bg-white border border-border rounded-lg p-6 sm:p-10 shadow-2xs">
               <EmptyState
@@ -380,10 +375,12 @@ export default function DiscussionsPage(): JSX.Element {
                 <DiscussionCard
                   key={discussion.id}
                   discussion={discussion}
-                  onOpenDetails={(disc) => setSelectedDiscussionId(disc.id)}
+                  onOpenDetails={handleOpenDetails}
                   onVote={handleVote}
                   onTagClick={(tag) => setSelectedTag(tag)}
                   onToggleBookmark={handleToggleBookmark}
+                  onDelete={handleDeleteDiscussion}
+                  isOwner={Boolean(currentUserId) && discussion.author.id === currentUserId}
                 />
               ))}
             </div>
@@ -442,6 +439,8 @@ export default function DiscussionsPage(): JSX.Element {
         onVoteComment={handleVoteComment}
         onToggleBookmark={handleToggleBookmark}
         onTagClick={(tag) => setSelectedTag(tag)}
+        onDelete={handleDeleteDiscussion}
+        isOwner={Boolean(selectedDiscussion) && selectedDiscussion?.author.id === currentUserId}
       />
 
       {/* Create Discussion Modal */}

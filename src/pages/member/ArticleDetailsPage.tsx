@@ -10,6 +10,7 @@ import remarkGfm from "remark-gfm";
 import articlePlaceholder from "@/assets/images/article-placeholder.jpg";
 import { Avatar, Button, Skeleton, Tag } from "@/components/common";
 import { toast } from "@/hooks/useToast";
+import { confirmDialog } from "@/hooks/useConfirmDialog";
 import { cn } from "@/lib/utils/cn";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
 import { deleteArticle, getArticleById, getArticleComments, likeArticle, saveArticle, type Article } from "@/features/articles/api/articleApi";
@@ -627,10 +628,12 @@ const handleDelete =
       return;
     }
 
-    const confirmed =
-      window.confirm(
-        "Are you sure you want to delete this article? This action cannot be undone."
-      );
+    const confirmed = await confirmDialog({
+      title: "Delete this article?",
+      description: "This action cannot be undone.",
+      confirmLabel: "Delete",
+      variant: "danger",
+    });
 
     if (!confirmed) {
       return;

@@ -25,6 +25,13 @@ export interface UserProfile {
   followingCount?: number | string;
   articlesCount?: number | string;
   resourcesCount?: number | string;
+  isProfileCompleted?: boolean;
+  socialLinks?: {
+    xUrl?: string | null;
+    linkedInUrl?: string | null;
+    githubUrl?: string | null;
+    websiteUrl?: string | null;
+  };
   [key: string]: unknown;
 }
 
@@ -189,12 +196,15 @@ export function formatProfileName(
  */
 export function getProfileAvatar(profile?: UserProfile | null): string | undefined {
   if (!profile) return undefined;
-  return (
-    (profile.avatarUrl as string | undefined) ||
-    (profile.avatar as string | undefined) ||
-    (profile.profilePictureUrl as string | undefined) ||
-    undefined
-  );
+  const p = profile as Record<string, unknown>;
+  const value =
+    profile.avatarUrl ||
+    profile.avatar ||
+    profile.profilePictureUrl ||
+    p.AvatarUrl ||
+    p.Avatar ||
+    p.ProfilePictureUrl;
+  return typeof value === "string" && value.trim() ? value : undefined;
 }
 
 /**
@@ -205,4 +215,62 @@ export function getProfileRole(profile?: UserProfile | null): string | undefined
   return typeof profile.role === "string" && profile.role.trim().length > 0
     ? profile.role.trim()
     : undefined;
+}
+
+export interface ProfileLinks {
+  websiteUrl?: string;
+  githubUrl?: string;
+  xUrl?: string;
+  linkedInUrl?: string;
+}
+
+function readStringField(profile: Record<string, unknown>, ...keys: string[]): string | undefined {
+  for (const key of keys) {
+    const value = profile[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return undefined;
+}
+
+/**
+ * Retrieves the user's social/profile links, tolerant of casing differences from the backend.
+ */
+export function getProfileLinks(profile?: UserProfile | null): ProfileLinks {
+  if (!profile) return {};
+  const p = profile as Record<string, unknown>;
+  const nested = p.socialLinks ?? p.SocialLinks;
+  const social = nested && typeof nested === "object" ? (nested as Record<string, unknown>) : {};
+
+  return {
+    websiteUrl: readStringField(
+      social,
+      "websiteUrl",
+      "WebsiteUrl",
+    ) ?? readStringField(p, "websiteUrl", "WebsiteUrl", "website", "Website"),
+    githubUrl: readStringField(
+      social,
+      "githubUrl",
+      "GithubUrl",
+    ) ?? readStringField(p, "githubUrl", "GithubUrl", "github", "Github"),
+    xUrl: readStringField(
+      social,
+      "xUrl",
+      "XUrl",
+    ) ?? readStringField(p, "xUrl", "XUrl", "twitter", "Twitter"),
+    linkedInUrl: readStringField(
+      social,
+      "linkedInUrl",
+      "LinkedInUrl",
+    ) ?? readStringField(p, "linkedInUrl", "LinkedInUrl", "linkedin", "LinkedIn"),
+  };
+}
+
+/**
+ * Determines whether the user has completed the post-signup onboarding flow.
+ * Tolerant of casing differences from the backend (isProfileCompleted / IsProfileCompleted).
+ */
+export function isProfileComplete(profile?: UserProfile | null): boolean {
+  if (!profile) return false;
+  const value = profile.isProfileCompleted ?? (profile as Record<string, unknown>).IsProfileCompleted;
+  return Boolean(value);
 }

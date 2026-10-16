@@ -1,15 +1,21 @@
 import { useState, type JSX, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import {
   HiChevronUp,
-  HiChevronDown,
+  HiOutlineChevronUp,
+  HiHeart,
+  HiOutlineHeart,
   HiOutlineChatBubbleLeftEllipsis,
   HiOutlineShare,
   HiOutlineBookmark,
   HiBookmark,
+  HiOutlineTrash,
 } from "react-icons/hi2";
 import { Modal, Avatar, Tag, Button, Textarea, EmptyState } from "@/components/common";
 import { cn } from "@/lib/utils/cn";
+import { formatTimeAgo } from "@/lib/utils/date";
 import { toast } from "@/hooks/useToast";
+import { confirmDialog } from "@/hooks/useConfirmDialog";
 import type { Discussion } from "@/types/discussions.types";
 
 export interface DiscussionDetailModalProps {
@@ -18,9 +24,15 @@ export interface DiscussionDetailModalProps {
   onClose: () => void;
   onVote: (discussionId: string, direction: "up" | "down") => void;
   onAddComment: (discussionId: string, content: string) => void;
-  onVoteComment: (discussionId: string, commentId: string) => void;
+  onVoteComment: (
+    discussionId: string,
+    commentId: string,
+    direction: "up" | "down",
+  ) => void;
   onToggleBookmark?: (discussionId: string) => void;
   onTagClick?: (tag: string) => void;
+  onDelete?: (discussionId: string) => void;
+  isOwner?: boolean;
 }
 
 export function DiscussionDetailModal({
@@ -32,13 +44,13 @@ export function DiscussionDetailModal({
   onVoteComment,
   onToggleBookmark,
   onTagClick,
+  onDelete,
+  isOwner = false,
 }: DiscussionDetailModalProps): JSX.Element | null {
   const [commentText, setCommentText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!discussion) return null;
-
-  const netVotes = discussion.upvotes - discussion.downvotes;
 
   const handleCommentSubmit = (e: FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
@@ -65,6 +77,18 @@ export function DiscussionDetailModal({
     }
   };
 
+  const handleDelete = async (): Promise<void> => {
+    const confirmed = await confirmDialog({
+      title: "Delete this discussion?",
+      description: "This action cannot be undone.",
+      confirmLabel: "Delete",
+      variant: "danger",
+    });
+    if (confirmed) {
+      onDelete?.(discussion.id);
+    }
+  };
+
   return (
     <Modal
       open={open}
@@ -75,12 +99,17 @@ export function DiscussionDetailModal({
           <span className="text-xs uppercase font-bold tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded">
             Question
           </span>
-          <span className="text-xs text-text/50 font-normal">Posted by @{discussion.author.username}</span>
+          <Link
+            to={`/profile/${discussion.author.id}`}
+            className="text-xs text-text/50 font-normal hover:text-primary hover:underline"
+          >
+            Posted by @{discussion.author.username}
+          </Link>
         </div>
       }
       description={
         <span className="flex items-center gap-2 text-xs text-text/50">
-          <span>{discussion.createdAt}</span>
+          <span>{formatTimeAgo(discussion.createdAt)}</span>
           <span>•</span>
           <span>{discussion.commentsCount} comments</span>
         </span>
@@ -89,46 +118,36 @@ export function DiscussionDetailModal({
       <div className="space-y-6">
         {/* Discussion Question Header & Body */}
         <div className="flex gap-4 items-start">
-          {/* Vote Column */}
+          {/* Like column */}
           <div className="w-10 flex flex-col items-center bg-background/60 rounded-md p-1 border border-border/60 shrink-0 select-none">
             <button
               type="button"
               onClick={() => onVote(discussion.id, "up")}
-              aria-label="Upvote question"
+              aria-pressed={discussion.isLiked || discussion.userVote === "up"}
+              aria-label={discussion.isLiked ? "Unlike discussion" : "Like discussion"}
+              title={discussion.isLiked ? "Unlike" : "Like"}
               className={cn(
-                "p-1 rounded transition-colors cursor-pointer",
-                discussion.userVote === "up"
-                  ? "text-primary bg-primary/10"
-                  : "text-text/40 hover:text-primary hover:bg-primary/5",
+                "p-1 rounded transition-all duration-150 cursor-pointer active:scale-90",
+                discussion.isLiked || discussion.userVote === "up"
+                  ? "text-rose-500 bg-rose-50"
+                  : "text-text/40 hover:text-rose-500 hover:bg-rose-50/60",
               )}
             >
-              <HiChevronUp className="w-5 h-5 stroke-1" />
+              {discussion.isLiked || discussion.userVote === "up" ? (
+                <HiHeart className="w-5 h-5" />
+              ) : (
+                <HiOutlineHeart className="w-5 h-5" />
+              )}
             </button>
 
             <span
               className={cn(
                 "text-xs font-bold py-1 tabular-nums",
-                discussion.userVote === "up" && "text-primary",
-                discussion.userVote === "down" && "text-rose-500",
-                !discussion.userVote && "text-text/70",
+                discussion.isLiked ? "text-rose-500" : "text-text/70",
               )}
             >
-              {netVotes}
+              {discussion.likeCount ?? discussion.upvotes}
             </span>
-
-            <button
-              type="button"
-              onClick={() => onVote(discussion.id, "down")}
-              aria-label="Downvote question"
-              className={cn(
-                "p-1 rounded transition-colors cursor-pointer",
-                discussion.userVote === "down"
-                  ? "text-rose-500 bg-rose-500/10"
-                  : "text-text/40 hover:text-rose-500 hover:bg-rose-500/5",
-              )}
-            >
-              <HiChevronDown className="w-5 h-5 stroke-1" />
-            </button>
           </div>
 
           {/* Main Question Content */}
@@ -143,10 +162,15 @@ export function DiscussionDetailModal({
                 size="sm"
                 name={discussion.author.name}
                 src={discussion.author.avatarUrl}
-                href={false}
+                href={`/profile/${discussion.author.id}`}
               />
               <div className="text-xs">
-                <span className="font-semibold text-text">{discussion.author.name}</span>
+                <Link
+                  to={`/profile/${discussion.author.id}`}
+                  className="font-semibold text-text hover:text-primary hover:underline"
+                >
+                  {discussion.author.name}
+                </Link>
                 {discussion.author.role && (
                   <span className="ml-2 text-[11px] text-text/50 font-medium bg-border/40 px-1.5 py-0.5 rounded">
                     {discussion.author.role}
@@ -195,12 +219,18 @@ export function DiscussionDetailModal({
               <button
                 type="button"
                 onClick={() => onToggleBookmark?.(discussion.id)}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md hover:bg-background hover:text-text transition-colors font-medium cursor-pointer"
+                aria-pressed={discussion.isBookmarked}
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-all duration-150 font-medium cursor-pointer active:scale-95",
+                  discussion.isBookmarked
+                    ? "text-amber-600 bg-amber-50"
+                    : "hover:bg-background hover:text-text",
+                )}
               >
                 {discussion.isBookmarked ? (
                   <>
-                    <HiBookmark className="w-4 h-4 text-primary" />
-                    <span className="text-primary">Saved</span>
+                    <HiBookmark className="w-4 h-4" />
+                    <span>Saved</span>
                   </>
                 ) : (
                   <>
@@ -209,6 +239,17 @@ export function DiscussionDetailModal({
                   </>
                 )}
               </button>
+
+              {isOwner && (
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md hover:bg-rose-50 hover:text-rose-600 transition-colors font-medium cursor-pointer ml-auto"
+                >
+                  <HiOutlineTrash className="w-4 h-4" />
+                  <span>Delete</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -268,12 +309,17 @@ export function DiscussionDetailModal({
                         size="xs"
                         name={comment.author.name}
                         src={comment.author.avatarUrl}
-                        href={false}
+                        href={`/profile/${comment.author.id}`}
                       />
-                      <span className="font-semibold text-text">{comment.author.name}</span>
+                      <Link
+                        to={`/profile/${comment.author.id}`}
+                        className="font-semibold text-text hover:text-primary hover:underline"
+                      >
+                        {comment.author.name}
+                      </Link>
                       <span className="text-text/40 font-mono">@{comment.author.username}</span>
                     </div>
-                    <span className="text-text/40">{comment.createdAt}</span>
+                    <span className="text-text/40">{formatTimeAgo(comment.createdAt)}</span>
                   </div>
 
                   <p className="text-sm text-text/80 leading-relaxed whitespace-pre-wrap pl-1">
@@ -283,15 +329,22 @@ export function DiscussionDetailModal({
                   <div className="flex items-center gap-2 pt-1">
                     <button
                       type="button"
-                      onClick={() => onVoteComment(discussion.id, comment.id)}
+                      onClick={() => onVoteComment(discussion.id, comment.id, "up")}
+                      aria-pressed={comment.isUpvoted}
+                      aria-label={comment.isUpvoted ? "Remove upvote" : "Upvote reply"}
+                      title={comment.isUpvoted ? "Remove upvote" : "Upvote"}
                       className={cn(
-                        "inline-flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors cursor-pointer",
+                        "inline-flex items-center gap-1.5 text-xs font-bold pl-1.5 pr-2.5 py-1 rounded-full border transition-all duration-150 cursor-pointer active:scale-90 tabular-nums",
                         comment.isUpvoted
-                          ? "bg-primary/10 text-primary font-semibold"
-                          : "text-text/50 hover:bg-border/40 hover:text-text",
+                          ? "bg-primary text-white border-primary shadow-sm shadow-primary/30"
+                          : "bg-white text-text/60 border-border hover:border-primary/50 hover:text-primary hover:bg-primary/5",
                       )}
                     >
-                      <HiChevronUp className="w-3.5 h-3.5" />
+                      {comment.isUpvoted ? (
+                        <HiChevronUp className="w-4 h-4" />
+                      ) : (
+                        <HiOutlineChevronUp className="w-4 h-4" />
+                      )}
                       <span>{comment.upvotes}</span>
                     </button>
                   </div>

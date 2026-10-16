@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback, type JSX } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { MdOutlineSearch } from "react-icons/md";
 import { LuPenLine, LuLayoutGrid, LuLayoutList, LuX } from "react-icons/lu";
 import { Button, Input, Skeleton } from "@/components/common";
@@ -8,6 +8,7 @@ import type { Article } from "@/features/articles/api/articleApi";
 import { ArticleCard } from "@/features/articles/components/ArticleCard";
 import { ArticleSearchDropdown } from "@/features/articles/components/ArticleSearchDropdown";
 import { toast } from "@/hooks/useToast";
+import { getApiErrorMessage } from "@/lib/utils/apiError";
 
 interface DisplayArticle {
   id: string;
@@ -131,6 +132,7 @@ function mapArticle(art: Article): DisplayArticle {
 
 export function ArticlesPage(): JSX.Element {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [articles, setArticles] = useState<DisplayArticle[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -141,7 +143,6 @@ export function ArticlesPage(): JSX.Element {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());
   const [layout, setLayout] = useState<"list" | "grid">("list");
@@ -195,10 +196,10 @@ export function ArticlesPage(): JSX.Element {
         if (initialBookmarked.size > 0) {
           setBookmarkedIds(initialBookmarked);
         }
-      } catch {
+      } catch (err: unknown) {
         if (isSubscribed) {
           setArticles([]);
-          toast.error("Failed to load articles. Please try again later.");
+          toast.error(getApiErrorMessage(err, "Failed to load articles. Please try again later."));
         }
       } finally {
         if (isSubscribed) {
@@ -267,8 +268,8 @@ export function ArticlesPage(): JSX.Element {
       if (newlyBookmarked.size > 0) {
         setBookmarkedIds((prev) => new Set([...prev, ...newlyBookmarked]));
       }
-    } catch {
-      setLoadMoreError("Failed to load more articles.");
+    } catch (err: unknown) {
+      setLoadMoreError(getApiErrorMessage(err, "Failed to load more articles."));
     } finally {
       setIsLoadingMore(false);
     }
@@ -319,7 +320,7 @@ export function ArticlesPage(): JSX.Element {
       } else {
         toast.success("Saved to bookmarks");
       }
-    } catch {
+    } catch (err: unknown) {
       // Revert on failure
       setBookmarkedIds((prev) => {
         const next = new Set(prev);
@@ -330,7 +331,7 @@ export function ArticlesPage(): JSX.Element {
         }
         return next;
       });
-      toast.error("Failed to update bookmark");
+      toast.error(getApiErrorMessage(err, "Failed to update bookmark"));
     }
   };
 
@@ -357,7 +358,7 @@ export function ArticlesPage(): JSX.Element {
 
     try {
       await likeArticle(articleId);
-    } catch {
+    } catch (err: unknown) {
       // Revert on failure
       setArticles((prev) =>
         prev.map((art) =>
@@ -370,9 +371,31 @@ export function ArticlesPage(): JSX.Element {
             : art,
         ),
       );
-      toast.error("Failed to update like status");
+      toast.error(getApiErrorMessage(err, "Failed to update like status"));
     }
   };
+
+  const selectedCategory = searchParams.get("tag") || "All";
+
+  const setSelectedCategory = useCallback(
+    (update: string | ((prev: string) => string)) => {
+      setSearchParams(
+        (prev) => {
+          const current = prev.get("tag") || "All";
+          const next = typeof update === "function" ? update(current) : update;
+          const params = new URLSearchParams(prev);
+          if (!next || next === "All") {
+            params.delete("tag");
+          } else {
+            params.set("tag", next);
+          }
+          return params;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
 
   const filteredArticles = useMemo(() => {
     const q = searchQuery.toLowerCase();

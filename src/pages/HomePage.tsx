@@ -25,6 +25,9 @@ import {
   PaginationDots,
   type TrendingDiscussion,
 } from "@/features/articles/components";
+import { getUserProfile, isProfileComplete } from "@/lib/api/user.api";
+import { OnboardingModal } from "@/features/onboarding/components/OnboardingModal";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 interface Author {
   name: string;
@@ -273,12 +276,33 @@ function HomeArticleCard({
 }
 
 export function HomePage(): JSX.Element {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [activeTab, setActiveTab] = useState<string>("For You");
   const [articles, setArticles] = useState<ArticleFeedItem[]>(MOCK_ARTICLES);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [trendingSidebarItems, setTrendingSidebarItems] = useState<TrendingDiscussion[]>([]);
+  const [showOnboarding, setShowOnboarding] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    let active = true;
+
+    getUserProfile()
+      .then((profile) => {
+        if (active && !isProfileComplete(profile)) {
+          setShowOnboarding(true);
+        }
+      })
+      .catch(() => {
+        // Profile fetch failure: don't block the page with onboarding
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [isAuthenticated]);
 
   const fetchArticles = useCallback(async (tab: string, page: number): Promise<void> => {
     setIsLoading(true);
@@ -480,6 +504,8 @@ export function HomePage(): JSX.Element {
           <PopularResourcesWidget />
         </aside>
       </div>
+
+      <OnboardingModal open={showOnboarding} onComplete={() => setShowOnboarding(false)} />
     </div>
   );
 }

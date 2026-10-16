@@ -38,11 +38,10 @@ export function Skeleton({
   const skeletonElement = (index: number = 0): JSX.Element => (
     <div
       key={index}
-      role="status"
-      aria-label="Loading..."
+      aria-hidden="true"
       style={customStyles}
       className={cn(
-        "bg-border/60 transition-colors",
+        "bg-border/60 transition-colors outline-none",
         animate && "animate-pulse",
         variantStyles[variant],
         className,

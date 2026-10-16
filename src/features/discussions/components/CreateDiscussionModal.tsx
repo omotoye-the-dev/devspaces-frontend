@@ -1,28 +1,14 @@
-import { useState, type JSX, type FormEvent, type KeyboardEvent } from "react";
+import { useState, useEffect, type JSX, type FormEvent, type KeyboardEvent } from "react";
 import { HiPlus } from "react-icons/hi2";
 import { Modal, Input, Textarea, Button, Tag } from "@/components/common";
 import { toast } from "@/hooks/useToast";
+import { getTags } from "@/features/articles/api/tagApi";
 
 export interface CreateDiscussionModalProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (data: { title: string; content: string; tags: string[] }) => void;
 }
-
-const SUGGESTED_TAGS = [
-  "react",
-  "typescript",
-  "javascript",
-  "nodejs",
-  "nextjs",
-  "tailwind",
-  "css",
-  "architecture",
-  "api",
-  "performance",
-  "python",
-  "database",
-];
 
 export function CreateDiscussionModal({
   open,
@@ -34,6 +20,24 @@ export function CreateDiscussionModal({
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [errors, setErrors] = useState<{ title?: string; content?: string; tags?: string }>({});
+  const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!open) return;
+    let active = true;
+
+    getTags({ pageSize: 20 })
+      .then((fetchedTags) => {
+        if (active) setSuggestedTags(fetchedTags.map((t) => t.name));
+      })
+      .catch(() => {
+        if (active) setSuggestedTags([]);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [open]);
 
   const handleAddTag = (tagToAdd: string): void => {
     const formatted = tagToAdd.trim().toLowerCase().replace(/^[#\s]+/, "");
@@ -44,8 +48,8 @@ export function CreateDiscussionModal({
       return;
     }
 
-    if (tags.length >= 5) {
-      toast.error("You can add up to 5 tags maximum");
+    if (tags.length >= 4) {
+      toast.error("You can add up to 4 tags maximum");
       return;
     }
 
@@ -140,7 +144,7 @@ export function CreateDiscussionModal({
         {/* Tags Selection */}
         <div className="space-y-2">
           <label className="text-xs font-medium text-text block">
-            Tags (up to 5)
+            Tags (up to 4)
           </label>
 
           {/* Active Tags */}
@@ -173,7 +177,7 @@ export function CreateDiscussionModal({
               variant="secondary"
               size="sm"
               onClick={() => handleAddTag(tagInput)}
-              disabled={!tagInput.trim()}
+              disabled={!tagInput.trim() || tags.length >= 4}
               leftIcon={<HiPlus />}
             >
               Add
@@ -185,23 +189,25 @@ export function CreateDiscussionModal({
           )}
 
           {/* Suggested tags */}
-          <div className="pt-1">
-            <span className="text-[11px] text-text/50 block mb-1">Suggested topics:</span>
-            <div className="flex flex-wrap items-center gap-1">
-              {SUGGESTED_TAGS.filter((t) => !tags.includes(t))
-                .slice(0, 8)
-                .map((suggested) => (
-                  <button
-                    key={suggested}
-                    type="button"
-                    onClick={() => handleAddTag(suggested)}
-                    className="text-[11px] px-2 py-0.5 rounded-full bg-border/40 hover:bg-primary/10 hover:text-primary text-text/60 transition-colors cursor-pointer"
-                  >
-                    +{suggested}
-                  </button>
-                ))}
+          {tags.length < 4 && suggestedTags.some((t) => !tags.includes(t)) && (
+            <div className="pt-1">
+              <span className="text-[11px] text-text/50 block mb-1">Suggested topics:</span>
+              <div className="flex flex-wrap items-center gap-1">
+                {suggestedTags.filter((t) => !tags.includes(t))
+                  .slice(0, 8)
+                  .map((suggested) => (
+                    <button
+                      key={suggested}
+                      type="button"
+                      onClick={() => handleAddTag(suggested)}
+                      className="text-[11px] px-2 py-0.5 rounded-full bg-border/40 hover:bg-primary/10 hover:text-primary text-text/60 transition-colors cursor-pointer"
+                    >
+                      +{suggested}
+                    </button>
+                  ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Content / Question Details */}

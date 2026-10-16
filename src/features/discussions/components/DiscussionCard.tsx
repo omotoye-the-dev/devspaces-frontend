@@ -1,16 +1,25 @@
 import type { JSX, MouseEvent } from "react";
+import { Link } from "react-router-dom";
 import {
-  HiChevronUp,
-  HiChevronDown,
+  HiHeart,
+  HiOutlineHeart,
   HiOutlineChatBubbleLeftEllipsis,
   HiOutlineShare,
   HiOutlineBookmark,
   HiBookmark,
+  HiOutlineTrash,
 } from "react-icons/hi2";
 import { Avatar, Tag } from "@/components/common";
 import { cn } from "@/lib/utils/cn";
+import { formatTimeAgo } from "@/lib/utils/date";
 import { toast } from "@/hooks/useToast";
+import { confirmDialog } from "@/hooks/useConfirmDialog";
 import type { Discussion } from "@/types/discussions.types";
+
+function formatCount(value: number): string {
+  if (value >= 1000) return `${(value / 1000).toFixed(1).replace(/\.0$/, "")}k`;
+  return String(value);
+}
 
 export interface DiscussionCardProps {
   discussion: Discussion;
@@ -18,6 +27,8 @@ export interface DiscussionCardProps {
   onVote: (discussionId: string, direction: "up" | "down") => void;
   onTagClick?: (tag: string) => void;
   onToggleBookmark?: (discussionId: string) => void;
+  onDelete?: (discussionId: string) => void;
+  isOwner?: boolean;
   className?: string;
 }
 
@@ -27,10 +38,10 @@ export function DiscussionCard({
   onVote,
   onTagClick,
   onToggleBookmark,
+  onDelete,
+  isOwner = false,
   className,
 }: DiscussionCardProps): JSX.Element {
-  const netVotes = discussion.upvotes - discussion.downvotes;
-
   const handleVoteClick = (e: MouseEvent<HTMLButtonElement>, direction: "up" | "down"): void => {
     e.stopPropagation();
     onVote(discussion.id, direction);
@@ -56,6 +67,19 @@ export function DiscussionCard({
     onTagClick?.(tag);
   };
 
+  const handleDeleteClick = async (e: MouseEvent<HTMLButtonElement>): Promise<void> => {
+    e.stopPropagation();
+    const confirmed = await confirmDialog({
+      title: "Delete this discussion?",
+      description: "This action cannot be undone.",
+      confirmLabel: "Delete",
+      variant: "danger",
+    });
+    if (confirmed) {
+      onDelete?.(discussion.id);
+    }
+  };
+
   return (
     <article
       tabIndex={0}
@@ -72,7 +96,7 @@ export function DiscussionCard({
         className,
       )}
     >
-      {/* Left side: Reddit-style voting sequence column */}
+      {/* Left side: discussion like column */}
       <div
         className="w-12 sm:w-14 bg-background/50 border-r border-border/70 flex flex-col items-center py-3 shrink-0 select-none gap-0.5"
         onClick={(e) => e.stopPropagation()}
@@ -80,41 +104,31 @@ export function DiscussionCard({
         <button
           type="button"
           onClick={(e) => handleVoteClick(e, "up")}
-          aria-label="Upvote question"
+          aria-pressed={discussion.isLiked || discussion.userVote === "up"}
+          aria-label={discussion.isLiked ? "Unlike discussion" : "Like discussion"}
+          title={discussion.isLiked ? "Unlike" : "Like"}
           className={cn(
-            "p-1.5 rounded-md transition-colors cursor-pointer",
-            discussion.userVote === "up"
-              ? "text-primary bg-primary/10"
-              : "text-text/40 hover:text-primary hover:bg-primary/5",
+            "p-1.5 rounded-md transition-all duration-150 cursor-pointer active:scale-90",
+            discussion.isLiked || discussion.userVote === "up"
+              ? "text-rose-500 bg-rose-50"
+              : "text-text/40 hover:text-rose-500 hover:bg-rose-50/60",
           )}
         >
-          <HiChevronUp className="w-5 h-5 stroke-1" />
+          {discussion.isLiked || discussion.userVote === "up" ? (
+            <HiHeart className="w-5 h-5" />
+          ) : (
+            <HiOutlineHeart className="w-5 h-5" />
+          )}
         </button>
 
         <span
           className={cn(
-            "text-xs font-bold leading-none py-1 tabular-nums",
-            discussion.userVote === "up" && "text-primary",
-            discussion.userVote === "down" && "text-rose-500",
-            !discussion.userVote && "text-text/70",
+            "text-xs font-bold leading-none py-1 tabular-nums transition-colors",
+            discussion.isLiked ? "text-rose-500" : "text-text/70",
           )}
         >
-          {netVotes}
+          {formatCount(discussion.likeCount ?? discussion.upvotes)}
         </span>
-
-        <button
-          type="button"
-          onClick={(e) => handleVoteClick(e, "down")}
-          aria-label="Downvote question"
-          className={cn(
-            "p-1.5 rounded-md transition-colors cursor-pointer",
-            discussion.userVote === "down"
-              ? "text-rose-500 bg-rose-500/10"
-              : "text-text/40 hover:text-rose-500 hover:bg-rose-500/5",
-          )}
-        >
-          <HiChevronDown className="w-5 h-5 stroke-1" />
-        </button>
       </div>
 
       {/* Right side: Discussion details */}
@@ -122,18 +136,23 @@ export function DiscussionCard({
         <div>
           {/* Metadata Row */}
           <div className="flex items-center flex-wrap gap-2 text-xs text-text/50 mb-1.5">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
               <Avatar
                 size="xs"
-                name={discussion.author.name}
+                name={discussion.author.username}
                 src={discussion.author.avatarUrl}
-                href={false}
+                href={`/profile/${discussion.author.id}`}
               />
-              <span className="font-semibold text-text/80">{discussion.author.name}</span>
+              <Link
+                to={`/profile/${discussion.author.id}`}
+                className="font-semibold text-text/80 hover:text-primary hover:underline"
+              >
+                {discussion.author.name}
+              </Link>
               <span className="text-text/40 font-mono">@{discussion.author.username}</span>
             </div>
             <span className="text-text/30">•</span>
-            <span>{discussion.createdAt}</span>
+            <span>{formatTimeAgo(discussion.createdAt)}</span>
 
             {discussion.isSolved && (
               <span className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -202,12 +221,14 @@ export function DiscussionCard({
             <button
               type="button"
               onClick={handleBookmarkClick}
+              aria-pressed={discussion.isBookmarked}
               aria-label={discussion.isBookmarked ? "Remove bookmark" : "Bookmark discussion"}
+              title={discussion.isBookmarked ? "Saved" : "Save"}
               className={cn(
-                "p-1.5 rounded-md transition-colors cursor-pointer",
+                "p-1.5 rounded-md transition-all duration-150 cursor-pointer active:scale-90",
                 discussion.isBookmarked
-                  ? "text-primary bg-primary/10"
-                  : "text-text/40 hover:text-text hover:bg-background",
+                  ? "text-amber-600 bg-amber-50"
+                  : "text-text/40 hover:text-amber-600 hover:bg-amber-50/60",
               )}
             >
               {discussion.isBookmarked ? (
@@ -216,6 +237,18 @@ export function DiscussionCard({
                 <HiOutlineBookmark className="w-4 h-4" />
               )}
             </button>
+
+            {isOwner && (
+              <button
+                type="button"
+                onClick={handleDeleteClick}
+                aria-label="Delete discussion"
+                title="Delete discussion"
+                className="p-1.5 rounded-md transition-all duration-150 cursor-pointer active:scale-90 text-text/40 hover:text-rose-600 hover:bg-rose-50"
+              >
+                <HiOutlineTrash className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
       </div>
