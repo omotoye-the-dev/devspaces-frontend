@@ -146,6 +146,23 @@ export async function getSavedResources(
 }
 
 /**
+ * Fetches the current user's resource viewing/download history.
+ * GET /api/resources/history
+ */
+export async function getResourceHistory(
+  params?: ResourceQueryParams,
+): Promise<PaginatedResponse<ResourceListItem>> {
+  const response = await apiClient.get<PaginatedResponse<ResourceListItem>>(
+    ENDPOINTS.RESOURCES.HISTORY,
+    {
+      params,
+    },
+  );
+
+  return response.data;
+}
+
+/**
  * Fetches full resource details by ID including sub-parts.
  * GET /api/resources/{id}
  */

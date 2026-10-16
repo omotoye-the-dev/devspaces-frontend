@@ -1,11 +1,17 @@
 import { useEffect, useMemo, useState, type JSX } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiArrowRight, FiBookOpen, FiClock, FiSearch, FiTrash2 } from "react-icons/fi";
-import { Button, Modal, Tag } from "@/components/common";
-import { getFeedArticles, type Article } from "@/features/articles/api/articleApi";
+import { FiArrowRight, FiBookOpen, FiClock, FiMessageSquare, FiSearch } from "react-icons/fi";
+import { Skeleton, Tag } from "@/components/common";
+import { toast } from "@/hooks/useToast";
+import { getApiErrorMessage } from "@/lib/utils/apiError";
+import { getArticleHistory, type Article } from "@/features/articles/api/articleApi";
+import { getResourceHistory } from "@/features/resources/api/resources.api";
+import type { ResourceListItem } from "@/types/resources.types";
+import { getDiscussionHistory } from "@/features/discussions/api/discussionApi";
+import type { Discussion } from "@/types/discussions.types";
 import { cn } from "@/lib/utils/cn";
 
-type HistoryFilter = "all" | "article" | "resource";
+type HistoryFilter = "all" | "article" | "resource" | "discussion";
 
 type HistoryEntry = {
   id: string;
@@ -14,13 +20,13 @@ type HistoryEntry = {
   description: string;
   category: string;
   author: string;
+  createdAt: string;
   timeLabel: string;
   route: string;
   accent: string;
 };
 
 const HISTORY_ACCENTS = ["bg-primary", "bg-teal-500", "bg-amber-500", "bg-rose-500", "bg-violet-500"];
-const HISTORY_DELETE_STORAGE_KEY = "devspace-history-cleared";
 
 const formatRelativeTime = (value?: string | null): string => {
   if (!value) {
@@ -62,6 +68,7 @@ const mapArticleToHistoryEntry = (article: Article, index: number): HistoryEntry
     "DevSpace member";
 
   const category = article.tags?.[0] || "General";
+  const createdAt = article.createdAt;
 
   return {
     id: article.id,
@@ -70,8 +77,50 @@ const mapArticleToHistoryEntry = (article: Article, index: number): HistoryEntry
     description,
     category,
     author: authorName,
-    timeLabel: formatRelativeTime(article.createdAt),
+    createdAt,
+    timeLabel: formatRelativeTime(createdAt),
     route: `/articles/${article.id}`,
+    accent: HISTORY_ACCENTS[index % HISTORY_ACCENTS.length],
+  };
+};
+
+const mapResourceToHistoryEntry = (resource: ResourceListItem, index: number): HistoryEntry => {
+  const authorName = resource.uploader?.name || resource.uploader?.username || "DevSpace member";
+  const createdAt = resource.createdAt;
+
+  return {
+    id: resource.id,
+    type: "resource",
+    title: resource.title,
+    description: resource.description || "No description available.",
+    category: resource.category || "General",
+    author: authorName,
+    createdAt,
+    timeLabel: formatRelativeTime(createdAt),
+    route: `/resources/${resource.id}`,
+    accent: HISTORY_ACCENTS[index % HISTORY_ACCENTS.length],
+  };
+};
+
+const mapDiscussionToHistoryEntry = (discussion: Discussion, index: number): HistoryEntry => {
+  const authorName = discussion.author?.name || discussion.author?.username || "DevSpace member";
+  const createdAt = discussion.createdAt;
+  const description = discussion.content?.trim()
+    ? discussion.content.length > 200
+      ? `${discussion.content.slice(0, 200).trim()}...`
+      : discussion.content
+    : "No description available.";
+
+  return {
+    id: discussion.id,
+    type: "discussion",
+    title: discussion.title,
+    description,
+    category: discussion.tags?.[0] || "General",
+    author: authorName,
+    createdAt,
+    timeLabel: formatRelativeTime(createdAt),
+    route: "/discussions",
     accent: HISTORY_ACCENTS[index % HISTORY_ACCENTS.length],
   };
 };
@@ -82,23 +131,46 @@ function HistoryPage(): JSX.Element {
   const [search, setSearch] = useState("");
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchHistory = async (): Promise<void> => {
       try {
-        if (typeof window !== "undefined" && window.localStorage.getItem(HISTORY_DELETE_STORAGE_KEY) === "true") {
-          setEntries([]);
-          setIsLoading(false);
-          return;
+        setIsLoading(true);
+
+        const [articlesResult, resourcesResult, discussionsResult] = await Promise.allSettled([
+          getArticleHistory({ page: 1, pageSize: 20 }),
+          getResourceHistory({ page: 1, pageSize: 20 }),
+          getDiscussionHistory(),
+        ]);
+
+        const articleEntries =
+          articlesResult.status === "fulfilled"
+            ? articlesResult.value.data.map((article, index) => mapArticleToHistoryEntry(article, index))
+            : [];
+
+        const resourceEntries =
+          resourcesResult.status === "fulfilled"
+            ? resourcesResult.value.data.map((resource, index) => mapResourceToHistoryEntry(resource, index))
+            : [];
+
+        const discussionEntries =
+          discussionsResult.status === "fulfilled"
+            ? discussionsResult.value.map((discussion, index) => mapDiscussionToHistoryEntry(discussion, index))
+            : [];
+
+        if (
+          articlesResult.status === "rejected" &&
+          resourcesResult.status === "rejected" &&
+          discussionsResult.status === "rejected"
+        ) {
+          toast.error(getApiErrorMessage(articlesResult.reason, "Failed to load history"));
         }
 
-        setIsLoading(true);
-        const response = await getFeedArticles({ page: 1, pageSize: 20 });
-        const mappedEntries = response.data.map((article, index) =>
-          mapArticleToHistoryEntry(article, index),
+        const combined = [...articleEntries, ...resourceEntries, ...discussionEntries].sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
         );
-        setEntries(mappedEntries);
+
+        setEntries(combined);
       } catch (error) {
         console.error("Failed to load history entries:", error);
         setEntries([]);
@@ -109,17 +181,6 @@ function HistoryPage(): JSX.Element {
 
     void fetchHistory();
   }, []);
-
-  const handleDeleteHistory = (): void => {
-    setEntries([]);
-    setFilter("all");
-    setSearch("");
-    setIsDeleteModalOpen(false);
-
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(HISTORY_DELETE_STORAGE_KEY, "true");
-    }
-  };
 
   const visibleEntries = useMemo(() => {
     const normalizedQuery = search.trim().toLowerCase();
@@ -142,7 +203,7 @@ function HistoryPage(): JSX.Element {
       total: entries.length,
       articles: entries.filter((entry) => entry.type === "article").length,
       resources: entries.filter((entry) => entry.type === "resource").length,
-      recent: entries.filter((entry) => entry.timeLabel.includes("hour") || entry.timeLabel.includes("day")).length,
+      discussions: entries.filter((entry) => entry.type === "discussion").length,
     }),
     [entries],
   );
@@ -151,38 +212,11 @@ function HistoryPage(): JSX.Element {
     { id: "all", label: "All" },
     { id: "article", label: "Articles" },
     { id: "resource", label: "Resources" },
+    { id: "discussion", label: "Discussions" },
   ];
 
   return (
     <>
-      <Modal
-        open={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
-        title="Delete history permanently?"
-        size="sm"
-      >
-        <div className="space-y-4 pt-2">
-          <div className="flex items-start gap-3 rounded-xl bg-rose-50 p-3 text-rose-800">
-            <FiTrash2 className="mt-0.5 h-5 w-5 shrink-0" />
-            <div className="text-xs leading-relaxed">
-              <p className="font-semibold">This will permanently remove your browsing history on this device.</p>
-              <p className="mt-1 text-rose-700">
-                You will need to reload your recent activity before it appears again.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-end gap-2 border-t border-border pt-2">
-            <Button type="button" variant="secondary" size="sm" onClick={() => setIsDeleteModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="button" variant="danger" size="sm" onClick={handleDeleteHistory} leftIcon={<FiTrash2 className="h-4 w-4" />}>
-              Delete history
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
       <div className="min-h-screen w-full bg-background text-text">
         <div className="w-full px-4 py-6 sm:px-6 lg:px-8">
         <header className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -192,17 +226,6 @@ function HistoryPage(): JSX.Element {
             </p>
             <h1 className="mt-1 text-3xl font-bold tracking-tight text-text">History</h1>
           </div>
-
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            leftIcon={<FiTrash2 className="w-4 h-4" />}
-            onClick={() => setIsDeleteModalOpen(true)}
-            disabled={entries.length === 0 || isLoading}
-          >
-            Clear history
-          </Button>
         </header>
 
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -242,12 +265,12 @@ function HistoryPage(): JSX.Element {
           <div className="rounded-xl border border-border bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text/45">
-                Recent
+                Discussions
               </p>
-              <FiClock className="h-4 w-4 text-primary" />
+              <FiMessageSquare className="h-4 w-4 text-primary" />
             </div>
-            <p className="mt-4 text-3xl font-bold text-text">{summary.recent}</p>
-            <p className="mt-1 text-xs text-text/50">Updated in the last few days</p>
+            <p className="mt-4 text-3xl font-bold text-text">{summary.discussions}</p>
+            <p className="mt-1 text-xs text-text/50">Questions and discussions visited</p>
           </div>
         </section>
 
@@ -287,9 +310,23 @@ function HistoryPage(): JSX.Element {
 
         <section className="mt-6 space-y-4">
           {isLoading ? (
-            <div className="mt-6 rounded-xl border border-border bg-white p-8 text-center">
-              <p className="text-base font-semibold text-text">Loading history...</p>
-            </div>
+            Array.from({ length: 4 }).map((_, index) => (
+              <div
+                key={index}
+                className="flex items-start gap-3 rounded-xl border border-border bg-white p-4"
+              >
+                <Skeleton variant="rounded" width={6} height={48} className="mt-1 rounded-full" />
+                <div className="flex-1 min-w-0 space-y-2.5">
+                  <div className="flex items-center justify-between gap-3">
+                    <Skeleton variant="rounded" width={70} height={18} />
+                    <Skeleton variant="text" width={80} height={12} />
+                  </div>
+                  <Skeleton variant="text" width="70%" height={18} />
+                  <Skeleton variant="text" width="100%" height={14} />
+                  <Skeleton variant="rounded" width={72} height={20} />
+                </div>
+              </div>
+            ))
           ) : visibleEntries.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border bg-white p-8 text-center">
               <p className="text-base font-semibold text-text">No matching history yet</p>

@@ -74,6 +74,7 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
 
   const isArticlesActive = location.pathname === "/articles" || location.pathname.startsWith("/articles/");
   const isResourcesActive = location.pathname === "/resources" || location.pathname.startsWith("/resources/");
+  const isDiscussionsActive = location.pathname === "/discussions" || location.pathname.startsWith("/discussions/");
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -213,12 +214,15 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
               </Button>
 
               <Button
-                variant="ghost"
+                variant={isDiscussionsActive ? "secondary" : "ghost"}
                 type="button"
-                className="whitespace-nowrap"
-                onClick={() => handleProtectedNavigation("/tags")}
+                className={cn(
+                  "whitespace-nowrap transition-colors",
+                  isDiscussionsActive && "font-semibold text-primary bg-primary/10 border-primary/20",
+                )}
+                onClick={() => handleProtectedNavigation("/discussions")}
               >
-                Tags
+                Discussions
               </Button>
             </div>
 
@@ -424,11 +428,16 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
                 type="button"
                 onClick={() => {
                   setMobileOpen(false);
-                  handleProtectedNavigation("/tags");
+                  handleProtectedNavigation("/discussions");
                 }}
-                className="px-2 py-2 text-left text-text/80 hover:text-text hover:bg-slate-50 rounded-md transition-colors"
+                className={cn(
+                  "px-2 py-2 text-left rounded-md transition-colors",
+                  isDiscussionsActive
+                    ? "text-primary font-semibold bg-primary/10"
+                    : "text-text/80 hover:text-text hover:bg-slate-50",
+                )}
               >
-                Tags
+                Discussions
               </button>
 
               <Button

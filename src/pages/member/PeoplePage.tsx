@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type JSX } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiArrowRight, FiGrid, FiList, FiSearch } from "react-icons/fi";
 import { HiOutlineUserGroup } from "react-icons/hi2";
-import { Avatar, Button, Tag } from "@/components/common";
+import { Avatar, Button, Skeleton, Tag } from "@/components/common";
 import { apiClient } from "@/lib/api/client";
 import { ENDPOINTS } from "@/lib/api/endpoints";
 import { cn } from "@/lib/utils/cn";
@@ -122,37 +122,42 @@ export default function PeoplePage(): JSX.Element {
   const [activeFilter, setActiveFilter] = useState<PeopleFilter>("all");
   const [view, setView] = useState<PeopleView>("grid");
   const [search, setSearch] = useState("");
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
     let isMounted = true;
 
     async function fetchPeople(): Promise<void> {
-      for (const endpoint of PEOPLE_ENDPOINTS) {
-        try {
-          const response = await apiClient.get<unknown>(endpoint);
-          const users = extractPeopleUsers(response.data).filter((person) => {
-            const normalizedName = [person.firstName, person.lastName].filter(Boolean).join(" ").trim().toLowerCase();
-            const username = (person.username || "").trim().toLowerCase();
+      try {
+        for (const endpoint of PEOPLE_ENDPOINTS) {
+          try {
+            const response = await apiClient.get<unknown>(endpoint);
+            const users = extractPeopleUsers(response.data).filter((person) => {
+              const normalizedName = [person.firstName, person.lastName].filter(Boolean).join(" ").trim().toLowerCase();
+              const username = (person.username || "").trim().toLowerCase();
 
-            return !(
-              normalizedName === "jane doe" ||
-              normalizedName === "liliana dahliarose" ||
-              username === "janedoe" ||
-              username === "lilianadahliarose"
-            );
-          });
+              return !(
+                normalizedName === "jane doe" ||
+                normalizedName === "liliana dahliarose" ||
+                username === "janedoe" ||
+                username === "lilianadahliarose"
+              );
+            });
 
-          if (isMounted && users.length > 0) {
-            setPeople(users);
-            return;
+            if (isMounted && users.length > 0) {
+              setPeople(users);
+              return;
+            }
+          } catch {
+            // Try the next known endpoint.
           }
-        } catch {
-          // Try the next known endpoint.
         }
-      }
 
-      if (isMounted) {
-        setPeople([]);
+        if (isMounted) {
+          setPeople([]);
+        }
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
     }
 
@@ -292,6 +297,44 @@ export default function PeoplePage(): JSX.Element {
           </div>
         </section>
 
+        {isLoading ? (
+          <section
+            className={cn(
+              view === "grid"
+                ? "grid gap-4 md:grid-cols-2 xl:grid-cols-3"
+                : "flex flex-col gap-4",
+            )}
+          >
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div
+                key={index}
+                className={cn(
+                  "rounded-2xl border border-border bg-white p-4 shadow-sm",
+                  view === "list" && "flex flex-col gap-4 md:flex-row md:items-center md:justify-between",
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <Skeleton variant="circular" width={48} height={48} />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <Skeleton variant="text" width="60%" height={16} />
+                    <Skeleton variant="text" width="40%" height={13} />
+                  </div>
+                </div>
+
+                <div className={cn(view === "list" ? "flex-1 space-y-2" : "mt-4 space-y-2")}>
+                  <Skeleton variant="text" width="30%" height={13} />
+                  <Skeleton variant="text" width="90%" height={13} />
+                </div>
+
+                <div className={cn(view === "list" ? "grid w-full grid-cols-4 gap-2 md:w-[28rem]" : "mt-5 grid grid-cols-4 gap-2")}>
+                  {Array.from({ length: 4 }).map((__, statIndex) => (
+                    <Skeleton key={statIndex} variant="rounded" height={44} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </section>
+        ) : (
         <section
           className={cn(
             view === "grid"
@@ -365,8 +408,9 @@ export default function PeoplePage(): JSX.Element {
             </button>
           ))}
         </section>
+        )}
 
-        {filteredPeople.length === 0 && (
+        {!isLoading && filteredPeople.length === 0 && (
           <div className="mt-6 rounded-xl border border-dashed border-border bg-white p-8 text-center">
             <p className="flex items-center justify-center gap-2 text-base font-semibold text-text">
               <HiOutlineUserGroup className="h-5 w-5 text-primary" />

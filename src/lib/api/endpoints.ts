@@ -21,6 +21,8 @@ export const ENDPOINTS = {
     LIST: `${API_BASE_URL}/api/v1/users/list`,
     ALL: `${API_BASE_URL}/api/v1/users/all`,
     INTERESTED_TAGS: `${API_BASE_URL}/api/v1/users/me/interested-tags`,
+    ACTIVITY: (userId: string) => `${API_BASE_URL}/api/v1/users/${userId}/activity`,
+    ABOUT: (username: string) => `${API_BASE_URL}/api/v1/users/${username}/about`,
   },
   LEADERBOARD: `${API_BASE_URL}/api/v1/leaderboard`,
   AUTHORS: {
@@ -47,6 +49,7 @@ export const ENDPOINTS = {
 
     SAVE: (id: string) => `${API_BASE_URL}/api/posts/${id}/save`,
     SAVED: `${API_BASE_URL}/api/posts/saved`,
+    HISTORY: `${API_BASE_URL}/api/posts/history`,
     COVER_IMAGE: (id: string) => `${API_BASE_URL}/api/posts/${id}/cover-image`,
     TRENDING: `${API_BASE_URL}/api/posts/trending`,
     FOLLOWING: `${API_BASE_URL}/api/posts/feed/following`,
@@ -57,6 +60,7 @@ export const ENDPOINTS = {
   RESOURCES: {
     BASE: `${API_BASE_URL}/api/resources`,
     SAVED: `${API_BASE_URL}/api/resources/saved`,
+    HISTORY: `${API_BASE_URL}/api/resources/history`,
     UPLOAD_IMAGE: `${API_BASE_URL}/api/resources/upload-image`,
     UPLOAD_FILE: `${API_BASE_URL}/api/resources/upload-file`,
     CATEGORIES: `${API_BASE_URL}/api/resources/categories`,

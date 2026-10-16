@@ -118,6 +118,25 @@ function addReplyToComment(
   });
 }
 
+function findTopLevelComment(comments: DisplayComment[], id: string): DisplayComment | null {
+  for (const c of comments) {
+    if (c.id === id) return c;
+    if (c.replies?.some((r) => r.id === id)) return c;
+  }
+  return null;
+}
+
+const MENTION_PREFIX_REGEX = /^@([a-zA-Z0-9_.]{1,32})\s+/;
+
+function extractLeadingMention(message: string): {
+  mentionUsername: string | null;
+  displayMessage: string;
+} {
+  const match = message.match(MENTION_PREFIX_REGEX);
+  if (!match) return { mentionUsername: null, displayMessage: message };
+  return { mentionUsername: match[1], displayMessage: message.slice(match[0].length) };
+}
+
 function findCommentById(comments: DisplayComment[], id: string): DisplayComment | null {
   for (const c of comments) {
     if (c.id === id) return c;
@@ -191,6 +210,7 @@ export function countAllComments(comments: Array<Comment | DisplayComment>): num
 interface CommentItemProps {
   comment: DisplayComment;
   depth: number;
+  threadRootUsername?: string;
   replyingTo: string | null;
   replyText: string;
   isReplying: boolean;
@@ -207,6 +227,7 @@ interface CommentItemProps {
 function CommentItem({
   comment,
   depth,
+  threadRootUsername,
   replyingTo,
   replyText,
   isReplying,
@@ -229,6 +250,10 @@ function CommentItem({
     "User";
 
   const displayAvatar = comment.user?.avatarUrl || comment.user?.avatar || undefined;
+
+  const { mentionUsername, displayMessage } =
+    depth > 0 ? extractLeadingMention(comment.message) : { mentionUsername: null, displayMessage: comment.message };
+  const repliedToUsername = depth > 0 ? (mentionUsername ?? threadRootUsername ?? null) : null;
 
   const isOwnComment =
     Boolean(currentUser?.id && (currentUser.id === comment.userId || (comment.user?.id && currentUser.id === comment.user.id)));
@@ -283,6 +308,13 @@ function CommentItem({
             </span>
           </div>
 
+          {/* Replied-to indicator */}
+          {repliedToUsername && (
+            <p className="mb-1 text-[9px] text-gray-400 sm:text-[10px]">
+              Replied to <span className="font-semibold text-gray-600">@{repliedToUsername}</span>
+            </p>
+          )}
+
           {/* Message */}
           <p
             className="
@@ -294,7 +326,7 @@ function CommentItem({
               sm:text-xs
             "
           >
-            {comment.message}
+            {displayMessage}
           </p>
 
           {/* Actions */}
@@ -503,6 +535,12 @@ function CommentItem({
               key={reply.id}
               comment={reply}
               depth={depth + 1}
+              threadRootUsername={
+                comment.user?.username?.trim() ||
+                comment.user?.userName?.trim() ||
+                comment.user?.name?.trim() ||
+                displayName
+              }
               replyingTo={replyingTo}
               replyText={replyText}
               isReplying={isReplying}
@@ -693,11 +731,16 @@ export function ArticleComments({
       return;
     }
 
+    const isTopLevel = comments.some((c) => c.id === comment.id);
+    const mentionUsername = !isTopLevel
+      ? comment.user?.username?.trim() || comment.user?.userName?.trim() || comment.user?.name?.trim()
+      : null;
+
     setReplyingTo(comment.id);
-    setReplyText("");
+    setReplyText(mentionUsername ? `@${mentionUsername} ` : "");
   };
 
-  const handleSubmitReply = async (event: React.FormEvent, parentId: string) => {
+  const handleSubmitReply = async (event: React.FormEvent, clickedCommentId: string) => {
     event.preventDefault();
 
     const message = replyText.trim();
@@ -711,6 +754,11 @@ export function ArticleComments({
       toast.error("You must be logged in to reply");
       return;
     }
+
+    // Replies always flatten under the top-level comment, regardless of which
+    // reply within the thread the user tapped "Reply" on.
+    const threadRoot = findTopLevelComment(comments, clickedCommentId);
+    const parentId = threadRoot?.id ?? clickedCommentId;
 
     try {
       setIsReplying(true);

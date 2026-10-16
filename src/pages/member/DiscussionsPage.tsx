@@ -6,7 +6,7 @@ import {
   HiOutlineSparkles,
   HiOutlineLightBulb,
 } from "react-icons/hi2";
-import { Button, EmptyState } from "@/components/common";
+import { Button, EmptyState, Skeleton } from "@/components/common";
 import { toast } from "@/hooks/useToast";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -145,11 +145,16 @@ export default function DiscussionsPage(): JSX.Element {
     content: string,
   ): Promise<void> => {
     try {
-      await createDiscussionReply(discussionId, { content });
-      const updatedDiscussion = await getDiscussionById(discussionId);
+      const newComment = await createDiscussionReply(discussionId, { content });
       setDiscussions((current) =>
         current.map((discussion) =>
-          discussion.id === discussionId ? updatedDiscussion : discussion,
+          discussion.id === discussionId
+            ? {
+                ...discussion,
+                comments: [...discussion.comments, newComment],
+                commentsCount: discussion.commentsCount + 1,
+              }
+            : discussion,
         ),
       );
     } catch (err: unknown) {
@@ -320,8 +325,31 @@ export default function DiscussionsPage(): JSX.Element {
         {/* Left / Center: Discussions Sequence */}
         <section className="flex-1 w-full space-y-3 min-w-0" aria-label="Discussions List">
           {isLoading ? (
-            <div className="bg-white border border-border rounded-lg p-10 text-center text-sm text-text/60">
-              Loading discussions...
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="bg-white border border-border rounded-lg p-4 flex gap-4"
+                >
+                  <div className="w-10 flex flex-col items-center gap-2 shrink-0">
+                    <Skeleton variant="circular" width={28} height={28} />
+                    <Skeleton variant="text" width={20} height={12} />
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-2.5">
+                    <div className="flex items-center gap-2">
+                      <Skeleton variant="circular" width={24} height={24} />
+                      <Skeleton variant="text" width={120} height={12} />
+                    </div>
+                    <Skeleton variant="text" width="80%" height={18} />
+                    <Skeleton variant="text" width="100%" height={14} />
+                    <Skeleton variant="text" width="60%" height={14} />
+                    <div className="flex items-center gap-2 pt-1">
+                      <Skeleton variant="rounded" width={56} height={20} />
+                      <Skeleton variant="rounded" width={56} height={20} />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : discussions.length === 0 ? (
             /* Empty state when no discussions exist at all */

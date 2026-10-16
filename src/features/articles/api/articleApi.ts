@@ -251,6 +251,38 @@ export async function getSavedArticles(
 }
 
 /**
+ * GET /api/posts/history (paginated reading history for the logged-in user)
+ */
+export async function getArticleHistory(
+  params?: GetFeedParams,
+): Promise<{ data: Article[]; pagination?: Pagination }> {
+  const response = await apiClient.get<
+    | FeedResponse
+    | Article[]
+    | {
+        data?: Article[];
+        pagination?: Pagination;
+      }
+  >(ENDPOINTS.POSTS.HISTORY, { params });
+
+  if (Array.isArray(response.data)) {
+    return { data: response.data };
+  }
+
+  if (response.data && typeof response.data === "object") {
+    const res = response.data as FeedResponse;
+    if (Array.isArray(res.data)) {
+      return {
+        data: res.data,
+        pagination: res.pagination,
+      };
+    }
+  }
+
+  return { data: [] };
+}
+
+/**
  * GET /api/posts/{id}
  */
 export async function getArticleById(

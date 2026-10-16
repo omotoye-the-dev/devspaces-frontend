@@ -274,3 +274,107 @@ export function isProfileComplete(profile?: UserProfile | null): boolean {
   const value = profile.isProfileCompleted ?? (profile as Record<string, unknown>).IsProfileCompleted;
   return Boolean(value);
 }
+
+export interface UserActivityItem {
+  id: string;
+  action: string;
+  targetType: string;
+  targetId: string;
+  targetTitle: string;
+  targetSlug?: string;
+  visibility?: string;
+  createdAt: string;
+}
+
+export interface UserActivityPagination {
+  currentPage: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
+}
+
+export interface UserActivityPage {
+  items: UserActivityItem[];
+  pagination: UserActivityPagination;
+}
+
+interface UserActivityApiResponse {
+  success: boolean;
+  message: string;
+  data: Array<Record<string, unknown>>;
+  pagination?: UserActivityPagination;
+}
+
+function normalizeActivityItem(raw: Record<string, unknown>): UserActivityItem {
+  return {
+    id: String(raw.activityId ?? raw.id ?? `${raw.targetId ?? "activity"}-${raw.createdAt ?? Date.now()}`),
+    action: typeof raw.action === "string" && raw.action.trim() ? raw.action : "Activity",
+    targetType: typeof raw.targetType === "string" && raw.targetType.trim() ? raw.targetType : "Item",
+    targetId: typeof raw.targetId === "string" ? raw.targetId : "",
+    targetTitle: typeof raw.targetTitle === "string" && raw.targetTitle.trim() ? raw.targetTitle : "Untitled",
+    targetSlug: typeof raw.targetSlug === "string" ? raw.targetSlug : undefined,
+    visibility: typeof raw.visibility === "string" ? raw.visibility : undefined,
+    createdAt: typeof raw.createdAt === "string" ? raw.createdAt : new Date().toISOString(),
+  };
+}
+
+export interface UserAboutInfo {
+  userId: string;
+  username: string;
+  followersCount: number;
+  followingCount: number;
+}
+
+interface UserAboutApiResponse {
+  success: boolean;
+  message: string;
+  data: Record<string, unknown>;
+  errors: string[] | string | null;
+}
+
+/**
+ * Fetches a user's follower/following counts (and basic identity) by username, for use on
+ * either the logged-in user's own profile or another user's profile.
+ */
+export async function getUserAbout(username: string): Promise<UserAboutInfo> {
+  const response = await apiClient.get<UserAboutApiResponse>(ENDPOINTS.USER.ABOUT(username));
+  const data = response.data?.data ?? {};
+
+  return {
+    userId: typeof data.userId === "string" ? data.userId : "",
+    username: typeof data.username === "string" ? data.username : username,
+    followersCount: typeof data.followersCount === "number" ? data.followersCount : 0,
+    followingCount: typeof data.followingCount === "number" ? data.followingCount : 0,
+  };
+}
+
+/**
+ * Fetches a user's recent activity feed (reads, likes, comments, etc.) for the Activity tab.
+ */
+export async function getUserActivity(
+  userId: string,
+  params?: { page?: number; pageSize?: number },
+): Promise<UserActivityPage> {
+  const response = await apiClient.get<UserActivityApiResponse>(
+    ENDPOINTS.USER.ACTIVITY(userId),
+    { params },
+  );
+
+  const rawItems = Array.isArray(response.data?.data) ? response.data.data : [];
+  const items = rawItems.map(normalizeActivityItem);
+
+  return {
+    items,
+    pagination:
+      response.data?.pagination ?? {
+        currentPage: 1,
+        pageSize: items.length,
+        totalCount: items.length,
+        totalPages: 1,
+        hasNext: false,
+        hasPrevious: false,
+      },
+  };
+}

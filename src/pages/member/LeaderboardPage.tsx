@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type JSX } from "react";
-import { FiArrowUpRight, FiSearch } from "react-icons/fi";
+import { FiSearch } from "react-icons/fi";
 import { HiOutlineTrophy } from "react-icons/hi2";
-import { Avatar, Tag } from "@/components/common";
+import { Avatar, Skeleton, Tag } from "@/components/common";
 import { apiClient } from "@/lib/api/client";
 import { ENDPOINTS } from "@/lib/api/endpoints";
 import { cn } from "@/lib/utils/cn";
@@ -15,10 +15,6 @@ type LeaderboardUser = {
   avatarUrl?: string;
   role: string;
   points: number;
-  streak: number;
-  articles: number;
-  resources: number;
-  change: number;
   badge: string;
 };
 
@@ -101,11 +97,10 @@ function normalizeLeaderboardUser(raw: Record<string, unknown>, fallbackLabel: s
     username,
     avatarUrl: typeof raw.avatarUrl === "string" ? raw.avatarUrl : undefined,
     role: typeof raw.role === "string" && raw.role.trim() ? raw.role : "Member",
-    points: toNumber(raw.points ?? raw.totalPoints ?? raw.score, 0),
-    streak: toNumber(raw.streak ?? raw.currentStreak, 0),
-    articles: toNumber(raw.articlesCount ?? raw.articles ?? raw.articleCount, 0),
-    resources: toNumber(raw.resourcesCount ?? raw.resources ?? raw.resourceCount, 0),
-    change: toNumber(raw.change ?? raw.growth ?? raw.trend, 0),
+    points: toNumber(
+      raw.totalScore ?? raw.TotalScore ?? raw.points ?? raw.totalPoints ?? raw.score,
+      0,
+    ),
     badge: typeof raw.badge === "string" && raw.badge.trim() ? raw.badge : "Contributor",
   };
 }
@@ -185,6 +180,7 @@ export default function LeaderboardPage(): JSX.Element {
   const [apiMessage, setApiMessage] = useState<string>("");
   const [apiErrors, setApiErrors] = useState<string[]>([]);
   const [leaderboardResponse, setLeaderboardResponse] = useState<Record<LeaderboardCategoryKey, LeaderboardCategory>>({ ...EMPTY_LEADERBOARD });
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
     let isMounted = true;
@@ -202,6 +198,8 @@ export default function LeaderboardPage(): JSX.Element {
         setApiMessage("Leaderboard data is temporarily unavailable.");
         setApiErrors(["Unable to fetch leaderboard data."]);
         setLeaderboardResponse({ ...EMPTY_LEADERBOARD });
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
     }
 
@@ -293,7 +291,46 @@ export default function LeaderboardPage(): JSX.Element {
           <p className="mt-3 text-sm leading-relaxed text-text/60">{leaderboardData.description}</p>
         </section>
 
-        {(leaderboardData.topContributors.length === 0 && !hasApiErrors) ? (
+        {isLoading ? (
+          <>
+            <section className="mb-6 grid gap-4 md:grid-cols-3">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <div key={index} className="rounded-2xl border border-border bg-white p-5 shadow-sm space-y-5">
+                  <div className="flex items-center justify-between">
+                    <Skeleton variant="circular" width={32} height={32} />
+                    <Skeleton variant="rounded" width={70} height={20} />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Skeleton variant="circular" width={48} height={48} />
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <Skeleton variant="text" width="70%" height={18} />
+                      <Skeleton variant="text" width="50%" height={14} />
+                    </div>
+                  </div>
+                  <Skeleton variant="text" width="40%" height={14} />
+                  <div className="space-y-1.5">
+                    <Skeleton variant="text" width={50} height={11} />
+                    <Skeleton variant="text" width={80} height={24} />
+                  </div>
+                </div>
+              ))}
+            </section>
+
+            <section className="rounded-2xl border border-border bg-white shadow-sm divide-y divide-border">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <div key={index} className="flex items-center gap-3 px-4 py-4">
+                  <Skeleton variant="circular" width={36} height={36} />
+                  <Skeleton variant="circular" width={36} height={36} />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <Skeleton variant="text" width="40%" height={14} />
+                    <Skeleton variant="text" width="25%" height={12} />
+                  </div>
+                  <Skeleton variant="rounded" width={70} height={32} />
+                </div>
+              ))}
+            </section>
+          </>
+        ) : (leaderboardData.topContributors.length === 0 && !hasApiErrors) ? (
           <section className="rounded-xl border border-dashed border-border bg-white p-8 text-center">
             <p className="text-base font-semibold text-text">No contributors yet</p>
             <p className="mt-1 text-sm text-text/50">
@@ -345,17 +382,11 @@ export default function LeaderboardPage(): JSX.Element {
 
                   <p className="mt-4 text-sm text-text/60">{user.role}</p>
 
-                  <div className="mt-4 flex items-end justify-between">
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text/40">
-                        Points
-                      </p>
-                      <p className="mt-1 text-2xl font-bold text-text">{user.points.toLocaleString()}</p>
-                    </div>
-                    <div className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-600">
-                      <FiArrowUpRight className="h-3.5 w-3.5" />
-                      +{user.change}%
-                    </div>
+                  <div className="mt-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text/40">
+                      Points
+                    </p>
+                    <p className="mt-1 text-2xl font-bold text-text">{user.points.toLocaleString()}</p>
                   </div>
                 </div>
               ))}
@@ -414,26 +445,6 @@ export default function LeaderboardPage(): JSX.Element {
                       <div className="rounded-lg bg-background px-2.5 py-1.5 text-center">
                         <p className="text-[10px] uppercase tracking-[0.16em] text-text/40">Points</p>
                         <p className="mt-1 text-sm font-semibold text-text">{user.points}</p>
-                      </div>
-
-                      <div className="rounded-lg bg-background px-2.5 py-1.5 text-center">
-                        <p className="text-[10px] uppercase tracking-[0.16em] text-text/40">Streak</p>
-                        <p className="mt-1 text-sm font-semibold text-text">{user.streak}d</p>
-                      </div>
-
-                      <div className="rounded-lg bg-background px-2.5 py-1.5 text-center">
-                        <p className="text-[10px] uppercase tracking-[0.16em] text-text/40">Articles</p>
-                        <p className="mt-1 text-sm font-semibold text-text">{user.articles}</p>
-                      </div>
-
-                      <div className="rounded-lg bg-background px-2.5 py-1.5 text-center">
-                        <p className="text-[10px] uppercase tracking-[0.16em] text-text/40">Resources</p>
-                        <p className="mt-1 text-sm font-semibold text-text">{user.resources}</p>
-                      </div>
-
-                      <div className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-600">
-                        <FiArrowUpRight className="h-3.5 w-3.5" />
-                        {user.change}%
                       </div>
                     </div>
                   </div>

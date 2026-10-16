@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, type JSX, type MouseEvent } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import {
   FiMapPin,
   FiLink,
@@ -19,16 +19,22 @@ import {
   FiArrowUp,
   FiArrowDown,
   FiDownload,
+  FiEdit2,
 } from "react-icons/fi";
 import { BsPatchCheckFill } from "react-icons/bs";
 import { Avatar, Button, Tabs, Skeleton, EmptyState, type TabItem } from "@/components/common";
+import { EditProfileModal } from "@/features/profile/components/EditProfileModal";
 import {
   getUserProfile,
   formatProfileName,
   getProfileAvatar,
   getProfileLinks,
   followAuthor,
+  getUserActivity,
+  getUserAbout,
   type UserProfile,
+  type UserActivityItem,
+  type UserAboutInfo,
 } from "@/lib/api/user.api";
 import { getArticles, getMyPosts, type Article } from "@/features/articles/api/articleApi";
 import { ArticleCard } from "@/features/articles/components/ArticleCard";
@@ -46,6 +52,37 @@ import type { ResourceListItem } from "@/types/resources.types";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { toast } from "@/hooks/useToast";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
+import { formatTimeAgo } from "@/lib/utils/date";
+
+function describeActivity(item: UserActivityItem): string {
+  const type = item.targetType.toLowerCase();
+  const article = type === "article" || type === "post";
+  const typeLabel = article ? "article" : type === "resource" ? "resource" : type === "discussion" ? "discussion" : type;
+  const articleIndicator = article ? "an" : "a";
+
+  switch (item.action) {
+    case "Read":
+      return `Viewed ${articleIndicator} ${typeLabel}`;
+    case "Liked":
+      return `Liked ${articleIndicator} ${typeLabel}`;
+    case "Saved":
+      return `Saved ${articleIndicator} ${typeLabel}`;
+    case "Commented":
+      return `Commented on ${articleIndicator} ${typeLabel}`;
+    case "Published":
+      return `Published a new ${typeLabel}`;
+    default:
+      return `${item.action} ${articleIndicator} ${typeLabel}`;
+  }
+}
+
+function getActivityLink(item: UserActivityItem): string | undefined {
+  if (!item.targetId) return undefined;
+  const type = item.targetType.toLowerCase();
+  if (type === "article" || type === "post") return `/articles/${item.targetId}`;
+  if (type === "resource") return `/resources/${item.targetId}`;
+  return undefined;
+}
 
 function formatDate(dateStr?: string): string {
   if (!dateStr) return "";
@@ -105,6 +142,11 @@ export default function ProfilePage(): JSX.Element {
   const [isFollowLoading, setIsFollowLoading] = useState<boolean>(false);
   const [followersOffset, setFollowersOffset] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [activities, setActivities] = useState<UserActivityItem[]>([]);
+  const [isActivityLoading, setIsActivityLoading] = useState<boolean>(false);
+  const [activityLoadedForUserId, setActivityLoadedForUserId] = useState<string | null>(null);
+  const [aboutStats, setAboutStats] = useState<UserAboutInfo | null>(null);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState<boolean>(false);
 
   const isOwnProfile = Boolean(
     !id ||
@@ -263,6 +305,39 @@ export default function ProfilePage(): JSX.Element {
     };
   }, [id, isOwnProfile, currentUser?.id, currentUser?.username, currentUser?.userName]);
 
+  const targetUserId =
+    (profile?.id as string | undefined) || id || (isOwnProfile ? currentUser?.id : undefined);
+
+  useEffect(() => {
+    if (activeTab !== "activity" || !targetUserId) return;
+    if (activityLoadedForUserId === targetUserId) return;
+
+    let active = true;
+    setIsActivityLoading(true);
+
+    getUserActivity(targetUserId)
+      .then((page) => {
+        if (!active) return;
+        setActivities(page.items);
+        setActivityLoadedForUserId(targetUserId);
+      })
+      .catch((err: unknown) => {
+        if (active) toast.error(getApiErrorMessage(err, "Failed to load activity"));
+      })
+      .finally(() => {
+        if (active) setIsActivityLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [activeTab, targetUserId, activityLoadedForUserId]);
+
+  const visibleActivities = useMemo(
+    () => activities.filter((item) => isOwnProfile || item.visibility !== "Private"),
+    [activities, isOwnProfile],
+  );
+
   const firstArticle = articles[0];
   const firstArticleAuthorName =
     firstArticle?.author?.name || firstArticle?.author?.userName || firstArticle?.authorName;
@@ -278,6 +353,26 @@ export default function ProfilePage(): JSX.Element {
     (profile?.username as string | undefined) ||
     (isOwnProfile ? currentUser?.username : firstArticleUserName) ||
     undefined;
+
+  useEffect(() => {
+    if (!username) {
+      setAboutStats(null);
+      return;
+    }
+    let active = true;
+
+    getUserAbout(username)
+      .then((info) => {
+        if (active) setAboutStats(info);
+      })
+      .catch(() => {
+        if (active) setAboutStats(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [username]);
 
   const defaultName = isOwnProfile
     ? currentUser?.username
@@ -311,23 +406,27 @@ export default function ProfilePage(): JSX.Element {
     return 0;
   };
 
-  const rawFollowers = getStatNumber(
-    profile?.totalFollowers,
-    profile?.followersCount,
-    profile?.followers,
-    profile?.followerCount,
-    (profile as Record<string, unknown> | null)?.totalFollowerCount,
-  );
+  const rawFollowers =
+    aboutStats?.followersCount ??
+    getStatNumber(
+      profile?.totalFollowers,
+      profile?.followersCount,
+      profile?.followers,
+      profile?.followerCount,
+      (profile as Record<string, unknown> | null)?.totalFollowerCount,
+    );
   const followersCount = Math.max(0, rawFollowers + followersOffset);
 
-  const rawFollowing = getStatNumber(
-    profile?.totalFollowed,
-    profile?.totalFollowing,
-    profile?.followingCount,
-    profile?.followedCount,
-    profile?.following,
-    (profile as Record<string, unknown> | null)?.totalFollowedCount,
-  );
+  const rawFollowing =
+    aboutStats?.followingCount ??
+    getStatNumber(
+      profile?.totalFollowed,
+      profile?.totalFollowing,
+      profile?.followingCount,
+      profile?.followedCount,
+      profile?.following,
+      (profile as Record<string, unknown> | null)?.totalFollowedCount,
+    );
   const followingCount = rawFollowing;
 
   const articlesCount = articles.length;
@@ -1012,45 +1111,76 @@ export default function ProfilePage(): JSX.Element {
         {activeTab === "activity" && (
           <div className="bg-white border border-border rounded-2xl p-6 space-y-4">
             <h3 className="text-sm font-bold text-text">Recent Activity</h3>
-            <div className="space-y-3 divide-y divide-border/60">
-              {[
-                {
-                  action: "Published a new article",
-                  target: "Architecting Resilient Web Applications in 2026",
-                  time: "2 days ago",
-                },
-                {
-                  action: "Liked an article",
-                  target: "Understanding TypeScript 5.8 Decorators",
-                  time: "4 days ago",
-                },
-                {
-                  action: "Commented on",
-                  target: "State Management in Modern React with Zustand",
-                  time: "1 week ago",
-                },
-              ].map((act, index) => (
-                <div key={index} className="pt-3 flex items-start justify-between gap-4">
-                  <div className="space-y-0.5">
-                    <p className="text-xs text-text/60">
-                      {act.action}: <span className="font-semibold text-text">{act.target}</span>
-                    </p>
-                    <p className="text-[11px] text-text/40">{act.time}</p>
+
+            {isActivityLoading ? (
+              <div className="space-y-3 divide-y divide-border/60">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <div key={index} className="pt-3 space-y-2">
+                    <Skeleton variant="text" width="60%" height={14} />
+                    <Skeleton variant="text" width={80} height={11} />
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : visibleActivities.length === 0 ? (
+              <EmptyState
+                size="sm"
+                icon={<FiActivity className="w-5 h-5 text-text/40" />}
+                title="No activity yet"
+                description={
+                  isOwnProfile
+                    ? "Your reads, likes, and comments will show up here."
+                    : `${displayName} hasn't had any recent activity.`
+                }
+              />
+            ) : (
+              <div className="space-y-3 divide-y divide-border/60">
+                {visibleActivities.map((item) => {
+                  const href = getActivityLink(item);
+                  return (
+                    <div key={item.id} className="pt-3 flex items-start justify-between gap-4">
+                      <div className="space-y-0.5">
+                        <p className="text-xs text-text/60">
+                          {describeActivity(item)}:{" "}
+                          {href ? (
+                            <Link to={href} className="font-semibold text-text hover:text-primary hover:underline">
+                              {item.targetTitle}
+                            </Link>
+                          ) : (
+                            <span className="font-semibold text-text">{item.targetTitle}</span>
+                          )}
+                        </p>
+                        <p className="text-[11px] text-text/40">{formatTimeAgo(item.createdAt)}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
         {activeTab === "about" && (
           <div className="bg-white border border-border rounded-2xl p-6 sm:p-8 space-y-6">
-            <div>
-              <h3 className="text-base font-bold text-text mb-2">About {displayName}</h3>
-              {bio ? (
-                <p className="text-sm text-text/70 leading-relaxed max-w-3xl">{bio}</p>
-              ) : (
-                <p className="text-sm text-text/40 italic">No bio provided yet.</p>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-base font-bold text-text mb-2">About {displayName}</h3>
+                {bio ? (
+                  <p className="text-sm text-text/70 leading-relaxed max-w-3xl">{bio}</p>
+                ) : (
+                  <p className="text-sm text-text/40 italic">No bio provided yet.</p>
+                )}
+              </div>
+
+              {isOwnProfile && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  leftIcon={<FiEdit2 className="w-3.5 h-3.5" />}
+                  onClick={() => setIsEditProfileOpen(true)}
+                  className="shrink-0"
+                >
+                  Edit Profile
+                </Button>
               )}
             </div>
 
@@ -1110,6 +1240,13 @@ export default function ProfilePage(): JSX.Element {
           </div>
         )}
       </section>
+
+      <EditProfileModal
+        open={isEditProfileOpen}
+        onClose={() => setIsEditProfileOpen(false)}
+        profile={profile}
+        onUpdated={(updated) => setProfile((prev) => ({ ...prev, ...updated }))}
+      />
     </div>
   );
 }
