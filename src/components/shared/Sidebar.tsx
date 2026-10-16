@@ -244,13 +244,17 @@ export function Sidebar({
         ? "explore"
         : location.pathname.startsWith("/discussions")
           ? "discussions"
-          : location.pathname.startsWith("/profile")
-            ? "profile"
-            : location.pathname.startsWith("/resources")
-              ? "resources"
-              : location.pathname.startsWith("/saved")
-                ? "bookmarks"
-                : undefined;
+          : location.pathname.startsWith("/people")
+            ? "people"
+            : location.pathname.startsWith("/leaderboard")
+              ? "leaderboard"
+              : location.pathname.startsWith("/profile")
+                ? "profile"
+                : location.pathname.startsWith("/resources")
+                  ? "resources"
+                  : location.pathname.startsWith("/saved")
+                    ? "bookmarks"
+                    : undefined;
 
   const currentActive = activeItemProp ?? routeActiveItem ?? internalActiveItem;
 
@@ -284,6 +288,8 @@ export function Sidebar({
       if (id === "feed" || id === "Feed" || id === "home") navigate("/");
       else if (id === "explore") navigate("/articles");
       else if (id === "discussions") navigate("/discussions");
+      else if (id === "people") navigate("/people");
+      else if (id === "leaderboard") navigate("/leaderboard");
       else if (id === "resources") navigate("/resources");
       else if (id === "history") navigate("/history");
       else if (id === "write") navigate("/articles/new");

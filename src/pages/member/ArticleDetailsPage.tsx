@@ -843,14 +843,6 @@ const coverImage =
 
 return (
   <div ref={pageRef} className="min-h-screen w-full bg-gray-50">
-    {/* Top Fixed Reading Progress Bar */}
-    <div className="fixed top-0 left-0 right-0 z-50 h-1 bg-transparent pointer-events-none">
-      <div
-        className="h-full bg-linear-to-r from-primary via-blue-500 to-indigo-500 transition-all duration-100 ease-out"
-        style={{ width: `${readingProgress}%` }}
-      />
-    </div>
-
     <div className="w-full px-4 py-6 sm:px-6 lg:px-8">
       {/* In-page Sticky Reading Progress Bar */}
       <div className="sticky -top-2 sm:-top-4 md:-top-6 z-30 mb-8 bg-gray-50/95 py-2 backdrop-blur-xs">

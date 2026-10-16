@@ -20,6 +20,8 @@ import ProfilePage from "@/pages/member/ProfilePage";
 import DiscussionsPage from "@/pages/member/DiscussionsPage";
 import HistoryPage from "@/pages/member/HistoryPage";
 import SavedPage from "@/pages/member/SavedPage";
+import LeaderboardPage from "@/pages/member/LeaderboardPage";
+import PeoplePage from "@/pages/member/PeoplePage";
 
 export const router = createBrowserRouter([
   {
@@ -80,6 +82,14 @@ export const router = createBrowserRouter([
           {
             path: "saved",
             element: <SavedPage />,
+          },
+          {
+            path: "people",
+            element: <PeoplePage />,
+          },
+          {
+            path: "leaderboard",
+            element: <LeaderboardPage />,
           },
         ],
       },

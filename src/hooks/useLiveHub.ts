@@ -23,7 +23,7 @@ export function useLiveHub<T = unknown>({
   id,
   onUpdate,
   enabled = true,
-}: UseLiveHubOptions<T>): signalR.HubConnection | null {
+}: UseLiveHubOptions<T>): void {
   const connectionRef = useRef<signalR.HubConnection | null>(null);
   const callbackRef = useRef(onUpdate);
 
@@ -73,5 +73,4 @@ export function useLiveHub<T = unknown>({
     };
   }, [type, id, enabled]);
 
-  return connectionRef.current;
 }

@@ -18,10 +18,18 @@ export const ENDPOINTS = {
 
   USER: {
     PROFILE: `${API_BASE_URL}/api/User/profile`,
+    LIST: `${API_BASE_URL}/api/User/list`,
+    ALL: `${API_BASE_URL}/api/User/all`,
   },
+  LEADERBOARD: `${API_BASE_URL}/api/v1/leaderboard`,
   AUTHORS: {
+    LIST: `${API_BASE_URL}/api/authors`,
     DETAIL: (id: string) => `${API_BASE_URL}/api/authors/${id}`,
     FOLLOW: (id: string) => `${API_BASE_URL}/api/authors/${id}/follow`,
+  },
+  USERS: {
+    LIST: `${API_BASE_URL}/api/users`,
+    ALL: `${API_BASE_URL}/api/users/all`,
   },
 
   POSTS: {

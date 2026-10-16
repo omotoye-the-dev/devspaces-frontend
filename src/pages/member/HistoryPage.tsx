@@ -1,7 +1,8 @@
-import { useMemo, useState, type JSX } from "react";
+import { useEffect, useMemo, useState, type JSX } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiArrowRight, FiBookOpen, FiClock, FiSearch, FiTrash2 } from "react-icons/fi";
-import { Button, Tag } from "@/components/common";
+import { Button, Modal, Tag } from "@/components/common";
+import { getFeedArticles, type Article } from "@/features/articles/api/articleApi";
 import { cn } from "@/lib/utils/cn";
 
 type HistoryFilter = "all" | "article" | "resource";
@@ -18,69 +19,107 @@ type HistoryEntry = {
   accent: string;
 };
 
-const initialHistory: HistoryEntry[] = [
-  {
-    id: "h-1",
+const HISTORY_ACCENTS = ["bg-primary", "bg-teal-500", "bg-amber-500", "bg-rose-500", "bg-violet-500"];
+const HISTORY_DELETE_STORAGE_KEY = "devspace-history-cleared";
+
+const formatRelativeTime = (value?: string | null): string => {
+  if (!value) {
+    return "Recently";
+  }
+
+  const diffMs = Date.now() - new Date(value).getTime();
+  const minutes = Math.max(0, Math.floor(diffMs / 60000));
+
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} day${days === 1 ? "" : "s"} ago`;
+
+  return new Date(value).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
+const mapArticleToHistoryEntry = (article: Article, index: number): HistoryEntry => {
+  const description =
+    article.excerpt ||
+    article.content
+      ?.replace(/<[^>]*>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim() ||
+    "No description available.";
+
+  const authorName =
+    article.author?.name ||
+    article.author?.userName ||
+    article.author?.username ||
+    "DevSpace member";
+
+  const category = article.tags?.[0] || "General";
+
+  return {
+    id: article.id,
     type: "article",
-    title: "Designing resilient React applications with TanStack Query",
-    description: "A practical guide to handling loading, cache invalidation, and optimistic UI updates.",
-    category: "React",
-    author: "Aisha Khan",
-    timeLabel: "2 hours ago",
-    route: "/articles/1",
-    accent: "bg-primary",
-  },
-  {
-    id: "h-2",
-    type: "resource",
-    title: "Type-safe API integration checklist",
-    description: "A curated set of frontend standards and validation tips for safe data access.",
-    category: "TypeScript",
-    author: "DevSpace Team",
-    timeLabel: "Yesterday",
-    route: "/resources/1",
-    accent: "bg-teal-500",
-  },
-  {
-    id: "h-3",
-    type: "article",
-    title: "Shipping faster with focused CI pipelines",
-    description: "How to reduce feedback time and keep release quality high without over-engineering.",
-    category: "DevOps",
-    author: "Marcus Lee",
-    timeLabel: "3 days ago",
-    route: "/articles/2",
-    accent: "bg-amber-500",
-  },
-  {
-    id: "h-4",
-    type: "resource",
-    title: "Authentication patterns for modern web apps",
-    description: "A resource collection covering session, token, and social login flows.",
-    category: "Security",
-    author: "Nora James",
-    timeLabel: "Last week",
-    route: "/resources/2",
-    accent: "bg-rose-500",
-  },
-  {
-    id: "h-5",
-    type: "article",
-    title: "What I learned from building sustainable design systems",
-    description: "Patterns for scaling components without introducing churn and inconsistency.",
-    category: "Design",
-    author: "Lena Ortiz",
-    timeLabel: "Last week",
-    route: "/articles/3",
-    accent: "bg-violet-500",
-  },
-];
+    title: article.title,
+    description,
+    category,
+    author: authorName,
+    timeLabel: formatRelativeTime(article.createdAt),
+    route: `/articles/${article.id}`,
+    accent: HISTORY_ACCENTS[index % HISTORY_ACCENTS.length],
+  };
+};
 
 function HistoryPage(): JSX.Element {
   const navigate = useNavigate();
   const [filter, setFilter] = useState<HistoryFilter>("all");
   const [search, setSearch] = useState("");
-  const [entries, setEntries] = useState<HistoryEntry[]>(initialHistory);
+  const [entries, setEntries] = useState<HistoryEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+  useEffect(() => {
+    const fetchHistory = async (): Promise<void> => {
+      try {
+        if (typeof window !== "undefined" && window.localStorage.getItem(HISTORY_DELETE_STORAGE_KEY) === "true") {
+          setEntries([]);
+          setIsLoading(false);
+          return;
+        }
+
+        setIsLoading(true);
+        const response = await getFeedArticles({ page: 1, pageSize: 20 });
+        const mappedEntries = response.data.map((article, index) =>
+          mapArticleToHistoryEntry(article, index),
+        );
+        setEntries(mappedEntries);
+      } catch (error) {
+        console.error("Failed to load history entries:", error);
+        setEntries([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void fetchHistory();
+  }, []);
+
+  const handleDeleteHistory = (): void => {
+    setEntries([]);
+    setFilter("all");
+    setSearch("");
+    setIsDeleteModalOpen(false);
+
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(HISTORY_DELETE_STORAGE_KEY, "true");
+    }
+  };
 
   const visibleEntries = useMemo(() => {
     const normalizedQuery = search.trim().toLowerCase();
@@ -115,8 +154,37 @@ function HistoryPage(): JSX.Element {
   ];
 
   return (
-    <div className="min-h-screen bg-background text-text">
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+    <>
+      <Modal
+        open={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title="Delete history permanently?"
+        size="sm"
+      >
+        <div className="space-y-4 pt-2">
+          <div className="flex items-start gap-3 rounded-xl bg-rose-50 p-3 text-rose-800">
+            <FiTrash2 className="mt-0.5 h-5 w-5 shrink-0" />
+            <div className="text-xs leading-relaxed">
+              <p className="font-semibold">This will permanently remove your browsing history on this device.</p>
+              <p className="mt-1 text-rose-700">
+                You will need to reload your recent activity before it appears again.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 border-t border-border pt-2">
+            <Button type="button" variant="secondary" size="sm" onClick={() => setIsDeleteModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" variant="danger" size="sm" onClick={handleDeleteHistory} leftIcon={<FiTrash2 className="h-4 w-4" />}>
+              Delete history
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <div className="min-h-screen w-full bg-background text-text">
+        <div className="w-full px-4 py-6 sm:px-6 lg:px-8">
         <header className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-primary/70">
@@ -130,8 +198,8 @@ function HistoryPage(): JSX.Element {
             variant="outline"
             size="sm"
             leftIcon={<FiTrash2 className="w-4 h-4" />}
-            onClick={() => setEntries([])}
-            disabled={entries.length === 0}
+            onClick={() => setIsDeleteModalOpen(true)}
+            disabled={entries.length === 0 || isLoading}
           >
             Clear history
           </Button>
@@ -218,7 +286,11 @@ function HistoryPage(): JSX.Element {
         </section>
 
         <section className="mt-6 space-y-4">
-          {visibleEntries.length === 0 ? (
+          {isLoading ? (
+            <div className="mt-6 rounded-xl border border-border bg-white p-8 text-center">
+              <p className="text-base font-semibold text-text">Loading history...</p>
+            </div>
+          ) : visibleEntries.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border bg-white p-8 text-center">
               <p className="text-base font-semibold text-text">No matching history yet</p>
               <p className="mt-1 text-sm text-text/50">
@@ -272,8 +344,9 @@ function HistoryPage(): JSX.Element {
             ))
           )}
         </section>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
