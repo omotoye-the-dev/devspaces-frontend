@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, type JSX } from "react";
+import { useState, useMemo, useEffect, useCallback, type JSX } from "react";
 import {
   HiPlus,
   HiOutlineChatBubbleLeftRight,
@@ -31,6 +31,37 @@ import {
   CreateDiscussionModal,
   DiscussionFilterBar,
 } from "@/features/discussions/components";
+import { useLiveHub } from "@/hooks/useLiveHub";
+import {
+  normalizeDiscussionUpdate,
+  type DiscussionCounts,
+} from "@/features/discussions/utils/liveUpdate";
+
+/**
+ * Render-null component that subscribes to the SignalR live hub for a single
+ * discussion and forwards normalised count updates to the parent page.
+ *
+ * One instance is mounted next to each DiscussionCard so the page owns a
+ * single list-state and cards stay purely prop-driven.
+ * Hub: /ws/hub/discussions/{id}/live
+ */
+function DiscussionLiveSync({
+  id,
+  onCounts,
+}: {
+  id: string;
+  onCounts: (id: string, counts: DiscussionCounts) => void;
+}): null {
+  useLiveHub({
+    type: "discussion",
+    id,
+    onUpdate: (data) => {
+      const counts = normalizeDiscussionUpdate(data);
+      if (counts) onCounts(id, counts);
+    },
+  });
+  return null;
+}
 
 export default function DiscussionsPage(): JSX.Element {
   const currentUserId = useAuthStore((state) => state.user?.id);
@@ -90,6 +121,42 @@ export default function DiscussionsPage(): JSX.Element {
     });
     return Array.from(tagSet);
   }, [discussions]);
+
+  // Patch live count updates from SignalR into the discussion list state
+  const handleLiveCounts = useCallback(
+    (id: string, counts: DiscussionCounts): void => {
+      setDiscussions((prev) =>
+        prev.map((d) => (d.id === id ? { ...d, ...counts } : d)),
+      );
+    },
+    [],
+  );
+
+  // Refresh comments for the open discussion when the comment hub fires
+  const handleLiveCommentUpdate = useCallback(async (): Promise<void> => {
+    if (!selectedDiscussionId) return;
+    try {
+      const updatedDiscussion = await getDiscussionById(selectedDiscussionId);
+      setDiscussions((prev) =>
+        prev.map((d) =>
+          d.id === selectedDiscussionId ? updatedDiscussion : d,
+        ),
+      );
+    } catch {
+      // Silently ignore real-time refresh failures
+    }
+  }, [selectedDiscussionId]);
+
+  // Real-time comment updates for the currently open discussion
+  // Hub: /ws/hub/discussions/comments/{id}/live
+  useLiveHub({
+    type: "discussion-comment",
+    id: selectedDiscussionId,
+    enabled: Boolean(selectedDiscussionId),
+    onUpdate: () => {
+      void handleLiveCommentUpdate();
+    },
+  });
 
   // Handle discussion vote (up / down)
   const handleVote = async (
@@ -400,16 +467,22 @@ export default function DiscussionsPage(): JSX.Element {
             /* Reddit-like discussion post sequence */
             <div className="space-y-3">
               {filteredDiscussions.map((discussion) => (
-                <DiscussionCard
-                  key={discussion.id}
-                  discussion={discussion}
-                  onOpenDetails={handleOpenDetails}
-                  onVote={handleVote}
-                  onTagClick={(tag) => setSelectedTag(tag)}
-                  onToggleBookmark={handleToggleBookmark}
-                  onDelete={handleDeleteDiscussion}
-                  isOwner={Boolean(currentUserId) && discussion.author.id === currentUserId}
-                />
+                <div key={discussion.id}>
+                  {/* Render-null SignalR sync — one connection per visible card */}
+                  <DiscussionLiveSync
+                    id={discussion.id}
+                    onCounts={handleLiveCounts}
+                  />
+                  <DiscussionCard
+                    discussion={discussion}
+                    onOpenDetails={handleOpenDetails}
+                    onVote={handleVote}
+                    onTagClick={(tag) => setSelectedTag(tag)}
+                    onToggleBookmark={handleToggleBookmark}
+                    onDelete={handleDeleteDiscussion}
+                    isOwner={Boolean(currentUserId) && discussion.author.id === currentUserId}
+                  />
+                </div>
               ))}
             </div>
           )}

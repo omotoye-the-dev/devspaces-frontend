@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type JSX } from "react";
+import { useEffect, useMemo, useState, useCallback, type JSX } from "react";
 import { FiBookmark, FiMessageSquare } from "react-icons/fi";
 import { MdOutlineSearch, MdClear } from "react-icons/md";
 import { Input, Tabs, EmptyState, Skeleton } from "@/components/common";
@@ -24,6 +24,51 @@ import type { ResourceListItem } from "@/types/resources.types";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
 import { toast } from "@/hooks/useToast";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useLiveHub } from "@/hooks/useLiveHub";
+import {
+  normalizeDiscussionUpdate,
+  type DiscussionCounts,
+} from "@/features/discussions/utils/liveUpdate";
+import {
+  normalizeResourceUpdate,
+  type ResourceCounts,
+} from "@/features/resources/utils/liveUpdate";
+
+function DiscussionLiveSync({
+  id,
+  onCounts,
+}: {
+  id: string;
+  onCounts: (id: string, counts: DiscussionCounts) => void;
+}): null {
+  useLiveHub({
+    type: "discussion",
+    id,
+    onUpdate: (data) => {
+      const counts = normalizeDiscussionUpdate(data);
+      if (counts) onCounts(id, counts);
+    },
+  });
+  return null;
+}
+
+function ResourceLiveSync({
+  id,
+  onCounts,
+}: {
+  id: string;
+  onCounts: (id: string, counts: ResourceCounts) => void;
+}): null {
+  useLiveHub({
+    type: "resource",
+    id,
+    onUpdate: (data) => {
+      const counts = normalizeResourceUpdate(data);
+      if (counts) onCounts(id, counts);
+    },
+  });
+  return null;
+}
 
 type SavedTab = "all" | "articles" | "resources" | "discussions";
 
@@ -119,6 +164,58 @@ export default function SavedPage(): JSX.Element {
       isMounted = false;
     };
   }, []);
+
+  // Patch live count updates from SignalR into discussion state
+  const handleLiveDiscussionCounts = useCallback(
+    (id: string, counts: DiscussionCounts): void => {
+      setDiscussions((prev) =>
+        prev.map((d) => (d.id === id ? { ...d, ...counts } : d)),
+      );
+    },
+    [],
+  );
+
+  // Patch live count updates from SignalR into resource state
+  const handleLiveResourceCounts = useCallback(
+    (id: string, counts: ResourceCounts): void => {
+      setResources((prev) =>
+        prev.map((r) =>
+          r.id === id
+            ? {
+                ...r,
+                upvoteCount: counts.upvoteCount ?? r.upvoteCount,
+                downvoteCount: counts.downvoteCount ?? r.downvoteCount,
+                saveCount: counts.saveCount ?? r.saveCount,
+              }
+            : r,
+        ),
+      );
+    },
+    [],
+  );
+
+  // Refresh comments for the open discussion in SavedPage when comment hub fires
+  const handleLiveCommentUpdate = useCallback(async (): Promise<void> => {
+    if (!selectedDiscussionId) return;
+    try {
+      const updatedDiscussion = await getDiscussionById(selectedDiscussionId);
+      setDiscussions((prev) =>
+        prev.map((d) => (d.id === selectedDiscussionId ? updatedDiscussion : d)),
+      );
+    } catch {
+      // Silently ignore real-time refresh failures
+    }
+  }, [selectedDiscussionId]);
+
+  // Real-time comment updates for currently open discussion
+  useLiveHub({
+    type: "discussion-comment",
+    id: selectedDiscussionId,
+    enabled: Boolean(selectedDiscussionId),
+    onUpdate: () => {
+      void handleLiveCommentUpdate();
+    },
+  });
 
   const handleUnsaveArticle = async (id: string): Promise<void> => {
     const prev = articles;
@@ -374,15 +471,20 @@ export default function SavedPage(): JSX.Element {
             {showDiscussions && filteredDiscussions.length > 0 && (
               <div className="space-y-3">
                 {filteredDiscussions.map((discussion) => (
-                  <DiscussionCard
-                    key={`discussion-${discussion.id}`}
-                    discussion={discussion}
-                    onOpenDetails={(d) => void handleOpenDiscussionDetails(d)}
-                    onVote={(id, direction) => void handleVoteDiscussion(id, direction)}
-                    onToggleBookmark={(id) => void handleUnsaveDiscussion(id)}
-                    onDelete={(id) => void handleDeleteDiscussion(id)}
-                    isOwner={Boolean(currentUserId) && discussion.author.id === currentUserId}
-                  />
+                  <div key={`discussion-${discussion.id}`}>
+                    <DiscussionLiveSync
+                      id={discussion.id}
+                      onCounts={handleLiveDiscussionCounts}
+                    />
+                    <DiscussionCard
+                      discussion={discussion}
+                      onOpenDetails={(d) => void handleOpenDiscussionDetails(d)}
+                      onVote={(id, direction) => void handleVoteDiscussion(id, direction)}
+                      onToggleBookmark={(id) => void handleUnsaveDiscussion(id)}
+                      onDelete={(id) => void handleDeleteDiscussion(id)}
+                      isOwner={Boolean(currentUserId) && discussion.author.id === currentUserId}
+                    />
+                  </div>
                 ))}
               </div>
             )}
@@ -415,11 +517,16 @@ export default function SavedPage(): JSX.Element {
 
                 {showResources &&
                   filteredResources.map((resource) => (
-                    <ResourceCard
-                      key={`resource-${resource.id}`}
-                      resource={mapToResourceCardItem(resource)}
-                      onBookmark={() => void handleUnsaveResource(resource.id)}
-                    />
+                    <div key={`resource-${resource.id}`}>
+                      <ResourceLiveSync
+                        id={resource.id}
+                        onCounts={handleLiveResourceCounts}
+                      />
+                      <ResourceCard
+                        resource={mapToResourceCardItem(resource)}
+                        onBookmark={() => void handleUnsaveResource(resource.id)}
+                      />
+                    </div>
                   ))}
               </div>
             )}

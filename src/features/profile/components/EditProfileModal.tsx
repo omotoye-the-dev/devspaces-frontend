@@ -39,6 +39,7 @@ export function EditProfileModal({
     if (!open) return;
 
     const links = getProfileLinks(profile);
+    /* eslint-disable react-hooks/set-state-in-effect -- reset form state when the modal opens or profile changes */
     setFirstName((profile?.firstName as string | undefined) || "");
     setLastName((profile?.lastName as string | undefined) || "");
     setBio((profile?.bio as string | undefined) || "");
@@ -48,6 +49,7 @@ export function EditProfileModal({
     setWebsiteUrl(links.websiteUrl || "");
     setAvatarFile(null);
     setAvatarPreview(null);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [open, profile]);
 
   if (!open) return null;

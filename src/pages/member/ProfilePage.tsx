@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, type JSX, type MouseEvent } from "react";
+import { useState, useEffect, useMemo, useCallback, type JSX, type MouseEvent } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import {
   FiMapPin,
@@ -48,6 +48,29 @@ import {
   applyVoteResponse,
 } from "@/features/resources/utils/voteHelper";
 import { ResourceCard, type ResourceItem } from "@/features/resources/components/ResourceCard";
+import { useLiveHub } from "@/hooks/useLiveHub";
+import {
+  normalizeResourceUpdate,
+  type ResourceCounts,
+} from "@/features/resources/utils/liveUpdate";
+
+function ResourceLiveSync({
+  id,
+  onCounts,
+}: {
+  id: string;
+  onCounts: (id: string, counts: ResourceCounts) => void;
+}): null {
+  useLiveHub({
+    type: "resource",
+    id,
+    onUpdate: (data) => {
+      const counts = normalizeResourceUpdate(data);
+      if (counts) onCounts(id, counts);
+    },
+  });
+  return null;
+}
 import type { ResourceListItem } from "@/types/resources.types";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { toast } from "@/hooks/useToast";
@@ -143,7 +166,6 @@ export default function ProfilePage(): JSX.Element {
   const [followersOffset, setFollowersOffset] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [activities, setActivities] = useState<UserActivityItem[]>([]);
-  const [isActivityLoading, setIsActivityLoading] = useState<boolean>(false);
   const [activityLoadedForUserId, setActivityLoadedForUserId] = useState<string | null>(null);
   const [aboutStats, setAboutStats] = useState<UserAboutInfo | null>(null);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState<boolean>(false);
@@ -308,12 +330,14 @@ export default function ProfilePage(): JSX.Element {
   const targetUserId =
     (profile?.id as string | undefined) || id || (isOwnProfile ? currentUser?.id : undefined);
 
+  const isActivityLoading =
+    activeTab === "activity" && Boolean(targetUserId) && activityLoadedForUserId !== targetUserId;
+
   useEffect(() => {
     if (activeTab !== "activity" || !targetUserId) return;
     if (activityLoadedForUserId === targetUserId) return;
 
     let active = true;
-    setIsActivityLoading(true);
 
     getUserActivity(targetUserId)
       .then((page) => {
@@ -322,10 +346,10 @@ export default function ProfilePage(): JSX.Element {
         setActivityLoadedForUserId(targetUserId);
       })
       .catch((err: unknown) => {
-        if (active) toast.error(getApiErrorMessage(err, "Failed to load activity"));
-      })
-      .finally(() => {
-        if (active) setIsActivityLoading(false);
+        if (active) {
+          toast.error(getApiErrorMessage(err, "Failed to load activity"));
+          setActivityLoadedForUserId(targetUserId);
+        }
       });
 
     return () => {
@@ -355,10 +379,8 @@ export default function ProfilePage(): JSX.Element {
     undefined;
 
   useEffect(() => {
-    if (!username) {
-      setAboutStats(null);
-      return;
-    }
+    if (!username) return;
+
     let active = true;
 
     getUserAbout(username)
@@ -373,6 +395,8 @@ export default function ProfilePage(): JSX.Element {
       active = false;
     };
   }, [username]);
+
+  const activeAboutStats = username ? aboutStats : null;
 
   const defaultName = isOwnProfile
     ? currentUser?.username
@@ -407,7 +431,7 @@ export default function ProfilePage(): JSX.Element {
   };
 
   const rawFollowers =
-    aboutStats?.followersCount ??
+    activeAboutStats?.followersCount ??
     getStatNumber(
       profile?.totalFollowers,
       profile?.followersCount,
@@ -418,7 +442,7 @@ export default function ProfilePage(): JSX.Element {
   const followersCount = Math.max(0, rawFollowers + followersOffset);
 
   const rawFollowing =
-    aboutStats?.followingCount ??
+    activeAboutStats?.followingCount ??
     getStatNumber(
       profile?.totalFollowed,
       profile?.totalFollowing,
@@ -459,6 +483,24 @@ export default function ProfilePage(): JSX.Element {
       { id: "about", label: "About", icon: <FiUser className="w-4 h-4" /> },
     ],
     [articlesCount, resourcesCount],
+  );
+
+  const handleLiveResourceCounts = useCallback(
+    (id: string, counts: ResourceCounts): void => {
+      setResources((prev) =>
+        prev.map((r) =>
+          r.id === id
+            ? {
+                ...r,
+                upvoteCount: counts.upvoteCount ?? r.upvoteCount,
+                downvoteCount: counts.downvoteCount ?? r.downvoteCount,
+                saveCount: counts.saveCount ?? r.saveCount,
+              }
+            : r,
+        ),
+      );
+    },
+    [],
   );
 
   const handleResourceClick = (cardItem: ResourceItem): void => {
@@ -1076,14 +1118,19 @@ export default function ProfilePage(): JSX.Element {
             ) : resources.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {resources.map((item) => (
-                  <ResourceCard
-                    key={item.id}
-                    resource={mapToResourceCardItem(item)}
-                    onClick={handleResourceClick}
-                    onUpvote={handleResourceUpvote}
-                    onDownvote={handleResourceDownvote}
-                    onBookmark={handleResourceBookmark}
-                  />
+                  <div key={item.id}>
+                    <ResourceLiveSync
+                      id={item.id}
+                      onCounts={handleLiveResourceCounts}
+                    />
+                    <ResourceCard
+                      resource={mapToResourceCardItem(item)}
+                      onClick={handleResourceClick}
+                      onUpvote={handleResourceUpvote}
+                      onDownvote={handleResourceDownvote}
+                      onBookmark={handleResourceBookmark}
+                    />
+                  </div>
                 ))}
               </div>
             ) : (

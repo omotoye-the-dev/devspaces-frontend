@@ -1,7 +1,7 @@
 import * as signalR from "@microsoft/signalr";
 import { API_BASE_URL } from "@/lib/api/endpoints";
 
-export type LiveHubType = "post" | "comment" | "resource";
+export type LiveHubType = "post" | "comment" | "resource" | "discussion" | "discussion-comment";
 
 /**
  * Returns the hub endpoint URL based on entity type and target ID.
@@ -17,6 +17,10 @@ export function getLiveHubUrl(type: LiveHubType, id: string): string {
       return `${baseUrl}/ws/hub/posts/comments/${normalizedId}/live`;
     case "resource":
       return `${baseUrl}/ws/hub/resources/${normalizedId}/live`;
+    case "discussion":
+      return `${baseUrl}/ws/hub/discussions/${normalizedId}/live`;
+    case "discussion-comment":
+      return `${baseUrl}/ws/hub/discussions/comments/${normalizedId}/live`;
     default:
       return `${baseUrl}/ws/hub/${type}/${normalizedId}/live`;
   }
