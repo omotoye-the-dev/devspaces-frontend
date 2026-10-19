@@ -768,7 +768,7 @@ export default function ProfilePage(): JSX.Element {
                 </div>
               </div>
               <div className="lg:pl-8 lg:border-l lg:border-border/60 shrink-0 w-full sm:w-auto">
-                <div className="grid grid-cols-2 divide-x divide-y divide-border/60 border border-border/60 rounded-2xl bg-white/80 overflow-hidden text-center min-w-60 sm:min-w-67.5">
+                <div className="grid grid-cols-2 divide-x divide-y divide-border/60 rounded-2xl bg-white/80 overflow-hidden text-center min-w-60 sm:min-w-67.5">
                   {Array.from({ length: 4 }).map((_, i) => (
                     <div
                       key={i}
