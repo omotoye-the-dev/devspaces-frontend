@@ -244,7 +244,7 @@ export default function PeoplePage(): JSX.Element {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search people"
-                className="w-full rounded-lg border border-border bg-white py-2.5 pl-9 pr-3 text-sm text-text placeholder:text-text/40 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/10"
+                className="w-full rounded-lg border border-border bg-white py-2.5 pl-9 pr-3 text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary/10"
               />
             </label>
           </div>
@@ -328,7 +328,7 @@ export default function PeoplePage(): JSX.Element {
                   <Skeleton variant="text" width="90%" height={13} />
                 </div>
 
-                <div className={cn(view === "list" ? "grid w-full grid-cols-4 gap-2 md:w-[28rem]" : "mt-5 grid grid-cols-4 gap-2")}>
+                <div className={cn(view === "list" ? "grid w-full grid-cols-4 gap-2 md:w-md" : "mt-5 grid grid-cols-4 gap-2")}>
                   {Array.from({ length: 4 }).map((__, statIndex) => (
                     <Skeleton key={statIndex} variant="rounded" height={44} />
                   ))}
@@ -380,7 +380,7 @@ export default function PeoplePage(): JSX.Element {
                 </div>
               </div>
 
-              <div className={cn(view === "list" ? "mt-4 grid w-full grid-cols-4 gap-2 md:mt-0 md:w-[28rem]" : "mt-5 grid grid-cols-4 gap-2")}>
+              <div className={cn(view === "list" ? "mt-4 grid w-full grid-cols-4 gap-2 md:mt-0 md:w-md" : "mt-5 grid grid-cols-4 gap-2")}>
                 <div className="rounded-lg bg-background p-2 text-center">
                   <p className="text-[10px] uppercase tracking-[0.14em] text-text/40">Articles</p>
                   <p className="mt-1 text-sm font-semibold text-text">{person.contributions.articlesCount}</p>
