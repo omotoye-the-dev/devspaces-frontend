@@ -1,27 +1,16 @@
-import { useEffect, useMemo, useState, type JSX } from "react";
+import { useEffect, useState, type JSX } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { MdOutlineSearch } from "react-icons/md";
 import { FiMenu, FiX } from "react-icons/fi";
 import { FaUser } from "react-icons/fa";
 import { HiOutlineBell } from "react-icons/hi";
 import { LuPenLine } from "react-icons/lu";
-import { Input, Button, Avatar, Skeleton } from "../common/index";
+import { MdOutlineSearch } from "react-icons/md";
+import { Button, Avatar, Skeleton } from "../common/index";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { getUserProfile, getProfileAvatar, type UserProfile } from "@/lib/api/user.api";
 import { cn } from "@/lib/utils/cn";
+import { GlobalSearchBar } from "./GlobalSearchBar";
 
-const searchSuggestions = [
-  "React hooks",
-  "TypeScript patterns",
-  "Tailwind CSS",
-  "Node.js APIs",
-  "UI design systems",
-  "Authentication flows",
-  "API integration",
-  "Frontend performance",
-  "State management",
-  "DevSpace roadmap",
-];
 
 export interface NavBarProps {
   isLoading?: boolean;
@@ -68,7 +57,6 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
   const [notifications] = useState(3);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [hasFetchedProfile, setHasFetchedProfile] = useState(false);
 
@@ -128,16 +116,6 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
       })()
     : undefined;
 
-  const filteredSuggestions = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase();
-
-    if (!term) {
-      return searchSuggestions.slice(0, 5);
-    }
-
-    return searchSuggestions.filter((item) => item.toLowerCase().includes(term));
-  }, [searchTerm]);
-
   const handleProtectedNavigation = (path: string) => {
     if (isAuthenticated) {
       navigate(path);
@@ -176,13 +154,8 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
           </div>
 
           {/* Middle: Search */}
-          <div className="w-200 px-4 hidden sm:block">
-            <Input
-              className="bg-gray-100 border-gray-300 focus:ring-primary"
-              placeholder="Search articles, tags, resources..."
-              inputSize="md"
-              leftIcon={<MdOutlineSearch className="text-text/40" />}
-            />
+          <div className="flex-1 px-4 hidden sm:block max-w-lg">
+            <GlobalSearchBar />
           </div>
 
           {/* Right: Links + Actions */}
@@ -300,68 +273,35 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
         </div>
 
         <div
-          className={`fixed inset-0 z-50 md:hidden transition-all duration-300 ease-out ${mobileSearchOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
-            }`}
-          onClick={() => {
-            setMobileSearchOpen(false);
-            setSearchTerm("");
-          }}
+          className={`fixed inset-0 z-50 md:hidden transition-all duration-300 ease-out ${
+            mobileSearchOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+          }`}
+          onClick={() => setMobileSearchOpen(false)}
         >
           <div
-            className={`absolute inset-0 bg-black/10 transition-opacity duration-500 ease-out ${mobileSearchOpen ? "opacity-100" : "opacity-0"
-              }`}
+            className={`absolute inset-0 bg-black/10 transition-opacity duration-500 ease-out ${
+              mobileSearchOpen ? "opacity-100" : "opacity-0"
+            }`}
           />
 
           <div
-            className={`relative bg-white border-b border-border shadow-sm transform transition-all duration-500 ease-out ${mobileSearchOpen ? "translate-y-0 opacity-100" : "-translate-y-3 opacity-0"
-              }`}
+            className={`relative bg-white border-b border-border shadow-sm transform transition-all duration-500 ease-out ${
+              mobileSearchOpen ? "translate-y-0 opacity-100" : "-translate-y-3 opacity-0"
+            }`}
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="px-4 pt-3 pb-2">
-              <div className="flex items-center gap-2">
-                <div className="flex-1">
-                  <Input
-                    value={searchTerm}
-                    onChange={(event) => setSearchTerm(event.target.value)}
-                    className="bg-gray-200 border-gray-300 focus:ring-primary"
-                    placeholder="Search articles, tags, resources..."
-                    inputSize="md"
-                    leftIcon={<MdOutlineSearch className="text-text/40" />}
-                  />
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMobileSearchOpen(false);
-                    setSearchTerm("");
-                  }}
-                  className="inline-flex items-center justify-center p-2 rounded-md text-text/80 hover:bg-slate-100 transition-colors"
-                  aria-label="Close search"
-                >
-                  <FiX className="w-5 h-5" />
-                </button>
+            <div className="px-4 pt-3 pb-4 flex items-center gap-2">
+              <div className="flex-1">
+                <GlobalSearchBar fullWidth />
               </div>
-
-              {mobileSearchOpen && filteredSuggestions.length > 0 && (
-                <div className="mt-3 rounded-xl border border-border bg-white shadow-sm overflow-hidden transition-all duration-500 ease-out">
-                  {filteredSuggestions.map((item) => (
-                    <button
-                      key={item}
-                      type="button"
-                      onClick={() => {
-                        setSearchTerm(item);
-                        setMobileSearchOpen(false);
-                        setSearchTerm("");
-                      }}
-                      className="flex w-full items-center justify-between px-3 py-2.5 text-left text-sm text-text/80 hover:bg-slate-50 transition-colors"
-                    >
-                      <span>{item}</span>
-                      <MdOutlineSearch className="w-4 h-4 text-text/40" />
-                    </button>
-                  ))}
-                </div>
-              )}
+              <button
+                type="button"
+                onClick={() => setMobileSearchOpen(false)}
+                className="inline-flex items-center justify-center p-2 rounded-md text-text/80 hover:bg-slate-100 transition-colors"
+                aria-label="Close search"
+              >
+                <FiX className="w-5 h-5" />
+              </button>
             </div>
           </div>
         </div>

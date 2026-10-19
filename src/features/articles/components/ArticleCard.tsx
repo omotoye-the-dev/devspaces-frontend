@@ -135,13 +135,17 @@ export function ArticleCard({
   const [liveComments, setLiveComments] = useState<number>(comments);
 
   // Re-sync if parent updates props (e.g. after a refetch)
-  useEffect(() => {
+  const [prevLikes, setPrevLikes] = useState<number>(likes);
+  if (prevLikes !== likes) {
+    setPrevLikes(likes);
     setLiveLikes(likes);
-  }, [likes]);
+  }
 
-  useEffect(() => {
+  const [prevComments, setPrevComments] = useState<number>(comments);
+  if (prevComments !== comments) {
+    setPrevComments(comments);
     setLiveComments(comments);
-  }, [comments]);
+  }
 
   // Subscribe to real-time article (post) updates
   useLiveHub<Record<string, unknown>>({

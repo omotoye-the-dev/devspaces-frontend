@@ -38,6 +38,7 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps): JSX
     if (!open) return;
     let active = true;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- loading flag for the fetch started below
     setIsLoadingTags(true);
     getTags({ pageSize: 24 })
       .then((tags) => {

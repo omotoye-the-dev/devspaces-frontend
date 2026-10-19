@@ -198,6 +198,8 @@ export default function PeoplePage(): JSX.Element {
     });
   }, [people]);
 
+  const [now] = useState(() => Date.now());
+
   const filteredPeople = useMemo(() => {
     const query = search.trim().toLowerCase();
 
@@ -208,7 +210,7 @@ export default function PeoplePage(): JSX.Element {
       const isActiveMatch =
         activeFilter === "all" ||
         (activeFilter === "active" && person.status === "online") ||
-        (activeFilter === "recent" && Number.isFinite(joinedAtTime) && Date.now() - joinedAtTime < recentCutoff);
+        (activeFilter === "recent" && Number.isFinite(joinedAtTime) && now - joinedAtTime < recentCutoff);
 
       const matchesQuery =
         query.length === 0 ||
@@ -220,7 +222,7 @@ export default function PeoplePage(): JSX.Element {
 
       return isActiveMatch && matchesQuery;
     });
-  }, [activeFilter, peopleSource, search]);
+  }, [activeFilter, peopleSource, search, now]);
 
   return (
     <div className="min-h-screen w-full bg-background text-text">
