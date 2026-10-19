@@ -25,6 +25,7 @@ import {
   PaginationDots,
   type TrendingDiscussion,
 } from "@/features/articles/components";
+import { getDiscussions } from "@/features/discussions/api/discussionApi";
 import { getUserProfile, isProfileComplete } from "@/lib/api/user.api";
 import { OnboardingModal } from "@/features/onboarding/components/OnboardingModal";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -360,32 +361,42 @@ export function HomePage(): JSX.Element {
     let active = true;
     async function loadSidebarTrending(): Promise<void> {
       try {
-        const res = await getTrendingArticles({ page: 1, pageSize: 5 });
-        if (active && res.data && res.data.length > 0) {
-          const mapped: TrendingDiscussion[] = res.data.slice(0, 5).map((item, i) => {
-            const colors = [
-              "bg-violet-500",
-              "bg-emerald-500",
-              "bg-sky-500",
-              "bg-amber-500",
-              "bg-rose-500",
-            ];
-            const author = item.author?.name || item.author?.userName || "Author";
-            return {
-              id: item.id,
-              title: item.title,
-              author,
-              timeAgo: item.createdAt
-                ? new Date(item.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-                : "Recently",
-              replies: item.commentCount ?? 0,
-              avatarColor: colors[i % colors.length],
-            };
-          });
-          setTrendingSidebarItems(mapped);
-        }
+        const data = await getDiscussions({ page: 1, pageSize: 5 });
+        if (!active) return;
+
+        const mapped: TrendingDiscussion[] = data.slice(0, 5).map((item, i) => {
+          const colors = [
+            "bg-violet-500",
+            "bg-emerald-500",
+            "bg-sky-500",
+            "bg-amber-500",
+            "bg-rose-500",
+          ];
+
+          const author = item.author?.name || item.author?.username || "Author";
+
+          return {
+            id: item.id,
+            title: item.title,
+            author,
+            username: item.author?.username,
+            avatarUrl: item.author?.avatarUrl,
+            timeAgo: item.createdAt
+              ? new Date(item.createdAt).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                })
+              : "Recently",
+            replies: item.commentsCount ?? 0,
+            avatarColor: colors[i % colors.length],
+          };
+        });
+
+        setTrendingSidebarItems(mapped);
       } catch {
-         // errors 
+        if (active) {
+          setTrendingSidebarItems([]);
+        }
       }
     }
     void loadSidebarTrending();

@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, type JSX } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   HiPlus,
   HiOutlineChatBubbleLeftRight,
@@ -33,6 +34,8 @@ import {
 } from "@/features/discussions/components";
 
 export default function DiscussionsPage(): JSX.Element {
+  const navigate = useNavigate();
+  const { id: discussionIdFromRoute } = useParams();
   const currentUserId = useAuthStore((state) => state.user?.id);
   const [discussions, setDiscussions] = useState<Discussion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -41,7 +44,8 @@ export default function DiscussionsPage(): JSX.Element {
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [selectedDiscussionId, setSelectedDiscussionId] = useState<string | null>(null);
+  const [localSelectedDiscussionId, setLocalSelectedDiscussionId] = useState<string | null>(null);
+  const selectedDiscussionId = discussionIdFromRoute ?? localSelectedDiscussionId;
 
   const refreshDiscussions = async (): Promise<void> => {
     try {
@@ -75,6 +79,32 @@ export default function DiscussionsPage(): JSX.Element {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!discussionIdFromRoute) {
+      return;
+    }
+
+    const openDiscussionFromRoute = async (): Promise<void> => {
+      try {
+        const fullDiscussion = await getDiscussionById(discussionIdFromRoute);
+        setDiscussions((current) => {
+          const exists = current.some((item) => item.id === fullDiscussion.id);
+          if (exists) {
+            return current.map((item) =>
+              item.id === fullDiscussion.id ? fullDiscussion : item,
+            );
+          }
+
+          return [fullDiscussion, ...current];
+        });
+      } catch (err: unknown) {
+        toast.error(getApiErrorMessage(err, "Unable to load the discussion details."));
+      }
+    };
+
+    void openDiscussionFromRoute();
+  }, [discussionIdFromRoute]);
 
   // Find currently active discussion for detail modal
   const selectedDiscussion = useMemo(() => {
@@ -187,9 +217,17 @@ export default function DiscussionsPage(): JSX.Element {
       const newDiscussion = await createDiscussion(data);
       await refreshDiscussions();
       toast.success("Your discussion was posted successfully!");
-      setSelectedDiscussionId(newDiscussion.id);
+      setLocalSelectedDiscussionId(newDiscussion.id);
+      navigate(`/discussions/${newDiscussion.id}`);
     } catch (err: unknown) {
       toast.error(getApiErrorMessage(err, "Unable to post your discussion."));
+    }
+  };
+
+  const handleCloseDiscussion = (): void => {
+    setLocalSelectedDiscussionId(null);
+    if (discussionIdFromRoute) {
+      navigate("/discussions");
     }
   };
 
@@ -198,7 +236,10 @@ export default function DiscussionsPage(): JSX.Element {
     const previous = discussions;
     setDiscussions((current) => current.filter((d) => d.id !== discussionId));
     if (selectedDiscussionId === discussionId) {
-      setSelectedDiscussionId(null);
+      setLocalSelectedDiscussionId(null);
+      if (discussionIdFromRoute) {
+        navigate("/discussions");
+      }
     }
 
     try {
@@ -211,7 +252,8 @@ export default function DiscussionsPage(): JSX.Element {
   };
 
   const handleOpenDetails = async (discussion: Discussion): Promise<void> => {
-    setSelectedDiscussionId(discussion.id);
+    navigate(`/discussions/${discussion.id}`);
+    setLocalSelectedDiscussionId(discussion.id);
 
     try {
       const fullDiscussion = await getDiscussionById(discussion.id);
@@ -461,7 +503,7 @@ export default function DiscussionsPage(): JSX.Element {
       <DiscussionDetailModal
         discussion={selectedDiscussion}
         open={Boolean(selectedDiscussion)}
-        onClose={() => setSelectedDiscussionId(null)}
+        onClose={handleCloseDiscussion}
         onVote={handleVote}
         onAddComment={handleAddComment}
         onVoteComment={handleVoteComment}

@@ -33,7 +33,16 @@ function unwrap<T>(response: ApiResponse<T> | T): T {
 
 function unwrapCollection(response: DiscussionCollectionResponse): Discussion[] {
   if (Array.isArray(response)) return response;
-  return response.data;
+
+  if (isRecord(response) && Array.isArray(response.data)) {
+    return response.data as Discussion[];
+  }
+
+  if (isRecord(response) && isRecord(response.data) && Array.isArray(response.data.items)) {
+    return response.data.items as Discussion[];
+  }
+
+  return [];
 }
 
 function unwrapReplies(response: ReplyCollectionResponse): DiscussionComment[] {
@@ -59,10 +68,11 @@ function normalizeAuthor(value: unknown): DiscussionAuthor {
   );
 
   const username = getString(author.username ?? author.userName, "developer");
+  const displayName = name === "DevSpace Developer" ? username : name;
 
   return {
     id: getString(author.id ?? author.userId, "unknown-author"),
-    name: name === "DevSpace Developer" ? username : name,
+    name: displayName,
     username,
     avatarUrl:
       typeof author.avatarUrl === "string" ? author.avatarUrl : undefined,
@@ -101,7 +111,10 @@ function normalizeDiscussion(value: unknown): Discussion {
   return {
     id: getString(discussion.id, `discussion-${Date.now()}`),
     title: getString(discussion.title, "Untitled discussion"),
-    content: getString(discussion.content ?? discussion.details, ""),
+    content: getString(
+      discussion.content ?? discussion.details ?? discussion.body ?? discussion.description,
+      "",
+    ),
     author: normalizeAuthor(discussion.creator ?? discussion.author ?? discussion.user),
     tags: Array.isArray(discussion.tags)
       ? discussion.tags.filter((tag): tag is string => typeof tag === "string")
@@ -119,7 +132,7 @@ function normalizeDiscussion(value: unknown): Discussion {
           : 0,
     saveCount:
       typeof discussion.saveCount === "number" ? discussion.saveCount : 0,
-    isLiked: Boolean(discussion.isLiked ?? discussion.liked),
+    isLiked: Boolean(discussion.isLiked ?? discussion.liked ?? false),
     userVote:
       discussion.userVote === "up" || discussion.userVote === "down"
         ? discussion.userVote
@@ -132,7 +145,9 @@ function normalizeDiscussion(value: unknown): Discussion {
           : comments.length,
     comments,
     isSolved: Boolean(discussion.isSolved),
-    isBookmarked: Boolean(discussion.isBookmarked ?? discussion.saved ?? discussion.isSaved),
+    isBookmarked: Boolean(
+      discussion.isBookmarked ?? discussion.saved ?? discussion.isSaved ?? false,
+    ),
   };
 }
 

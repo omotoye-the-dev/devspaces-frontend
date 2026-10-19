@@ -80,6 +80,10 @@ export const router = createBrowserRouter([
             element: <DiscussionsPage />,
           },
           {
+            path: "discussions/:id",
+            element: <DiscussionsPage />,
+          },
+          {
             path: "saved",
             element: <SavedPage />,
           },

@@ -28,6 +28,10 @@ function formatCount(count: number): string {
   return String(count);
 }
 
+function getSafeResourceCategory(category: string | null | undefined): string {
+  return category ? String(category).trim() || "general" : "general";
+}
+
 export function PopularResourcesWidget(): JSX.Element {
   const navigate = useNavigate();
   const [resources, setResources] = useState<ResourceListItem[]>([]);
@@ -45,10 +49,22 @@ export function PopularResourcesWidget(): JSX.Element {
           sortBy: "upvotes",
         });
 
-        if (active && response.data && response.data.length > 0) {
-          setResources(response.data);
-        } else if (active) {
-          setResources([]);
+        const nextResources = Array.isArray(response?.data) ? response.data : [];
+        const sortedResources = [...nextResources].sort((a, b) => {
+          const engagementA =
+            Number(a.upvoteCount ?? 0) +
+            Number(a.saveCount ?? 0) +
+            Number(a.downloadCount ?? 0);
+          const engagementB =
+            Number(b.upvoteCount ?? 0) +
+            Number(b.saveCount ?? 0) +
+            Number(b.downloadCount ?? 0);
+
+          return engagementB - engagementA || Number(b.upvoteCount ?? 0) - Number(a.upvoteCount ?? 0);
+        });
+
+        if (active) {
+          setResources(sortedResources);
         }
       } catch {
         if (active) {
@@ -107,16 +123,19 @@ export function PopularResourcesWidget(): JSX.Element {
           </div>
         ) : (
           resources.map((resource) => {
-            const color = getCategoryColor(resource.category);
-            const initials = resource.title
+            const title = resource.title || "Untitled Resource";
+            const category = getSafeResourceCategory(resource.category);
+            const color = getCategoryColor(category);
+            const initials = title
               .split(" ")
               .slice(0, 2)
-              .map((w) => w[0])
+              .map((word) => word[0])
               .join("")
-              .toUpperCase();
+              .toUpperCase() || "R";
             const uploaderLabel = resource.uploader?.username
               ? `@${resource.uploader.username}`
               : resource.uploader?.name || "DevSpace";
+            const upvoteCount = Number(resource.upvoteCount ?? 0);
 
             return (
               <div
@@ -124,7 +143,6 @@ export function PopularResourcesWidget(): JSX.Element {
                 onClick={() => handleResourceClick(resource.id)}
                 className="flex items-center gap-2.5 py-2 px-1 rounded-md hover:bg-background cursor-pointer transition-colors group/item"
               >
-                {/* Resource icon */}
                 <div
                   className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 overflow-hidden"
                   style={{ backgroundColor: color }}
@@ -132,8 +150,12 @@ export function PopularResourcesWidget(): JSX.Element {
                   {resource.logoUrl ? (
                     <img
                       src={resource.logoUrl}
-                      alt={resource.title}
+                      alt={title}
                       className="w-full h-full object-cover"
+                      onError={(event) => {
+                        const target = event.currentTarget;
+                        target.style.display = "none";
+                      }}
                     />
                   ) : (
                     <span className="text-[10px] font-bold text-white leading-none">
@@ -142,24 +164,20 @@ export function PopularResourcesWidget(): JSX.Element {
                   )}
                 </div>
 
-                {/* Resource info */}
                 <div className="flex-1 min-w-0">
                   <p className="text-[12.5px] font-semibold text-text truncate group-hover/item:text-primary transition-colors">
-                    {resource.title}
+                    {title}
                   </p>
                   <div className="flex items-center gap-1 text-[10.5px] text-text/40">
                     <span className="truncate">{uploaderLabel}</span>
                     <span>·</span>
-                    <span className="capitalize shrink-0">{resource.category}</span>
+                    <span className="capitalize shrink-0">{category}</span>
                   </div>
                 </div>
 
-                {/* Upvote count */}
                 <div className="flex items-center gap-1 text-[11px] text-text/40 shrink-0">
                   <FiArrowUp className="w-3 h-3" />
-                  <span className="font-medium">
-                    {formatCount(resource.upvoteCount)}
-                  </span>
+                  <span className="font-medium">{formatCount(upvoteCount)}</span>
                 </div>
               </div>
             );
