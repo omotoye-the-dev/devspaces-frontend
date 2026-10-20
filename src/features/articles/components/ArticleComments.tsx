@@ -7,9 +7,12 @@ import { AiFillLike, AiOutlineLike } from "react-icons/ai";
 import {
   getArticleComments,
   createComment,
+  deleteComment,
   likeComment,
   type Comment,
 } from "@/features/articles/api/articleApi";
+import { confirmDialog } from "@/hooks/useConfirmDialog";
+import { HiOutlineTrash } from "react-icons/hi2";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
 import { cn } from "@/lib/utils/cn";
 import type { AuthUser } from "@/types/auth.types";
@@ -118,6 +121,17 @@ function addReplyToComment(
   });
 }
 
+function removeCommentById(comments: DisplayComment[], id: string): DisplayComment[] {
+  return comments
+    .filter((c) => c.id !== id)
+    .map((c) => {
+      if (!c.replies || c.replies.length === 0) return c;
+      const replies = removeCommentById(c.replies, id);
+      if (replies.length === c.replies.length) return c;
+      return { ...c, replies, repliesCount: replies.length };
+    });
+}
+
 function findTopLevelComment(comments: DisplayComment[], id: string): DisplayComment | null {
   for (const c of comments) {
     if (c.id === id) return c;
@@ -222,6 +236,7 @@ interface CommentItemProps {
   onToggleReplies: (commentId: string) => void;
   formatTimeAgo: (dateString: string) => string;
   onLike: (commentId: string) => void;
+  onDelete: (commentId: string) => void;
 }
 
 function CommentItem({
@@ -239,6 +254,7 @@ function CommentItem({
   onToggleReplies,
   formatTimeAgo,
   onLike,
+  onDelete,
 }: CommentItemProps): JSX.Element {
   const indentation = Math.min(depth, 4) * 16;
 
@@ -385,6 +401,29 @@ function CommentItem({
             >
               Reply
             </button>
+
+            {/* Delete (own comments only) */}
+            {isOwnComment && (
+              <button
+                type="button"
+                onClick={() => onDelete(comment.id)}
+                aria-label="Delete comment"
+                className="
+                  flex
+                  items-center
+                  gap-1
+                  text-[9px]
+                  font-medium
+                  text-gray-500
+                  transition-colors
+                  hover:text-rose-600
+                  sm:text-[10px]
+                "
+              >
+                <HiOutlineTrash className="h-3.5 w-3.5" />
+                <span>Delete</span>
+              </button>
+            )}
           </div>
 
           {/* View/Hide Replies Toggle */}
@@ -552,6 +591,7 @@ function CommentItem({
               onToggleReplies={onToggleReplies}
               formatTimeAgo={formatTimeAgo}
               onLike={onLike}
+              onDelete={onDelete}
             />
           ))}
         </div>
@@ -892,6 +932,35 @@ export function ArticleComments({
     }
   };
 
+  const handleDeleteComment = async (commentId: string) => {
+    const target = findCommentById(comments, commentId);
+    if (!target) return;
+
+    const hasReplies = (target.replies?.length ?? 0) > 0 || (target.repliesCount ?? 0) > 0;
+
+    const confirmed = await confirmDialog({
+      title: "Delete this comment?",
+      description: hasReplies
+        ? "This will also remove its replies. This action cannot be undone."
+        : "This action cannot be undone.",
+      confirmLabel: "Delete",
+      variant: "danger",
+    });
+    if (!confirmed) return;
+
+    const previous = comments;
+    setComments((current) => removeCommentById(current, commentId));
+
+    try {
+      await deleteComment(articleId, commentId);
+      toast.success("Comment deleted");
+    } catch (err: unknown) {
+      console.error("Error deleting comment:", err);
+      setComments(previous);
+      toast.error(getApiErrorMessage(err) || "Failed to delete comment");
+    }
+  };
+
   const formatTimeAgo = (dateString: string) => {
     const now = new Date();
 
@@ -1111,6 +1180,7 @@ export function ArticleComments({
               onToggleReplies={handleToggleReplies}
               formatTimeAgo={formatTimeAgo}
               onLike={handleLikeComment}
+              onDelete={(id) => void handleDeleteComment(id)}
             />
           ))
         )}

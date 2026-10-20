@@ -3,7 +3,6 @@ import {
   HiOutlineArrowTrendingUp,
   HiOutlineClock,
   HiOutlineChatBubbleLeftRight,
-  HiOutlineQuestionMarkCircle,
   HiXMark,
 } from "react-icons/hi2";
 import { MdOutlineSearch, MdClear } from "react-icons/md";
@@ -41,11 +40,6 @@ const SORT_OPTIONS: Array<{
     id: "most_answered",
     label: "Most Answered",
     icon: <HiOutlineChatBubbleLeftRight className="w-4 h-4" />,
-  },
-  {
-    id: "unanswered",
-    label: "Unanswered",
-    icon: <HiOutlineQuestionMarkCircle className="w-4 h-4" />,
   },
 ];
 

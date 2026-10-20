@@ -21,7 +21,6 @@ import {
   FiDownload,
   FiEdit2,
 } from "react-icons/fi";
-import { BsPatchCheckFill } from "react-icons/bs";
 import { Avatar, Button, Tabs, Skeleton, EmptyState, type TabItem } from "@/components/common";
 import { EditProfileModal } from "@/features/profile/components/EditProfileModal";
 import {
@@ -407,13 +406,6 @@ export default function ProfilePage(): JSX.Element {
   const bio = (profile?.bio as string | undefined) || "";
 
   const avatarUrl = getProfileAvatar(profile) || (isOwnProfile ? undefined : firstArticleAvatar);
-
-  const isVerified = Boolean(
-    profile?.isEmailVerified ||
-    (profile as Record<string, unknown> | null)?.IsEmailVerified ||
-    profile?.isVerified ||
-    (profile as Record<string, unknown> | null)?.IsVerified,
-  );
 
   const location = (profile?.location as string | undefined) || "";
   const { websiteUrl: website, githubUrl: github, xUrl: twitter, linkedInUrl } =
@@ -811,13 +803,6 @@ export default function ProfilePage(): JSX.Element {
                       <h1 className="text-2xl sm:text-3xl font-extrabold text-text tracking-tight">
                         {displayName}
                       </h1>
-                      {isVerified && (
-                        <BsPatchCheckFill
-                          className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-blue-600 shrink-0"
-                          title="Verified member"
-                          aria-label="Verified member"
-                        />
-                      )}
                     </div>
                     {username && (
                       <p className="text-xs sm:text-sm font-medium text-text/50">@{username}</p>

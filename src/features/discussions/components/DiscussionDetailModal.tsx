@@ -1,4 +1,4 @@
-import { useState, type JSX, type FormEvent } from "react";
+import { useMemo, useState, type JSX, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import {
   HiChevronUp,
@@ -32,6 +32,8 @@ export interface DiscussionDetailModalProps {
   onToggleBookmark?: (discussionId: string) => void;
   onTagClick?: (tag: string) => void;
   onDelete?: (discussionId: string) => void;
+  onDeleteComment?: (discussionId: string, commentId: string) => void;
+  currentUserId?: string;
   isOwner?: boolean;
 }
 
@@ -45,10 +47,21 @@ export function DiscussionDetailModal({
   onToggleBookmark,
   onTagClick,
   onDelete,
+  onDeleteComment,
+  currentUserId,
   isOwner = false,
 }: DiscussionDetailModalProps): JSX.Element | null {
   const [commentText, setCommentText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Most recent replies first
+  const sortedComments = useMemo(
+    () =>
+      [...(discussion?.comments ?? [])].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      ),
+    [discussion?.comments],
+  );
 
   if (!discussion) return null;
 
@@ -86,6 +99,18 @@ export function DiscussionDetailModal({
     });
     if (confirmed) {
       onDelete?.(discussion.id);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string): Promise<void> => {
+    const confirmed = await confirmDialog({
+      title: "Delete this reply?",
+      description: "This action cannot be undone.",
+      confirmLabel: "Delete",
+      variant: "danger",
+    });
+    if (confirmed) {
+      onDeleteComment?.(discussion.id, commentId);
     }
   };
 
@@ -298,7 +323,7 @@ export function DiscussionDetailModal({
             </div>
           ) : (
             <div className="space-y-3 pt-2">
-              {discussion.comments.map((comment) => (
+              {sortedComments.map((comment) => (
                 <div
                   key={comment.id}
                   className="p-3.5 rounded-lg bg-background/40 border border-border/70 space-y-2"
@@ -347,6 +372,20 @@ export function DiscussionDetailModal({
                       )}
                       <span>{comment.upvotes}</span>
                     </button>
+
+                    {onDeleteComment &&
+                      Boolean(currentUserId) &&
+                      comment.author.id === currentUserId && (
+                        <button
+                          type="button"
+                          onClick={() => void handleDeleteComment(comment.id)}
+                          aria-label="Delete reply"
+                          className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-md text-text/50 hover:bg-rose-50 hover:text-rose-600 transition-colors cursor-pointer ml-auto"
+                        >
+                          <HiOutlineTrash className="w-4 h-4" />
+                          <span>Delete</span>
+                        </button>
+                      )}
                   </div>
                 </div>
               ))}

@@ -594,6 +594,13 @@ export async function createComment(
 }
 
 /**
+ * DELETE /api/posts/{id}/comments/{commentId}
+ */
+export async function deleteComment(postId: string, commentId: string): Promise<void> {
+  await apiClient.delete(ENDPOINTS.POSTS.COMMENT_DETAIL(postId, commentId));
+}
+
+/**
  * POST /api/posts/comments/{commentId}/like
  */
 export async function likeComment(commentId: string): Promise<void> {
