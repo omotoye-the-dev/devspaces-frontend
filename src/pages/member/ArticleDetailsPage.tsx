@@ -324,7 +324,7 @@ const handleLike = async (
     !isAuthenticated &&
     !currentUser
   ) {
-    navigate("/auth/sign-in");
+    toast.info("Please log in to like this article");
     return;
   }
 
@@ -404,7 +404,7 @@ const handleBookmark = async (
     !isAuthenticated &&
     !currentUser
   ) {
-    navigate("/auth/sign-in");
+    toast.info("Please log in to save this article");
     return;
   }
 
@@ -462,12 +462,8 @@ const handleFollowToggle =
       !isAuthenticated &&
       !currentUser
     ) {
-      toast.error(
-        "Please sign in to follow authors"
-      );
-
-      navigate(
-        "/auth/sign-in"
+      toast.info(
+        "Please log in to follow authors"
       );
 
       return;

@@ -35,6 +35,7 @@ import { getApiErrorMessage } from "@/lib/utils/apiError";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useLiveHub } from "@/hooks/useLiveHub";
 import { toast } from "@/hooks/useToast";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { cn } from "@/lib/utils/cn";
 
 function formatDate(dateStr?: string): string {
@@ -130,7 +131,10 @@ export function ResourceDetailsPage(): JSX.Element {
     },
   });
 
+  const requireAuth = useRequireAuth();
+
   const handleVoteToggle = async (): Promise<void> => {
+    if (!requireAuth("upvote this resource")) return;
     if (!resource) return;
 
     const currentVoteState = {
@@ -193,6 +197,7 @@ export function ResourceDetailsPage(): JSX.Element {
   };
 
   const handleDownvoteToggle = async (): Promise<void> => {
+    if (!requireAuth("downvote this resource")) return;
     if (!resource) return;
 
     const currentVoteState = {
@@ -255,6 +260,7 @@ export function ResourceDetailsPage(): JSX.Element {
   };
 
   const handleSaveToggle = async (): Promise<void> => {
+    if (!requireAuth("save this resource")) return;
     if (!resource) return;
     const nextSaved = !resource.isSavedByMe;
 
@@ -286,6 +292,7 @@ export function ResourceDetailsPage(): JSX.Element {
   };
 
   const handleDownload = async (partId?: string): Promise<void> => {
+    if (!requireAuth("download this resource")) return;
     if (!resource) return;
 
     if (partId) {

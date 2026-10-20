@@ -402,6 +402,8 @@ export function GlobalSearchBar({
           className={cn(
             "w-full pl-9 pr-8 py-2 text-sm rounded-lg border border-border bg-background/70",
             "placeholder:text-text/40",
+            // Hide the browser's built-in clear (X) button; we render our own
+            "[&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-cancel-button]:hidden",
             "focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50",
             "transition-all duration-150",
             inputClassName,

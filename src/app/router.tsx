@@ -16,6 +16,7 @@ import ResourcesPage from "@/pages/member/ResourcesPage";
 import ResourceDetailsPage from "@/pages/member/ResourceDetailsPage";
 import ResourceEditorPage from "@/pages/member/ResourceEditorPage";
 import ProtectedRoute from "@/components/shared/ProtectedRoute";
+import AuthGate from "@/components/shared/AuthGate";
 import ProfilePage from "@/pages/member/ProfilePage";
 import DiscussionsPage from "@/pages/member/DiscussionsPage";
 import HistoryPage from "@/pages/member/HistoryPage";
@@ -32,69 +33,63 @@ export const router = createBrowserRouter([
         index: true,
         element: <HomePage />,
       },
+      // Readable by guests; interactions are guarded inside each page
+      { path: "articles", element: <ArticlesPage /> },
+      { path: "articles/:id", element: <ArticleDetailsPage /> },
+      { path: "resources", element: <ResourcesPage /> },
+      { path: "resources/:id", element: <ResourceDetailsPage /> },
+      { path: "profile/:id", element: <ProfilePage /> },
+      { path: "people", element: <PeoplePage /> },
+      { path: "leaderboard", element: <LeaderboardPage /> },
+
+      // Backend requires auth: guests see an in-place "log in" panel
+      {
+        element: (
+          <AuthGate
+            title="Log in to join the discussions"
+            description="Browse questions, share answers and follow conversations with the DevSpace community."
+          />
+        ),
+        children: [
+          { path: "discussions", element: <DiscussionsPage /> },
+          { path: "discussions/:id", element: <DiscussionsPage /> },
+        ],
+      },
+      {
+        element: (
+          <AuthGate
+            title="Log in to see your saved items"
+            description="Articles, resources and discussions you save will show up here."
+          />
+        ),
+        children: [{ path: "saved", element: <SavedPage /> }],
+      },
+      {
+        element: (
+          <AuthGate
+            title="Log in to see your history"
+            description="Your recently viewed articles, resources and discussions will show up here."
+          />
+        ),
+        children: [{ path: "history", element: <HistoryPage /> }],
+      },
+      {
+        element: (
+          <AuthGate
+            title="Log in to view your profile"
+            description="Sign in to see and edit your profile, articles and activity."
+          />
+        ),
+        children: [{ path: "profile", element: <ProfilePage /> }],
+      },
+
+      // Creating / editing content still redirects to sign-in
       {
         element: <ProtectedRoute />,
         children: [
-          {
-            path: "articles",
-            element: <ArticlesPage />,
-          },
-          {
-            path: "resources",
-            element: <ResourcesPage />,
-          },
-          {
-            path: "resources/:id",
-            element: <ResourceDetailsPage />,
-          },
-          {
-            path: "resources/:id/edit",
-            element: <ResourceEditorPage />,
-          },
-          {
-            path: "history",
-            element: <HistoryPage />,
-          },
-          {
-            path: "articles/new",
-            element: <ArticleEditorPage />,
-          },
-          {
-            path: "articles/:id/edit",
-            element: <ArticleEditorPage />,
-          },
-          {
-            path: "profile",
-            element: <ProfilePage />,
-          },
-          {
-            path: "profile/:id",
-            element: <ProfilePage />,
-          },
-          {
-            path: "articles/:id",
-            element: <ArticleDetailsPage />,
-          },
-          {
-            path: "discussions",
-            element: <DiscussionsPage />,
-          },
-          {
-            path: "discussions/:id",
-            element: <DiscussionsPage />,
-          },
-          {
-            path: "saved",
-            element: <SavedPage />,
-          },
-          {
-            path: "people",
-            element: <PeoplePage />,
-          },
-          {
-            path: "leaderboard",
-            element: <LeaderboardPage />,
-          },
+          { path: "resources/:id/edit", element: <ResourceEditorPage /> },
+          { path: "articles/new", element: <ArticleEditorPage /> },
+          { path: "articles/:id/edit", element: <ArticleEditorPage /> },
         ],
       },
       {

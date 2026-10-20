@@ -7,6 +7,7 @@ import {
   HiHeart,
   HiOutlineFire,
   HiOutlineArrowTopRightOnSquare,
+  HiOutlineUserGroup,
 } from "react-icons/hi2";
 import { BsThreeDots } from "react-icons/bs";
 import { LuFileText, LuMessageSquare, LuPackage } from "react-icons/lu";
@@ -37,6 +38,8 @@ import type { ResourceListItem } from "@/types/resources.types";
 import { getUserProfile, isProfileComplete } from "@/lib/api/user.api";
 import { OnboardingModal } from "@/features/onboarding/components/OnboardingModal";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { LoginPrompt } from "@/components/shared/LoginPrompt";
 
 interface Author {
   name: string;
@@ -415,6 +418,7 @@ const TRENDING_FILTERS: { label: TrendingFilter; icon: JSX.Element }[] = [
 
 export function HomePage(): JSX.Element {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const requireAuth = useRequireAuth();
   // Regular feed
   const [activeTab, setActiveTab] = useState<string>("For You");
   const [articles, setArticles] = useState<ArticleFeedItem[]>(MOCK_ARTICLES);
@@ -424,6 +428,8 @@ export function HomePage(): JSX.Element {
   const nextPageRef = useRef<number>(1);
   const activeTabRef = useRef<string>("For You");
   const sentinelRef = useRef<HTMLDivElement>(null);
+  // The Following feed and Trending (posts + discussions) endpoints require a session
+  const isGuestGated = !isAuthenticated && (activeTab === "Following" || activeTab === "Trending");
 
   // Trending-specific
   const [trendingFilter, setTrendingFilter] = useState<TrendingFilter>("All");
@@ -554,6 +560,7 @@ export function HomePage(): JSX.Element {
   }, [trendingFilter, isTrendingFetchingMore, isTrendingInitLoading, updateHasMore]);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     let active = true;
     async function loadSidebarTrending(): Promise<void> {
       try {
@@ -601,11 +608,12 @@ export function HomePage(): JSX.Element {
     return () => {
       active = false;
     };
-  }, []);
+  }, [isAuthenticated]);
 
   // Tab switch
   useEffect(() => {
     activeTabRef.current = activeTab;
+    if (isGuestGated) return;
     if (activeTab === "Trending") {
       queueMicrotask(() => { void fetchTrendingInitial(); });
     } else {
@@ -615,11 +623,11 @@ export function HomePage(): JSX.Element {
         void fetchArticles(activeTab, 1, true);
       });
     }
-  }, [activeTab, fetchArticles, fetchTrendingInitial]);
+  }, [activeTab, isGuestGated, fetchArticles, fetchTrendingInitial]);
 
   // Infinite scroll — regular feed
   useEffect(() => {
-    if (activeTab === "Trending") return;
+    if (activeTab === "Trending" || isGuestGated) return;
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
     const observer = new IntersectionObserver(([entry]) => {
@@ -629,11 +637,11 @@ export function HomePage(): JSX.Element {
     }, { rootMargin: "200px" });
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [activeTab, hasMore, isFetchingMore, isLoading, fetchArticles]);
+  }, [activeTab, isGuestGated, hasMore, isFetchingMore, isLoading, fetchArticles]);
 
   // Infinite scroll — trending feed
   useEffect(() => {
-    if (activeTab !== "Trending") return;
+    if (activeTab !== "Trending" || isGuestGated) return;
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
     const observer = new IntersectionObserver(([entry]) => {
@@ -643,9 +651,10 @@ export function HomePage(): JSX.Element {
     }, { rootMargin: "250px" });
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [activeTab, isTrendingInitLoading, isTrendingFetchingMore, loadMoreTrending]);
+  }, [activeTab, isGuestGated, isTrendingInitLoading, isTrendingFetchingMore, loadMoreTrending]);
 
   const handleLike = async (id: string): Promise<void> => {
+    if (!requireAuth("like this article")) return;
     setArticles((prev) =>
       prev.map((a) =>
         a.id === id
@@ -661,19 +670,23 @@ export function HomePage(): JSX.Element {
   };
 
   const handleTrendingLikePost = async (id: string): Promise<void> => {
+    if (!requireAuth("like this article")) return;
     setTrendingPosts((prev) => prev.map((p) => p.id === id ? { ...p, liked: !p.liked, likes: p.liked ? p.likes - 1 : p.likes + 1 } : p));
     try { await likeArticle(id); } catch { /* silent */ }
   };
   const handleTrendingSavePost = async (id: string): Promise<void> => {
+    if (!requireAuth("save this article")) return;
     setTrendingPosts((prev) => prev.map((p) => (p.id === id ? { ...p, saved: !p.saved } : p)));
     try { await saveArticle(id); } catch { /* silent */ }
   };
   const handleTrendingLikeDiscussion = async (id: string): Promise<void> => {
+    if (!requireAuth("like this discussion")) return;
     setTrendingDiscussions((prev) => prev.map((d) => d.id === id ? { ...d, liked: !d.liked, upvotes: d.liked ? d.upvotes - 1 : d.upvotes + 1 } : d));
     try { await likeDiscussion(id); } catch { /* silent */ }
   };
 
   const handleSave = async (id: string): Promise<void> => {
+    if (!requireAuth("save this article")) return;
     setArticles((prev) =>
       prev.map((a) => (a.id === id ? { ...a, saved: !a.saved } : a)),
     );
@@ -715,7 +728,7 @@ export function HomePage(): JSX.Element {
           <HeroBanner />
           <FeedTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-          {activeTab === "Trending" && (
+          {activeTab === "Trending" && isAuthenticated && (
             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
               {TRENDING_FILTERS.map(({ label, icon }) => (
                 <button key={label} type="button" onClick={() => setTrendingFilter(label)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium whitespace-nowrap transition-all duration-150 cursor-pointer border ${trendingFilter === label ? "bg-primary text-white border-primary shadow-sm" : "bg-white text-text/60 border-border hover:border-primary/40 hover:text-text"}`}>{icon}{label}</button>
@@ -724,7 +737,13 @@ export function HomePage(): JSX.Element {
           )}
 
           <div className="space-y-4 min-h-75">
-            {activeTab === "Trending" ? (
+            {isGuestGated ? (
+              <LoginPrompt
+                icon={activeTab === "Following" ? <HiOutlineUserGroup className="w-6 h-6" /> : <HiOutlineFire className="w-6 h-6" />}
+                title={activeTab === "Following" ? "Log in to see posts from people you follow" : "Log in to see what's trending"}
+                description={activeTab === "Following" ? "Follow developers and their latest articles will show up here." : "Trending posts, discussions and resources from across DevSpace."}
+              />
+            ) : activeTab === "Trending" ? (
               isTrendingInitLoading ? <FeedSkeleton /> : trendingFeed.length === 0 ? (
                 <div className="bg-white border border-border rounded-lg p-10 text-center space-y-2">
                   <HiOutlineFire className="w-7 h-7 text-text/20 mx-auto mb-1" />
@@ -746,7 +765,7 @@ export function HomePage(): JSX.Element {
           </div>
 
           {/* Infinite scroll sentinel */}
-          <div ref={sentinelRef} className="h-4" aria-hidden="true" />
+          {!isGuestGated && <div ref={sentinelRef} className="h-4" aria-hidden="true" />}
 
           {/* Loading more indicator */}
           {isFetchingMore && (
@@ -785,7 +804,9 @@ export function HomePage(): JSX.Element {
         </div>
 
         <aside className="hidden lg:flex flex-col gap-4 w-72 xl:w-80 shrink-0 sticky top-6 self-start max-h-[calc(100vh-3rem)] overflow-y-auto hover-scrollbar">
-          <TrendingDiscussionsWidget discussions={trendingSidebarItems} isLoading={isSidebarLoading} />
+          {isAuthenticated && (
+            <TrendingDiscussionsWidget discussions={trendingSidebarItems} isLoading={isSidebarLoading} />
+          )}
           <PopularResourcesWidget />
         </aside>
       </div>

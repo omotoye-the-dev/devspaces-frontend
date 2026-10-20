@@ -73,6 +73,7 @@ function ResourceLiveSync({
 import type { ResourceListItem } from "@/types/resources.types";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { toast } from "@/hooks/useToast";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
 import { formatTimeAgo } from "@/lib/utils/date";
 
@@ -503,10 +504,13 @@ export default function ProfilePage(): JSX.Element {
     }
   };
 
+  const requireAuth = useRequireAuth();
+
   const handleResourceUpvote = async (
     resId: string,
     e: MouseEvent<HTMLButtonElement>,
   ): Promise<void> => {
+    if (!requireAuth("upvote this resource")) return;
     e.stopPropagation();
     const target = resources.find((r) => r.id === resId);
     if (!target) return;
@@ -580,6 +584,7 @@ export default function ProfilePage(): JSX.Element {
     resId: string,
     e: MouseEvent<HTMLButtonElement>,
   ): Promise<void> => {
+    if (!requireAuth("downvote this resource")) return;
     e.stopPropagation();
     const target = resources.find((r) => r.id === resId);
     if (!target) return;
@@ -653,6 +658,7 @@ export default function ProfilePage(): JSX.Element {
     resId: string,
     e: MouseEvent<HTMLButtonElement>,
   ): Promise<void> => {
+    if (!requireAuth("save this resource")) return;
     e.stopPropagation();
     const target = resources.find((r) => r.id === resId);
     if (!target) return;
@@ -679,7 +685,7 @@ export default function ProfilePage(): JSX.Element {
     if (!targetId || isFollowLoading) return;
 
     if (!isAuthenticated && !currentUser) {
-      toast.error("Please sign in to follow authors");
+      toast.info("Please log in to follow authors");
       return;
     }
 

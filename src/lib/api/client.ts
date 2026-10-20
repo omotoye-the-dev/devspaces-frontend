@@ -53,6 +53,12 @@ apiClient.interceptors.response.use(
 
     // Check if error is 401 Unauthorized and request has not already been retried
     if (error.response.status === 401 && originalRequest && !originalRequest._retry) {
+      // Guests have no session to expire: let the caller handle the 401 instead of
+      // showing "Session expired" and bouncing them to the sign-in page.
+      if (typeof window !== "undefined" && !localStorage.getItem("devspace_token")) {
+        return Promise.reject(error);
+      }
+
       const refreshToken =
         typeof window !== "undefined"
           ? localStorage.getItem("devspace_refresh_token")

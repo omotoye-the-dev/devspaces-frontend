@@ -28,6 +28,7 @@ import {
 import type { ResourceListItem } from "@/types/resources.types";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
 import { toast } from "@/hooks/useToast";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useLiveHub } from "@/hooks/useLiveHub";
 import {
   normalizeResourceUpdate,
@@ -307,7 +308,10 @@ export default function ResourcesPage(): JSX.Element {
   }, [resources, sortBy]);
 
   // Upvoting handler (action 0)
+  const requireAuth = useRequireAuth();
+
   const handleUpvote = async (id: string, e: MouseEvent<HTMLButtonElement>): Promise<void> => {
+    if (!requireAuth("upvote this resource")) return;
     e.stopPropagation();
     const target = resources.find((r) => r.id === id);
     if (!target) return;
@@ -379,6 +383,7 @@ export default function ResourcesPage(): JSX.Element {
 
   // Downvoting handler (action 1)
   const handleDownvote = async (id: string, e: MouseEvent<HTMLButtonElement>): Promise<void> => {
+    if (!requireAuth("downvote this resource")) return;
     e.stopPropagation();
     const target = resources.find((r) => r.id === id);
     if (!target) return;
@@ -450,6 +455,7 @@ export default function ResourcesPage(): JSX.Element {
 
   // Optimistic save / bookmark
   const handleBookmark = async (id: string, e: MouseEvent<HTMLButtonElement>): Promise<void> => {
+    if (!requireAuth("save this resource")) return;
     e.stopPropagation();
     const target = resources.find((r) => r.id === id);
     if (!target) return;
@@ -470,6 +476,10 @@ export default function ResourcesPage(): JSX.Element {
       );
       toast.error(getApiErrorMessage(err, "Failed to update saved status"));
     }
+  };
+
+  const handleOpenAddResource = (): void => {
+    if (requireAuth("add a resource")) setIsModalOpen(true);
   };
 
   const handleCardClick = (cardItem: ResourceItem): void => {
@@ -522,7 +532,7 @@ export default function ResourcesPage(): JSX.Element {
       <ResourceSidebar
         selectedCategory={selectedCategory}
         onSelectCategory={handleSelectCategory}
-        onAddResource={() => setIsModalOpen(true)}
+        onAddResource={handleOpenAddResource}
         counts={categoryCounts}
       />
 
@@ -541,7 +551,7 @@ export default function ResourcesPage(): JSX.Element {
           <Button
             size="md"
             variant="primary"
-            onClick={() => setIsModalOpen(true)}
+            onClick={handleOpenAddResource}
             className="w-full sm:w-auto shrink-0 shadow-sm"
           >
             Add Resource
@@ -730,7 +740,7 @@ export default function ResourcesPage(): JSX.Element {
                         Clear Filters
                       </Button>
                     )}
-                    <Button variant="primary" size="md" onClick={() => setIsModalOpen(true)}>
+                    <Button variant="primary" size="md" onClick={handleOpenAddResource}>
                       Add Resource
                     </Button>
                   </div>

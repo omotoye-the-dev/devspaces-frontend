@@ -9,6 +9,7 @@ import type { Article } from "@/features/articles/api/articleApi";
 import { ArticleCard } from "@/features/articles/components/ArticleCard";
 import { ArticleSearchDropdown } from "@/features/articles/components/ArticleSearchDropdown";
 import { toast } from "@/hooks/useToast";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
 
 interface DisplayArticle {
@@ -319,7 +320,10 @@ export function ArticlesPage(): JSX.Element {
     };
   }, [hasNextPage, isLoading, isLoadingMore, loadMore]);
 
+  const requireAuth = useRequireAuth();
+
   const toggleBookmark = async (id: string) => {
+    if (!requireAuth("save this article")) return;
     const isCurrentlyBookmarked = bookmarkedIds.has(id);
     setBookmarkedIds((prev) => {
       const next = new Set(prev);
@@ -354,6 +358,7 @@ export function ArticlesPage(): JSX.Element {
   };
 
   const handleLike = async (articleId: string): Promise<void> => {
+    if (!requireAuth("like this article")) return;
     const target = articles.find((a) => a.id === articleId);
     if (!target) return;
 

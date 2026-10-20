@@ -115,13 +115,9 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
       })()
     : undefined;
 
-  const handleProtectedNavigation = (path: string) => {
-    if (isAuthenticated) {
-      navigate(path);
-      return;
-    }
-
-    navigate("/auth/sign-in");
+  // Guests can browse every section; gated pages show their own "log in" panel
+  const handleNavigation = (path: string) => {
+    navigate(path);
   };
 
   const handlePrimaryAction = () => {
@@ -168,7 +164,7 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
                   "whitespace-nowrap transition-colors",
                   isArticlesActive && "font-semibold text-primary bg-primary/10 border-primary/20",
                 )}
-                onClick={() => handleProtectedNavigation("/articles")}
+                onClick={() => handleNavigation("/articles")}
               >
                 Articles
               </Button>
@@ -180,7 +176,7 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
                   "whitespace-nowrap transition-colors",
                   isResourcesActive && "font-semibold text-primary bg-primary/10 border-primary/20",
                 )}
-                onClick={() => handleProtectedNavigation("/resources")}
+                onClick={() => handleNavigation("/resources")}
               >
                 Resources
               </Button>
@@ -192,7 +188,7 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
                   "whitespace-nowrap transition-colors",
                   isDiscussionsActive && "font-semibold text-primary bg-primary/10 border-primary/20",
                 )}
-                onClick={() => handleProtectedNavigation("/discussions")}
+                onClick={() => handleNavigation("/discussions")}
               >
                 Discussions
               </Button>
@@ -323,7 +319,7 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
                 type="button"
                 onClick={() => {
                   setMobileOpen(false);
-                  handleProtectedNavigation("/articles");
+                  handleNavigation("/articles");
                 }}
                 className={cn(
                   "px-2 py-2 text-left rounded-md transition-colors",
@@ -339,7 +335,7 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
                 type="button"
                 onClick={() => {
                   setMobileOpen(false);
-                  handleProtectedNavigation("/resources");
+                  handleNavigation("/resources");
                 }}
                 className={cn(
                   "px-2 py-2 text-left rounded-md transition-colors",
@@ -355,7 +351,7 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
                 type="button"
                 onClick={() => {
                   setMobileOpen(false);
-                  handleProtectedNavigation("/discussions");
+                  handleNavigation("/discussions");
                 }}
                 className={cn(
                   "px-2 py-2 text-left rounded-md transition-colors",

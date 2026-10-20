@@ -294,7 +294,7 @@ export function Sidebar({
       else if (id === "history") navigate("/history");
       else if (id === "write") navigate("/articles/new");
       else if (id === "saved" || id === "bookmarks") navigate("/saved");
-      else if (id === "profile") navigate("/profile");
+      else if (id === "profile") navigate(isAuthenticated ? "/profile" : "/auth/sign-in");
     }
   };
 
@@ -585,7 +585,7 @@ export function Sidebar({
               >
                 {item.icon}
               </span>
-              <span>{item.label}</span>
+              <span>{item.id === "profile" && !isAuthenticated ? "Log in" : item.label}</span>
             </button>
           );
         })}
