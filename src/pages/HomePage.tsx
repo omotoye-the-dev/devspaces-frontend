@@ -433,9 +433,13 @@ export function HomePage(): JSX.Element {
   const trendingPostsPageRef = useRef(1);
   const trendingDiscPageRef = useRef(1);
   const trendingResPageRef = useRef(1);
-  const hasMoreTrendingPostsRef = useRef(true);
-  const hasMoreTrendingDiscRef = useRef(true);
-  const hasMoreTrendingResRef = useRef(true);
+  // Ref for use inside callbacks, mirrored into state so render never reads the ref
+  const hasMoreTrendingRef = useRef({ posts: true, disc: true, res: true });
+  const [hasMoreTrending, setHasMoreTrending] = useState({ posts: true, disc: true, res: true });
+  const updateHasMore = useCallback((key: "posts" | "disc" | "res", value: boolean): void => {
+    hasMoreTrendingRef.current = { ...hasMoreTrendingRef.current, [key]: value };
+    setHasMoreTrending(hasMoreTrendingRef.current);
+  }, []);
   const [isTrendingInitLoading, setIsTrendingInitLoading] = useState(false);
   const [isTrendingFetchingMore, setIsTrendingFetchingMore] = useState(false);
 
@@ -484,7 +488,7 @@ export function HomePage(): JSX.Element {
   const fetchTrendingInitial = useCallback(async () => {
     setIsTrendingInitLoading(true);
     trendingPostsPageRef.current = 1; trendingDiscPageRef.current = 1; trendingResPageRef.current = 1;
-    hasMoreTrendingPostsRef.current = true; hasMoreTrendingDiscRef.current = true; hasMoreTrendingResRef.current = true;
+    updateHasMore("posts", true); updateHasMore("disc", true); updateHasMore("res", true);
     const [postsRes, discRes, resRes] = await Promise.allSettled([
       getTrendingArticles({ page: 1, pageSize: PAGE_SIZE }),
       getDiscussions({ sort: "trending", page: 1, pageSize: PAGE_SIZE }),
@@ -493,29 +497,29 @@ export function HomePage(): JSX.Element {
     if (postsRes.status === "fulfilled") {
       const data = postsRes.value.data ?? [];
       setTrendingPosts(data.map(mapTrendingPost));
-      hasMoreTrendingPostsRef.current = postsRes.value.pagination?.hasNext ?? data.length >= PAGE_SIZE;
-      if (hasMoreTrendingPostsRef.current) trendingPostsPageRef.current = 2;
-    } else { setTrendingPosts([]); hasMoreTrendingPostsRef.current = false; }
+      updateHasMore("posts", postsRes.value.pagination?.hasNext ?? data.length >= PAGE_SIZE);
+      if (hasMoreTrendingRef.current.posts) trendingPostsPageRef.current = 2;
+    } else { setTrendingPosts([]); updateHasMore("posts", false); }
     if (discRes.status === "fulfilled") {
       const data = discRes.value;
       setTrendingDiscussions(data.map(mapTrendingDiscussion));
-      hasMoreTrendingDiscRef.current = data.length >= PAGE_SIZE;
-      if (hasMoreTrendingDiscRef.current) trendingDiscPageRef.current = 2;
-    } else { setTrendingDiscussions([]); hasMoreTrendingDiscRef.current = false; }
+      updateHasMore("disc", data.length >= PAGE_SIZE);
+      if (hasMoreTrendingRef.current.disc) trendingDiscPageRef.current = 2;
+    } else { setTrendingDiscussions([]); updateHasMore("disc", false); }
     if (resRes.status === "fulfilled") {
       const data = resRes.value.data ?? [];
       setTrendingResources(data.map(mapTrendingResource));
-      hasMoreTrendingResRef.current = resRes.value.pagination?.hasNext ?? data.length >= PAGE_SIZE;
-      if (hasMoreTrendingResRef.current) trendingResPageRef.current = 2;
-    } else { setTrendingResources([]); hasMoreTrendingResRef.current = false; }
+      updateHasMore("res", resRes.value.pagination?.hasNext ?? data.length >= PAGE_SIZE);
+      if (hasMoreTrendingRef.current.res) trendingResPageRef.current = 2;
+    } else { setTrendingResources([]); updateHasMore("res", false); }
     setIsTrendingInitLoading(false);
-  }, []);
+  }, [updateHasMore]);
 
   const loadMoreTrending = useCallback(async () => {
     if (isTrendingFetchingMore || isTrendingInitLoading) return;
-    const needPosts = (trendingFilter === "All" || trendingFilter === "Posts") && hasMoreTrendingPostsRef.current;
-    const needDisc = (trendingFilter === "All" || trendingFilter === "Discussions") && hasMoreTrendingDiscRef.current;
-    const needRes = (trendingFilter === "All" || trendingFilter === "Resources") && hasMoreTrendingResRef.current;
+    const needPosts = (trendingFilter === "All" || trendingFilter === "Posts") && hasMoreTrendingRef.current.posts;
+    const needDisc = (trendingFilter === "All" || trendingFilter === "Discussions") && hasMoreTrendingRef.current.disc;
+    const needRes = (trendingFilter === "All" || trendingFilter === "Resources") && hasMoreTrendingRef.current.res;
     if (!needPosts && !needDisc && !needRes) return;
     setIsTrendingFetchingMore(true);
     const promises: Promise<void>[] = [];
@@ -524,30 +528,30 @@ export function HomePage(): JSX.Element {
       promises.push(getTrendingArticles({ page, pageSize: PAGE_SIZE }).then((res) => {
         const data = res.data ?? [];
         setTrendingPosts((prev) => [...prev, ...data.map(mapTrendingPost).filter((p) => !prev.some((x) => x.id === p.id))]);
-        hasMoreTrendingPostsRef.current = res.pagination?.hasNext ?? data.length >= PAGE_SIZE;
-        if (hasMoreTrendingPostsRef.current) trendingPostsPageRef.current = page + 1;
-      }).catch(() => { hasMoreTrendingPostsRef.current = false; }));
+        updateHasMore("posts", res.pagination?.hasNext ?? data.length >= PAGE_SIZE);
+        if (hasMoreTrendingRef.current.posts) trendingPostsPageRef.current = page + 1;
+      }).catch(() => { updateHasMore("posts", false); }));
     }
     if (needDisc) {
       const page = trendingDiscPageRef.current;
       promises.push(getDiscussions({ sort: "trending", page, pageSize: PAGE_SIZE }).then((data) => {
         setTrendingDiscussions((prev) => [...prev, ...data.map(mapTrendingDiscussion).filter((d) => !prev.some((x) => x.id === d.id))]);
-        hasMoreTrendingDiscRef.current = data.length >= PAGE_SIZE;
-        if (hasMoreTrendingDiscRef.current) trendingDiscPageRef.current = page + 1;
-      }).catch(() => { hasMoreTrendingDiscRef.current = false; }));
+        updateHasMore("disc", data.length >= PAGE_SIZE);
+        if (hasMoreTrendingRef.current.disc) trendingDiscPageRef.current = page + 1;
+      }).catch(() => { updateHasMore("disc", false); }));
     }
     if (needRes) {
       const page = trendingResPageRef.current;
       promises.push(getResources({ page, pageSize: PAGE_SIZE } as Parameters<typeof getResources>[0]).then((res) => {
         const data = res.data ?? [];
         setTrendingResources((prev) => [...prev, ...data.map(mapTrendingResource).filter((r) => !prev.some((x) => x.id === r.id))]);
-        hasMoreTrendingResRef.current = res.pagination?.hasNext ?? data.length >= PAGE_SIZE;
-        if (hasMoreTrendingResRef.current) trendingResPageRef.current = page + 1;
-      }).catch(() => { hasMoreTrendingResRef.current = false; }));
+        updateHasMore("res", res.pagination?.hasNext ?? data.length >= PAGE_SIZE);
+        if (hasMoreTrendingRef.current.res) trendingResPageRef.current = page + 1;
+      }).catch(() => { updateHasMore("res", false); }));
     }
     await Promise.allSettled(promises);
     setIsTrendingFetchingMore(false);
-  }, [trendingFilter, isTrendingFetchingMore, isTrendingInitLoading]);
+  }, [trendingFilter, isTrendingFetchingMore, isTrendingInitLoading, updateHasMore]);
 
   useEffect(() => {
     let active = true;
@@ -603,11 +607,13 @@ export function HomePage(): JSX.Element {
   useEffect(() => {
     activeTabRef.current = activeTab;
     if (activeTab === "Trending") {
-      void fetchTrendingInitial();
+      queueMicrotask(() => { void fetchTrendingInitial(); });
     } else {
       nextPageRef.current = 1;
-      setHasMore(true);
-      queueMicrotask(() => { void fetchArticles(activeTab, 1, true); });
+      queueMicrotask(() => {
+        setHasMore(true);
+        void fetchArticles(activeTab, 1, true);
+      });
     }
   }, [activeTab, fetchArticles, fetchTrendingInitial]);
 
@@ -638,10 +644,6 @@ export function HomePage(): JSX.Element {
     observer.observe(sentinel);
     return () => observer.disconnect();
   }, [activeTab, isTrendingInitLoading, isTrendingFetchingMore, loadMoreTrending]);
-
-  const handleTabChange = (tab: string): void => {
-    setActiveTab(tab);
-  };
 
   const handleLike = async (id: string): Promise<void> => {
     setArticles((prev) =>
@@ -697,7 +699,14 @@ export function HomePage(): JSX.Element {
     return merged;
   })();
 
-  const trendingHasMore = trendingFilter === "Posts" ? hasMoreTrendingPostsRef.current : trendingFilter === "Discussions" ? hasMoreTrendingDiscRef.current : trendingFilter === "Resources" ? hasMoreTrendingResRef.current : (hasMoreTrendingPostsRef.current || hasMoreTrendingDiscRef.current || hasMoreTrendingResRef.current);
+  const trendingHasMore =
+    trendingFilter === "Posts"
+      ? hasMoreTrending.posts
+      : trendingFilter === "Discussions"
+        ? hasMoreTrending.disc
+        : trendingFilter === "Resources"
+          ? hasMoreTrending.res
+          : hasMoreTrending.posts || hasMoreTrending.disc || hasMoreTrending.res;
 
   return (
     <div className="w-full max-w-300 mx-auto font-inter">
