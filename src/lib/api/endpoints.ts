@@ -45,6 +45,8 @@ export const ENDPOINTS = {
     COMMENTS: (id: string) => `${API_BASE_URL}/api/posts/${id}/comments`,
 
     CREATE_COMMENT: (id: string) => `${API_BASE_URL}/api/posts/${id}/comment`,
+    COMMENT_DETAIL: (id: string, commentId: string) =>
+      `${API_BASE_URL}/api/posts/${id}/comments/${commentId}`,
     LIKE_COMMENT: (commentId: string) => `${API_BASE_URL}/api/posts/comments/${commentId}/like`,
 
     SAVE: (id: string) => `${API_BASE_URL}/api/posts/${id}/save`,
@@ -53,6 +55,13 @@ export const ENDPOINTS = {
     COVER_IMAGE: (id: string) => `${API_BASE_URL}/api/posts/${id}/cover-image`,
     TRENDING: `${API_BASE_URL}/api/posts/trending`,
     FOLLOWING: `${API_BASE_URL}/api/posts/feed/following`,
+  },
+  NOTIFICATIONS: {
+    LIST: `${API_BASE_URL}/api/notifications`,
+    UNREAD_COUNT: `${API_BASE_URL}/api/notifications/unread-count`,
+    READ_ALL: `${API_BASE_URL}/api/notifications/read-all`,
+    READ: (id: string) => `${API_BASE_URL}/api/notifications/${id}/read`,
+    DETAIL: (id: string) => `${API_BASE_URL}/api/notifications/${id}`,
   },
   TAGS: {
     LIST: `${API_BASE_URL}/api/tags`,

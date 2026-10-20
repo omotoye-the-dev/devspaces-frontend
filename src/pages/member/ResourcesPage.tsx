@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, Fragment, type JSX, type MouseEvent } from "react";
+import { useState, useEffect, useCallback, useMemo, Fragment, type JSX, type MouseEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Button,
@@ -8,7 +8,7 @@ import {
   Skeleton,
   type SelectOption,
 } from "@/components/common";
-import { MdOutlineSearch, MdClear } from "react-icons/md";
+import { MdOutlineSearch, MdClear, MdSort } from "react-icons/md";
 import { FiFolder, FiChevronLeft, FiChevronRight, FiRefreshCw } from "react-icons/fi";
 import { ResourceSidebar } from "@/features/resources/components/ResourceSidebar";
 import { CategoryPills } from "@/features/resources/components/CategoryPills";
@@ -35,10 +35,10 @@ import {
 } from "@/features/resources/utils/liveUpdate";
 
 const SORT_OPTIONS: SelectOption[] = [
-  { label: "Sort by: Most Upvoted", value: "most_upvoted" },
-  { label: "Sort by: Most Recent", value: "most_recent" },
-  { label: "Sort by: Most Downloaded", value: "most_downloaded" },
-  { label: "Sort by: Most Saved", value: "most_saved" },
+  { label: "Most Upvoted", value: "most_upvoted" },
+  { label: "Most Recent", value: "most_recent" },
+  { label: "Most Downloaded", value: "most_downloaded" },
+  { label: "Most Saved", value: "most_saved" },
 ];
 
 const CATEGORY_PARAM_MAP: Record<string, string> = {
@@ -288,6 +288,23 @@ export default function ResourcesPage(): JSX.Element {
       isMounted = false;
     };
   }, [selectedCategory, sortBy, debouncedSearch, page, refreshKey]);
+
+  // Sort the loaded page client-side so a sort change reorders instantly,
+  // before the server refetch lands (and live count updates keep order correct).
+  const sortedResources = useMemo<ResourceListItem[]>(() => {
+    const byDateDesc = (a: ResourceListItem, b: ResourceListItem): number =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+
+    const comparators: Record<string, (a: ResourceListItem, b: ResourceListItem) => number> = {
+      most_upvoted: (a, b) => (b.upvoteCount ?? 0) - (a.upvoteCount ?? 0),
+      most_recent: byDateDesc,
+      most_downloaded: (a, b) => (b.downloadCount ?? 0) - (a.downloadCount ?? 0),
+      most_saved: (a, b) => (b.saveCount ?? 0) - (a.saveCount ?? 0),
+    };
+
+    const compare = comparators[sortBy] ?? comparators.most_upvoted;
+    return [...resources].sort((a, b) => compare(a, b) || byDateDesc(a, b));
+  }, [resources, sortBy]);
 
   // Upvoting handler (action 0)
   const handleUpvote = async (id: string, e: MouseEvent<HTMLButtonElement>): Promise<void> => {
@@ -566,10 +583,12 @@ export default function ResourcesPage(): JSX.Element {
             <Select
               fullWidth={false}
               selectSize="md"
+              aria-label="Sort resources"
+              leftIcon={<MdSort className="w-full h-full" />}
               value={sortBy}
               onChange={(e) => handleSelectSort(e.target.value)}
               options={SORT_OPTIONS}
-              className="border-border rounded-lg text-xs sm:text-sm font-semibold bg-white text-text/80 shadow-2xs w-full sm:min-w-48"
+              className="border-border hover:border-primary/50 rounded-lg text-xs sm:text-sm font-semibold bg-white text-text/80 shadow-2xs w-full sm:min-w-48"
             />
           </div>
         </div>
@@ -644,7 +663,7 @@ export default function ResourcesPage(): JSX.Element {
             /* Resource Cards Grid */
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-                {resources.map((item) => (
+                {sortedResources.map((item) => (
                   <Fragment key={item.id}>
                     <ResourceLiveSync id={item.id} onCounts={handleLiveCounts} />
                     <ResourceCard

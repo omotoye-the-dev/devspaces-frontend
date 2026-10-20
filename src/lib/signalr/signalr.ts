@@ -57,3 +57,31 @@ export function createLiveHubConnection(
     )
     .build();
 }
+
+/**
+ * Creates a SignalR connection to the per-user notifications hub.
+ * The backend pushes new notifications on the "ReceiveNotification" event.
+ */
+export function createNotificationHubConnection(token?: string | null): signalR.HubConnection {
+  const baseUrl = (API_BASE_URL || "").replace(/\/+$/, "");
+
+  return new signalR.HubConnectionBuilder()
+    .withUrl(`${baseUrl}/ws/hub/notifications`, {
+      accessTokenFactory: () => {
+        if (token) return token;
+        return (
+          (typeof window !== "undefined"
+            ? localStorage.getItem("devspace_token")
+            : null) || ""
+        );
+      },
+      transport:
+        signalR.HttpTransportType.WebSockets |
+        signalR.HttpTransportType.LongPolling,
+    })
+    .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
+    .configureLogging(
+      import.meta.env.DEV ? signalR.LogLevel.Information : signalR.LogLevel.Warning,
+    )
+    .build();
+}

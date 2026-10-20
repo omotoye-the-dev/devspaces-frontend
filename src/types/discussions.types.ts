@@ -35,7 +35,7 @@ export interface Discussion {
   isBookmarked?: boolean;
 }
 
-export type DiscussionSortOption = "trending" | "latest" | "most_answered" | "unanswered";
+export type DiscussionSortOption = "trending" | "latest" | "most_answered";
 
 export interface CreateDiscussionDto {
   title: string;

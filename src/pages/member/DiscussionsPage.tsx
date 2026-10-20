@@ -15,6 +15,7 @@ import {
   createDiscussion,
   createDiscussionReply,
   deleteDiscussion,
+  deleteDiscussionReply,
   getDiscussionById,
   getDiscussions,
   likeDiscussion,
@@ -259,6 +260,33 @@ export default function DiscussionsPage(): JSX.Element {
     }
   };
 
+  // Handle deleting a reply
+  const handleDeleteComment = async (
+    discussionId: string,
+    commentId: string,
+  ): Promise<void> => {
+    const previous = discussions;
+    setDiscussions((current) =>
+      current.map((discussion) =>
+        discussion.id === discussionId
+          ? {
+              ...discussion,
+              comments: discussion.comments.filter((c) => c.id !== commentId),
+              commentsCount: Math.max(0, discussion.commentsCount - 1),
+            }
+          : discussion,
+      ),
+    );
+
+    try {
+      await deleteDiscussionReply(discussionId, commentId);
+      toast.success("Reply deleted");
+    } catch (err: unknown) {
+      setDiscussions(previous);
+      toast.error(getApiErrorMessage(err, "Unable to delete this reply."));
+    }
+  };
+
   // Handle voting on a comment
   const handleVoteComment = async (
     discussionId: string,
@@ -370,10 +398,6 @@ export default function DiscussionsPage(): JSX.Element {
 
         if (activeSort === "most_answered") {
           return b.commentsCount - a.commentsCount;
-        }
-
-        if (activeSort === "unanswered") {
-          return a.commentsCount - b.commentsCount;
         }
 
         // Default: latest
@@ -583,6 +607,8 @@ export default function DiscussionsPage(): JSX.Element {
         onToggleBookmark={handleToggleBookmark}
         onTagClick={(tag) => setSelectedTag(tag)}
         onDelete={handleDeleteDiscussion}
+        onDeleteComment={handleDeleteComment}
+        currentUserId={currentUserId}
         isOwner={Boolean(selectedDiscussion) && selectedDiscussion?.author.id === currentUserId}
       />
 

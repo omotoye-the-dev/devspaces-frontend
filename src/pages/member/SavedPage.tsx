@@ -12,6 +12,7 @@ import {
   likeDiscussion,
   saveDiscussion,
   deleteDiscussion,
+  deleteDiscussionReply,
   createDiscussionReply,
   voteDiscussionReply,
 } from "@/features/discussions/api/discussionApi";
@@ -308,6 +309,32 @@ export default function SavedPage(): JSX.Element {
     }
   };
 
+  const handleDeleteDiscussionComment = async (
+    discussionId: string,
+    commentId: string,
+  ): Promise<void> => {
+    const prev = discussions;
+    setDiscussions((current) =>
+      current.map((d) =>
+        d.id === discussionId
+          ? {
+              ...d,
+              comments: d.comments.filter((c) => c.id !== commentId),
+              commentsCount: Math.max(0, d.commentsCount - 1),
+            }
+          : d,
+      ),
+    );
+
+    try {
+      await deleteDiscussionReply(discussionId, commentId);
+      toast.success("Reply deleted");
+    } catch {
+      setDiscussions(prev);
+      toast.error("Unable to delete this reply.");
+    }
+  };
+
   const handleDeleteDiscussion = async (discussionId: string): Promise<void> => {
     const prev = discussions;
     setDiscussions((p) => p.filter((d) => d.id !== discussionId));
@@ -565,6 +592,10 @@ export default function SavedPage(): JSX.Element {
         }
         onToggleBookmark={(id) => void handleUnsaveDiscussion(id)}
         onDelete={(id) => void handleDeleteDiscussion(id)}
+        onDeleteComment={(discussionId, commentId) =>
+          void handleDeleteDiscussionComment(discussionId, commentId)
+        }
+        currentUserId={currentUserId}
         isOwner={Boolean(selectedDiscussion) && selectedDiscussion?.author.id === currentUserId}
       />
     </div>

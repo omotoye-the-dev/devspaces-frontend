@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, useRef, useCallback, type JSX } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { MdOutlineSearch } from "react-icons/md";
-import { LuPenLine, LuLayoutGrid, LuLayoutList, LuX } from "react-icons/lu";
+import { cn } from "@/lib/utils/cn";
+import { LuPenLine, LuLayoutGrid, LuLayoutList, LuX, LuArrowUp } from "react-icons/lu";
 import { Button, Input, Skeleton } from "@/components/common";
 import { getFeedArticles, likeArticle, saveArticle } from "@/features/articles/api/articleApi";
 import type { Article } from "@/features/articles/api/articleApi";
@@ -141,6 +142,23 @@ export function ArticlesPage(): JSX.Element {
   const [page, setPage] = useState<number>(1);
   const [hasNextPage, setHasNextPage] = useState<boolean>(true);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const topRef = useRef<HTMLDivElement | null>(null);
+  const [showScrollTop, setShowScrollTop] = useState<boolean>(false);
+
+  // Show the floating arrow once the layout's scroll container is scrolled a bit
+  useEffect(() => {
+    let scroller: HTMLElement | null = topRef.current?.parentElement ?? null;
+    while (scroller && !/(auto|scroll)/.test(getComputedStyle(scroller).overflowY)) {
+      scroller = scroller.parentElement;
+    }
+    const target: HTMLElement | Window = scroller ?? window;
+    const getTop = (): number => (scroller ? scroller.scrollTop : window.scrollY);
+
+    const onScroll = (): void => setShowScrollTop(getTop() > 400);
+    onScroll();
+    target.addEventListener("scroll", onScroll, { passive: true });
+    return () => target.removeEventListener("scroll", onScroll);
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
@@ -415,7 +433,7 @@ export function ArticlesPage(): JSX.Element {
   }, [articles, searchQuery, selectedCategory]);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 font-inter">
+    <div ref={topRef} className="max-w-4xl mx-auto space-y-6 font-inter">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-border rounded-2xl p-5 sm:p-6 shadow-xs">
         <div className="space-y-1">
@@ -742,6 +760,27 @@ export function ArticlesPage(): JSX.Element {
           </div>
         </>
       )}
+
+      {/* Floating scroll-to-top */}
+      <button
+        type="button"
+        onClick={() => topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+        className={cn(
+          "fixed bottom-20 right-4 md:bottom-8 md:right-8 z-40 p-3 rounded-full border-2 border-blue-500 bg-white text-blue-600 shadow-lg transition-all duration-200 hover:bg-blue-50",
+          showScrollTop
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 translate-y-2 pointer-events-none",
+        )}
+        aria-label="Scroll to top"
+        aria-hidden={!showScrollTop}
+        tabIndex={showScrollTop ? 0 : -1}
+      >
+        <span
+          aria-hidden="true"
+          className="absolute -inset-0.5 rounded-full border-2 border-blue-500 animate-ping pointer-events-none"
+        />
+        <LuArrowUp className="relative w-4 h-4" />
+      </button>
     </div>
   );
 }

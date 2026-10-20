@@ -2,7 +2,6 @@ import { useEffect, useState, type JSX } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { FiMenu, FiX } from "react-icons/fi";
 import { FaUser } from "react-icons/fa";
-import { HiOutlineBell } from "react-icons/hi";
 import { LuPenLine } from "react-icons/lu";
 import { MdOutlineSearch } from "react-icons/md";
 import { Button, Avatar, Skeleton } from "../common/index";
@@ -10,6 +9,7 @@ import { useAuthStore } from "@/stores/useAuthStore";
 import { getUserProfile, getProfileAvatar, type UserProfile } from "@/lib/api/user.api";
 import { cn } from "@/lib/utils/cn";
 import { GlobalSearchBar } from "./GlobalSearchBar";
+import { NotificationBell } from "@/features/notifications/components/NotificationBell";
 
 
 export interface NavBarProps {
@@ -54,7 +54,6 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
   const navigate = useNavigate();
   const location = useLocation();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const [notifications] = useState(3);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -213,21 +212,7 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
 
               {isAuthenticated && (
                 <>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Notifications"
-                    className="relative inline-flex items-center justify-center p-2 rounded-md text-text/80 hover:bg-slate-100 transition-colors shrink-0"
-                  >
-                    <HiOutlineBell className="w-6 h-6" />
-
-                    {notifications > 0 && (
-                      <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white bg-blue-500 rounded-full">
-                        {notifications}
-                      </span>
-                    )}
-                  </Button>
+                  <NotificationBell />
 
                   {isProfileLoading ? (
                     <Skeleton variant="circular" width={40} height={40} />
@@ -247,6 +232,8 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
 
             {/* Mobile Actions */}
             <div className="flex items-center gap-2 md:hidden">
+              {isAuthenticated && <NotificationBell />}
+
               <button
                 type="button"
                 onClick={() => {
