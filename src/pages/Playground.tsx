@@ -46,10 +46,10 @@ export default function Playground(): JSX.Element {
       localStorage.removeItem("devspace_refresh");
       logoutStore();
       success("Logged out successfully", {
-        description: "You have been redirected to the sign-in page.",
+        description: "You have been redirected to the home page.",
       });
       setIsLoggingOut(false);
-      navigate("/auth/sign-in");
+      navigate("/");
     }
   };
 
