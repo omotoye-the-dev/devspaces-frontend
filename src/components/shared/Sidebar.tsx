@@ -265,7 +265,7 @@ export function Sidebar({
   const handleLogout = (): void => {
     logout();
     toast.success("Logged out successfully");
-    navigate("/auth/sign-in");
+    navigate("/");
   };
 
   const handleToggleCollapse = (e: React.MouseEvent<HTMLButtonElement>): void => {
