@@ -1,6 +1,7 @@
 import type { JSX } from "react";
 import { useNavigate } from "react-router-dom";
 import { HiOutlineArrowTrendingUp, HiOutlineChatBubbleOvalLeft } from "react-icons/hi2";
+import { Skeleton } from "@/components/common";
 
 export interface TrendingDiscussion {
   id: string;
@@ -15,8 +16,10 @@ export interface TrendingDiscussion {
 
 export function TrendingDiscussionsWidget({
   discussions,
+  isLoading = false,
 }: {
   discussions?: TrendingDiscussion[];
+  isLoading?: boolean;
 }): JSX.Element {
   const navigate = useNavigate();
   const items = discussions ?? [];
@@ -38,7 +41,18 @@ export function TrendingDiscussionsWidget({
       </div>
 
       <div className="space-y-0.5">
-        {items.length === 0 ? (
+        {isLoading ? (
+          Array.from({ length: 5 }).map((_, idx) => (
+            <div key={idx} className="flex items-start gap-2.5 py-2 px-1">
+              <Skeleton variant="circular" width={28} height={28} className="shrink-0 mt-0.5" />
+              <div className="flex-1 space-y-1.5 min-w-0">
+                <Skeleton variant="text" width="85%" height={12} />
+                <Skeleton variant="text" width="55%" height={10} />
+              </div>
+              <Skeleton variant="text" width={24} height={12} className="shrink-0 mt-1" />
+            </div>
+          ))
+        ) : items.length === 0 ? (
           <p className="text-[12px] text-text/50 py-2">No trending discussions yet.</p>
         ) : (
           items.map((discussion) => (
