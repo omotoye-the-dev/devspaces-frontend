@@ -15,6 +15,7 @@ import { Avatar, Tag, Skeleton } from "@/components/common";
 import {
   getFeedArticles,
   getFollowingArticles,
+  getPersonalizedArticles,
   getTrendingArticles,
   likeArticle,
   saveArticle,
@@ -476,8 +477,24 @@ export function HomePage(): JSX.Element {
     if (isInitial) setIsLoading(true); else setIsFetchingMore(true);
     try {
       let response: { data: Article[]; pagination?: Pagination };
-      if (tab === "Following") response = await getFollowingArticles({ page, pageSize: PAGE_SIZE });
-      else response = await getFeedArticles({ page, pageSize: PAGE_SIZE });
+      if (tab === "Following") {
+        response = await getFollowingArticles({ page, pageSize: PAGE_SIZE });
+      } else if (tab === "For You") {
+        if (isAuthenticated) {
+          try {
+            response = await getPersonalizedArticles({ page, pageSize: PAGE_SIZE });
+            if (isInitial && (!response.data || response.data.length === 0)) {
+              response = await getFeedArticles({ page, pageSize: PAGE_SIZE });
+            }
+          } catch {
+            response = await getFeedArticles({ page, pageSize: PAGE_SIZE });
+          }
+        } else {
+          response = await getFeedArticles({ page, pageSize: PAGE_SIZE });
+        }
+      } else {
+        response = await getFeedArticles({ page, pageSize: PAGE_SIZE });
+      }
       const incoming = response.data?.map(mapApiArticleToFeedItem) ?? [];
       const paginationInfo = response.pagination;
       if (isInitial) { setArticles(incoming.length > 0 ? incoming : (tab === "For You" ? MOCK_ARTICLES : [])); }
@@ -489,7 +506,7 @@ export function HomePage(): JSX.Element {
       if (isInitial) setArticles(tab === "For You" ? MOCK_ARTICLES : []);
       setHasMore(false);
     } finally { if (isInitial) setIsLoading(false); else setIsFetchingMore(false); }
-  }, []);
+  }, [isAuthenticated]);
 
   const fetchTrendingInitial = useCallback(async () => {
     setIsTrendingInitLoading(true);

@@ -179,6 +179,53 @@ export async function getArticles(params?: GetFeedParams): Promise<Article[]> {
 }
 
 /**
+ * GET /api/posts/feed/personalized (paginated personalized feed)
+ */
+export async function getPersonalizedArticles(
+  params?: GetFeedParams,
+): Promise<{ data: Article[]; pagination?: Pagination }> {
+  const queryParams = params
+    ? {
+        ...params,
+        ...(params.page !== undefined ? { page: params.page, pageNumber: params.page } : {}),
+      }
+    : undefined;
+
+  const response = await apiClient.get<
+    | FeedResponse
+    | Article[]
+    | {
+        data?: Article[];
+        pagination?: Pagination;
+      }
+  >(ENDPOINTS.POSTS.PERSONALIZED, { params: queryParams });
+
+  if (Array.isArray(response.data)) {
+    return { data: response.data };
+  }
+
+  if (response.data && typeof response.data === "object") {
+    const res = response.data as FeedResponse;
+    if (Array.isArray(res.data)) {
+      return {
+        data: res.data,
+        pagination: res.pagination,
+      };
+    }
+  }
+
+  return { data: [] };
+}
+
+/**
+ * GET /api/posts/feed/personalized
+ */
+export async function getPersonalizedPosts(params?: GetFeedParams): Promise<Article[]> {
+  const result = await getPersonalizedArticles(params);
+  return result.data;
+}
+
+/**
  * GET /api/posts/my-posts
  */
 export async function getMyPosts(): Promise<Article[]> {

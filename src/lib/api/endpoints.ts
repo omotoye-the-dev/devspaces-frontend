@@ -37,6 +37,7 @@ export const ENDPOINTS = {
 
   POSTS: {
     FEED: `${API_BASE_URL}/api/posts/feed`,
+    PERSONALIZED: `${API_BASE_URL}/api/posts/feed/personalized`,
     MY_POSTS: `${API_BASE_URL}/api/posts/my-posts`,
 
     CREATE: `${API_BASE_URL}/api/posts`,
