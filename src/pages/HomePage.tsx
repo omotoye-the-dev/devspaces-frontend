@@ -88,56 +88,6 @@ interface TrendingResourceItem {
 type TrendingFeedItem = TrendingPostItem | TrendingDiscussionItem | TrendingResourceItem;
 type TrendingFilter = "All" | "Posts" | "Discussions" | "Resources";
 
-const MOCK_ARTICLES: ArticleFeedItem[] = [
-  {
-    id: "1",
-    author: {
-      name: "Aisha Khan",
-      title: "Senior Frontend Engineer @ Acme Co.",
-      badge: "Staff",
-    },
-    date: "May 12",
-    title: "Designing resilient React applications with TanStack Query",
-    description:
-      "Learn practical patterns for data fetching, caching, mutations, and background synchronization that make your React apps feel fast and dependable.",
-    tags: [
-      { label: "React", variant: "primary" },
-      { label: "TanStack Query", variant: "teal" },
-      { label: "TypeScript", variant: "neutral" },
-      { label: "Performance", variant: "outline" },
-    ],
-    likes: 412,
-    comments: 36,
-    readTime: "8 min read",
-    coverImage: "/article-react-tanstack.jpg",
-    liked: false,
-    saved: false,
-  },
-  {
-    id: "2",
-    author: {
-      name: "Marcus Lee",
-      title: "Backend Engineer @ ShipFast",
-    },
-    date: "May 9",
-    title: "What I learned deploying Node.js with blue-green releases",
-    description:
-      "A practical guide to zero-downtime deployments using blue-green strategy, Health checks, and automatic rollback with real-world gotchas.",
-    tags: [
-      { label: "Node.js", variant: "teal" },
-      { label: "DevOps", variant: "primary" },
-      { label: "Docker", variant: "neutral" },
-      { label: "CI/CD", variant: "outline" },
-    ],
-    likes: 298,
-    comments: 24,
-    readTime: "10 min read",
-    coverImage: "/article-nodejs-deploy.jpg",
-    liked: false,
-    saved: false,
-  },
-];
-
 function mapApiArticleToFeedItem(art: Article): ArticleFeedItem {
   const authorName = art.author?.name || art.author?.userName || art.authorName || "DevSpace Author";
   const authorTitle = art.author?.userName ? `@${art.author.userName}` : "Developer";
@@ -422,7 +372,7 @@ export function HomePage(): JSX.Element {
   const requireAuth = useRequireAuth();
   // Regular feed
   const [activeTab, setActiveTab] = useState<string>("For You");
-  const [articles, setArticles] = useState<ArticleFeedItem[]>(MOCK_ARTICLES);
+  const [articles, setArticles] = useState<ArticleFeedItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isFetchingMore, setIsFetchingMore] = useState<boolean>(false);
   const [hasMore, setHasMore] = useState<boolean>(true);
@@ -497,13 +447,13 @@ export function HomePage(): JSX.Element {
       }
       const incoming = response.data?.map(mapApiArticleToFeedItem) ?? [];
       const paginationInfo = response.pagination;
-      if (isInitial) { setArticles(incoming.length > 0 ? incoming : (tab === "For You" ? MOCK_ARTICLES : [])); }
+      if (isInitial) { setArticles(incoming); }
       else { setArticles((prev) => [...prev, ...incoming.filter((a) => !prev.some((p) => p.id === a.id))]); }
       const more = paginationInfo?.hasNext ?? (incoming.length === PAGE_SIZE);
       setHasMore(more);
       if (more) nextPageRef.current = page + 1;
     } catch {
-      if (isInitial) setArticles(tab === "For You" ? MOCK_ARTICLES : []);
+      if (isInitial) setArticles([]);
       setHasMore(false);
     } finally { if (isInitial) setIsLoading(false); else setIsFetchingMore(false); }
   }, [isAuthenticated]);
