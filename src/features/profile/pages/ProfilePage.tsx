@@ -1,152 +1,31 @@
-import { useState, useEffect, useMemo, useCallback, type JSX, type MouseEvent } from "react";
-import { Link, useParams, useNavigate } from "react-router-dom";
-import {
-  FiMapPin,
-  FiLink,
-  FiGithub,
-  FiTwitter,
-  FiLinkedin,
-  FiShare2,
-  FiMail,
-  FiUsers,
-  FiUserPlus,
-  FiFileText,
-  FiBookOpen,
-  FiActivity,
-  FiUser,
-  FiFolder,
-  FiCheck,
-  FiArrowUp,
-  FiArrowDown,
-  FiDownload,
-  FiEdit2,
-} from "react-icons/fi";
-import { Avatar, Button, Tabs, Skeleton, EmptyState, type TabItem } from "@/shared/ui";
+import { useState, useEffect, useMemo, type JSX } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { FiFileText, FiFolder, FiActivity, FiUser } from "react-icons/fi";
+import { Tabs, type TabItem } from "@/shared/ui";
 import { EditProfileModal } from "@/features/profile/components/EditProfileModal";
 import {
-  getUserProfile,
   formatProfileName,
   getProfileAvatar,
   getProfileLinks,
   followAuthor,
   getUserActivity,
   getUserAbout,
-  type UserProfile,
   type UserActivityItem,
   type UserAboutInfo,
 } from "@/features/profile/api/user.api";
-import { getArticles, getMyPosts, type Article } from "@/features/articles/api/articleApi";
-import { ArticleCard } from "@/features/articles/components/ArticleCard";
-import { getResources, voteResource, saveResource } from "@/features/resources/api/resources.api";
-import { calculateVoteTransition, applyVoteResponse } from "@/features/resources/utils/voteHelper";
-import { ResourceCard, type ResourceItem } from "@/features/resources/components/ResourceCard";
-import { useLiveHub } from "@/shared/hooks/useLiveHub";
-import {
-  normalizeResourceUpdate,
-  type ResourceCounts,
-} from "@/features/resources/utils/liveUpdate";
-
-function ResourceLiveSync({
-  id,
-  onCounts,
-}: {
-  id: string;
-  onCounts: (id: string, counts: ResourceCounts) => void;
-}): null {
-  useLiveHub({
-    type: "resource",
-    id,
-    onUpdate: (data) => {
-      const counts = normalizeResourceUpdate(data);
-      if (counts) onCounts(id, counts);
-    },
-  });
-  return null;
-}
-import type { ResourceListItem } from "@/features/resources/types/resources.types";
+import type { ResourceItem } from "@/features/resources/components/ResourceCard";
 import { useAuthStore } from "@/store";
 import { toast } from "@/shared/hooks/useToast";
-import { useRequireAuth } from "@/features/auth/hooks/useRequireAuth";
 import { getApiErrorMessage } from "@/shared/lib/utils/apiError";
-import { formatTimeAgo } from "@/shared/lib/utils/date";
-
-function describeActivity(item: UserActivityItem): string {
-  const type = item.targetType.toLowerCase();
-  const article = type === "article" || type === "post";
-  const typeLabel = article
-    ? "article"
-    : type === "resource"
-      ? "resource"
-      : type === "discussion"
-        ? "discussion"
-        : type;
-  const articleIndicator = article ? "an" : "a";
-
-  switch (item.action) {
-    case "Read":
-      return `Viewed ${articleIndicator} ${typeLabel}`;
-    case "Liked":
-      return `Liked ${articleIndicator} ${typeLabel}`;
-    case "Saved":
-      return `Saved ${articleIndicator} ${typeLabel}`;
-    case "Commented":
-      return `Commented on ${articleIndicator} ${typeLabel}`;
-    case "Published":
-      return `Published a new ${typeLabel}`;
-    default:
-      return `${item.action} ${articleIndicator} ${typeLabel}`;
-  }
-}
-
-function getActivityLink(item: UserActivityItem): string | undefined {
-  if (!item.targetId) return undefined;
-  const type = item.targetType.toLowerCase();
-  if (type === "article" || type === "post") return `/articles/${item.targetId}`;
-  if (type === "resource") return `/resources/${item.targetId}`;
-  return undefined;
-}
-
-function formatDate(dateStr?: string): string {
-  if (!dateStr) return "";
-  try {
-    const d = new Date(dateStr);
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    }).format(d);
-  } catch {
-    return dateStr;
-  }
-}
-
-function mapToResourceCardItem(item: ResourceListItem): ResourceItem {
-  const upvotes = item.upvoteCount ?? 0;
-  const downvotes = item.downvoteCount ?? 0;
-  const isUpvoted = Boolean(item.isUpvotedByMe);
-  const isDownvoted = Boolean(item.isDownvotedByMe);
-
-  return {
-    id: item.id,
-    title: item.title,
-    description: item.description,
-    category: item.category,
-    icon: item.logoUrl || undefined,
-    url: item.externalUrl || undefined,
-    tags: (item.tags || []).map((t) => (typeof t === "string" ? t : t.name)),
-    author: {
-      id: item.uploader?.userId,
-      name: item.uploader?.name || item.uploader?.username || "DevSpace Contributor",
-      avatarUrl: item.uploader?.avatarUrl || undefined,
-    },
-    updatedAt: formatDate(item.createdAt),
-    upvotesCount: upvotes,
-    downvotesCount: downvotes,
-    isUpvoted,
-    isDownvoted,
-    isBookmarked: item.isSavedByMe,
-  };
-}
+import { getStatNumber } from "@/features/profile/utils/profileHelpers";
+import { useProfileData } from "@/features/profile/hooks/useProfileData";
+import { useProfileResourceActions } from "@/features/profile/hooks/useProfileResourceActions";
+import { ProfileHeader } from "@/features/profile/components/profile-page/ProfileHeader";
+import { ProfileHeaderSkeleton } from "@/features/profile/components/profile-page/ProfileHeaderSkeleton";
+import { ProfileArticlesTab } from "@/features/profile/components/profile-page/ProfileArticlesTab";
+import { ProfileResourcesTab } from "@/features/profile/components/profile-page/ProfileResourcesTab";
+import { ProfileActivityTab } from "@/features/profile/components/profile-page/ProfileActivityTab";
+import { ProfileAboutTab } from "@/features/profile/components/profile-page/ProfileAboutTab";
 
 type ProfileTab = "articles" | "resources" | "activity" | "about";
 
@@ -156,14 +35,9 @@ export default function ProfilePage(): JSX.Element {
   const currentUser = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [articles, setArticles] = useState<Article[]>([]);
-  const [resources, setResources] = useState<ResourceListItem[]>([]);
   const [activeTab, setActiveTab] = useState<ProfileTab>("articles");
-  const [isFollowing, setIsFollowing] = useState<boolean>(false);
   const [isFollowLoading, setIsFollowLoading] = useState<boolean>(false);
   const [followersOffset, setFollowersOffset] = useState<number>(0);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [activities, setActivities] = useState<UserActivityItem[]>([]);
   const [activityLoadedForUserId, setActivityLoadedForUserId] = useState<string | null>(null);
   const [aboutStats, setAboutStats] = useState<UserAboutInfo | null>(null);
@@ -177,158 +51,16 @@ export default function ProfilePage(): JSX.Element {
     (currentUser?.username && id === currentUser.username),
   );
 
-  const [prevId, setPrevId] = useState<string | undefined>(id);
-  if (id !== prevId) {
-    setPrevId(id);
-    setIsLoading(true);
-  }
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadData(): Promise<void> {
-      try {
-        const profileRes = await getUserProfile(id);
-        if (cancelled) return;
-
-        setProfile(profileRes);
-        const isFollowedInitial =
-          typeof profileRes.following === "boolean"
-            ? profileRes.following
-            : typeof profileRes.isFollowing === "boolean"
-              ? profileRes.isFollowing
-              : false;
-        setIsFollowing(isFollowedInitial);
-
-        // Determine if this is the logged-in user's own profile
-        const myId = currentUser?.id || (profileRes.id as string | undefined);
-        const myUsername = (
-          currentUser?.username ||
-          currentUser?.userName ||
-          (profileRes.username as string | undefined) ||
-          (profileRes.userName as string | undefined)
-        )?.toLowerCase();
-
-        const isViewingSelf = Boolean(
-          !id ||
-          id === "me" ||
-          (myId && id === myId) ||
-          (myUsername && id.toLowerCase() === myUsername) ||
-          (currentUser?.id && profileRes.id && currentUser.id === profileRes.id),
-        );
-
-        let userArticles: Article[] = [];
-        let userResources: ResourceListItem[] = [];
-
-        // ── 1. Fetch Articles ───────────────────────────────────────────
-        if (isViewingSelf) {
-          try {
-            const myPosts = await getMyPosts();
-            if (Array.isArray(myPosts) && myPosts.length > 0) {
-              userArticles = myPosts;
-            }
-          } catch {
-            // Fall back to feed filtering
-          }
-
-          if (userArticles.length === 0) {
-            try {
-              const allPosts = await getArticles();
-              if (Array.isArray(allPosts)) {
-                userArticles = allPosts.filter((art) => {
-                  const authorId = art.author?.id || art.authorId;
-                  const authorUsername = (
-                    art.author?.userName || art.author?.username
-                  )?.toLowerCase();
-                  if (myId && authorId && authorId === myId) return true;
-                  if (myUsername && authorUsername && authorUsername === myUsername) return true;
-                  return false;
-                });
-              }
-            } catch {
-              // Fallback silently
-            }
-          }
-        } else {
-          try {
-            const allPosts = await getArticles();
-            if (Array.isArray(allPosts)) {
-              const targetId = (profileRes.id as string | undefined) || id;
-              const targetUsername = (
-                (profileRes.userName || profileRes.username) as string | undefined
-              )?.toLowerCase();
-              const targetName = (profileRes.name || profileRes.fullName)?.toLowerCase();
-
-              userArticles = allPosts.filter((art) => {
-                const authorId = art.author?.id || art.authorId;
-                const authorUsername = (
-                  art.author?.userName || art.author?.username
-                )?.toLowerCase();
-                const authorName = (art.author?.name || art.authorName)?.toLowerCase();
-
-                if (targetId && authorId && authorId === targetId) return true;
-                if (targetUsername && authorUsername && authorUsername === targetUsername)
-                  return true;
-                if (targetName && authorName && authorName === targetName) return true;
-                return false;
-              });
-            }
-          } catch {
-            // Fallback silently
-          }
-        }
-
-        // ── 2. Fetch Resources ──────────────────────────────────────────
-        try {
-          const targetResId = isViewingSelf ? myId : (profileRes.id as string | undefined) || id;
-          const targetResUsername = isViewingSelf
-            ? myUsername
-            : ((profileRes.userName || profileRes.username) as string | undefined)?.toLowerCase();
-
-          // Try querying getResources with uploaderId filter
-          const resQuery = await getResources({
-            uploaderId: targetResId,
-            pageSize: 50,
-          });
-
-          if (Array.isArray(resQuery.data) && resQuery.data.length > 0) {
-            userResources = resQuery.data;
-          } else {
-            // Fall back to querying feed and filtering by uploader
-            const allRes = await getResources({ pageSize: 50 });
-            if (Array.isArray(allRes.data)) {
-              userResources = allRes.data.filter((r) => {
-                const uploaderId = r.uploader?.userId;
-                const uploaderUsername = r.uploader?.username?.toLowerCase();
-                if (targetResId && uploaderId && uploaderId === targetResId) return true;
-                if (targetResUsername && uploaderUsername && uploaderUsername === targetResUsername)
-                  return true;
-                return false;
-              });
-            }
-          }
-        } catch {
-          // Fallback silently
-        }
-
-        if (!cancelled) {
-          setArticles(userArticles);
-          setResources(userResources);
-        }
-      } catch {
-        // Keep fallback data gracefully on network error
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    void loadData();
-    return () => {
-      cancelled = true;
-    };
-  }, [id, isOwnProfile, currentUser?.id, currentUser?.username, currentUser?.userName]);
+  const {
+    profile,
+    setProfile,
+    articles,
+    resources,
+    setResources,
+    isFollowing,
+    setIsFollowing,
+    isLoading,
+  } = useProfileData(id, isOwnProfile);
 
   const targetUserId =
     (profile?.id as string | undefined) || id || (isOwnProfile ? currentUser?.id : undefined);
@@ -419,17 +151,6 @@ export default function ProfilePage(): JSX.Element {
     linkedInUrl,
   } = getProfileLinks(profile);
 
-  const getStatNumber = (...candidates: unknown[]): number => {
-    for (const val of candidates) {
-      if (typeof val === "number" && !isNaN(val)) return val;
-      if (typeof val === "string" && val.trim() !== "") {
-        const parsed = parseInt(val, 10);
-        if (!isNaN(parsed)) return parsed;
-      }
-    }
-    return 0;
-  };
-
   const rawFollowers =
     activeAboutStats?.followersCount ??
     getStatNumber(
@@ -462,19 +183,6 @@ export default function ProfilePage(): JSX.Element {
   );
   const resourcesCount = resources.length > 0 ? resources.length : rawResourcesStat;
 
-  const totalResourceUpvotes = useMemo(
-    () => resources.reduce((acc, r) => acc + (r.upvoteCount || 0), 0),
-    [resources],
-  );
-  const totalResourceDownloads = useMemo(
-    () => resources.reduce((acc, r) => acc + (r.downloadCount || 0), 0),
-    [resources],
-  );
-  const totalResourceDownvotes = useMemo(
-    () => resources.reduce((acc, r) => acc + (r.downvoteCount || 0), 0),
-    [resources],
-  );
-
   const profileTabs: TabItem[] = useMemo(
     () => [
       {
@@ -495,202 +203,18 @@ export default function ProfilePage(): JSX.Element {
     [articlesCount, resourcesCount],
   );
 
-  const handleLiveResourceCounts = useCallback((id: string, counts: ResourceCounts): void => {
-    setResources((prev) =>
-      prev.map((r) =>
-        r.id === id
-          ? {
-              ...r,
-              upvoteCount: counts.upvoteCount ?? r.upvoteCount,
-              downvoteCount: counts.downvoteCount ?? r.downvoteCount,
-              saveCount: counts.saveCount ?? r.saveCount,
-            }
-          : r,
-      ),
-    );
-  }, []);
+  const {
+    handleLiveResourceCounts,
+    handleResourceUpvote,
+    handleResourceDownvote,
+    handleResourceBookmark,
+  } = useProfileResourceActions(resources, setResources);
 
   const handleResourceClick = (cardItem: ResourceItem): void => {
     if (isOwnProfile) {
       navigate(`/resources/${cardItem.id}/edit`);
     } else {
       navigate(`/resources/${cardItem.id}`);
-    }
-  };
-
-  const requireAuth = useRequireAuth();
-
-  const handleResourceUpvote = async (
-    resId: string,
-    e: MouseEvent<HTMLButtonElement>,
-  ): Promise<void> => {
-    if (!requireAuth("upvote this resource")) return;
-    e.stopPropagation();
-    const target = resources.find((r) => r.id === resId);
-    if (!target) return;
-
-    const currentVoteState = {
-      upvoteCount: target.upvoteCount ?? 0,
-      downvoteCount: target.downvoteCount ?? 0,
-      isUpvotedByMe: Boolean(target.isUpvotedByMe),
-      isDownvotedByMe: Boolean(target.isDownvotedByMe),
-    };
-
-    const transition = calculateVoteTransition(currentVoteState, 0);
-    if (!transition.allowed) {
-      if (transition.reason) {
-        toast.info(transition.reason);
-      }
-      return;
-    }
-
-    // Optimistic update
-    setResources((prev) =>
-      prev.map((r) =>
-        r.id === resId
-          ? {
-              ...r,
-              isUpvotedByMe: transition.optimisticState.isUpvotedByMe,
-              isDownvotedByMe: transition.optimisticState.isDownvotedByMe,
-              upvoteCount: transition.optimisticState.upvoteCount,
-              downvoteCount: transition.optimisticState.downvoteCount,
-            }
-          : r,
-      ),
-    );
-
-    try {
-      const res = await voteResource(resId, 0);
-      const reconciled = applyVoteResponse(transition.optimisticState, res.data);
-      setResources((prev) =>
-        prev.map((r) =>
-          r.id === resId
-            ? {
-                ...r,
-                isUpvotedByMe: reconciled.isUpvotedByMe,
-                isDownvotedByMe: reconciled.isDownvotedByMe,
-                upvoteCount: reconciled.upvoteCount,
-                downvoteCount: reconciled.downvoteCount,
-              }
-            : r,
-        ),
-      );
-    } catch (err: unknown) {
-      // Rollback
-      setResources((prev) =>
-        prev.map((r) =>
-          r.id === resId
-            ? {
-                ...r,
-                isUpvotedByMe: currentVoteState.isUpvotedByMe,
-                isDownvotedByMe: currentVoteState.isDownvotedByMe,
-                upvoteCount: currentVoteState.upvoteCount,
-                downvoteCount: currentVoteState.downvoteCount,
-              }
-            : r,
-        ),
-      );
-      toast.error(getApiErrorMessage(err, "Failed to record vote"));
-    }
-  };
-
-  const handleResourceDownvote = async (
-    resId: string,
-    e: MouseEvent<HTMLButtonElement>,
-  ): Promise<void> => {
-    if (!requireAuth("downvote this resource")) return;
-    e.stopPropagation();
-    const target = resources.find((r) => r.id === resId);
-    if (!target) return;
-
-    const currentVoteState = {
-      upvoteCount: target.upvoteCount ?? 0,
-      downvoteCount: target.downvoteCount ?? 0,
-      isUpvotedByMe: Boolean(target.isUpvotedByMe),
-      isDownvotedByMe: Boolean(target.isDownvotedByMe),
-    };
-
-    const transition = calculateVoteTransition(currentVoteState, 1);
-    if (!transition.allowed) {
-      if (transition.reason) {
-        toast.info(transition.reason);
-      }
-      return;
-    }
-
-    // Optimistic update
-    setResources((prev) =>
-      prev.map((r) =>
-        r.id === resId
-          ? {
-              ...r,
-              isUpvotedByMe: transition.optimisticState.isUpvotedByMe,
-              isDownvotedByMe: transition.optimisticState.isDownvotedByMe,
-              upvoteCount: transition.optimisticState.upvoteCount,
-              downvoteCount: transition.optimisticState.downvoteCount,
-            }
-          : r,
-      ),
-    );
-
-    try {
-      const res = await voteResource(resId, 1);
-      const reconciled = applyVoteResponse(transition.optimisticState, res.data);
-      setResources((prev) =>
-        prev.map((r) =>
-          r.id === resId
-            ? {
-                ...r,
-                isUpvotedByMe: reconciled.isUpvotedByMe,
-                isDownvotedByMe: reconciled.isDownvotedByMe,
-                upvoteCount: reconciled.upvoteCount,
-                downvoteCount: reconciled.downvoteCount,
-              }
-            : r,
-        ),
-      );
-    } catch (err: unknown) {
-      // Rollback
-      setResources((prev) =>
-        prev.map((r) =>
-          r.id === resId
-            ? {
-                ...r,
-                isUpvotedByMe: currentVoteState.isUpvotedByMe,
-                isDownvotedByMe: currentVoteState.isDownvotedByMe,
-                upvoteCount: currentVoteState.upvoteCount,
-                downvoteCount: currentVoteState.downvoteCount,
-              }
-            : r,
-        ),
-      );
-      toast.error(getApiErrorMessage(err, "Failed to record downvote"));
-    }
-  };
-
-  const handleResourceBookmark = async (
-    resId: string,
-    e: MouseEvent<HTMLButtonElement>,
-  ): Promise<void> => {
-    if (!requireAuth("save this resource")) return;
-    e.stopPropagation();
-    const target = resources.find((r) => r.id === resId);
-    if (!target) return;
-
-    const nextSaved = !target.isSavedByMe;
-
-    setResources((prev) =>
-      prev.map((r) => (r.id === resId ? { ...r, isSavedByMe: nextSaved } : r)),
-    );
-
-    try {
-      await saveResource(resId, nextSaved);
-      toast.success(nextSaved ? "Saved to your bookmarks" : "Removed from bookmarks");
-    } catch (err: unknown) {
-      setResources((prev) =>
-        prev.map((r) => (r.id === resId ? { ...r, isSavedByMe: !nextSaved } : r)),
-      );
-      toast.error(getApiErrorMessage(err, "Failed to update saved status"));
     }
   };
 
@@ -758,267 +282,29 @@ export default function ProfilePage(): JSX.Element {
     <div className="max-w-6xl mx-auto space-y-6 pb-16 font-inter">
       {/* ── Profile Header Card ───────────────────────────────────────── */}
       {isLoading ? (
-        <section className="relative bg-white border border-border/70 rounded-2xl md:rounded-3xl shadow-xs overflow-hidden">
-          <div className="h-28 sm:h-32 bg-slate-100 animate-pulse" />
-          <div className="px-6 pb-6 sm:px-8 sm:pb-8 -mt-14 sm:-mt-16">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 sm:gap-6 flex-1 min-w-0">
-                <Skeleton
-                  variant="circular"
-                  width={112}
-                  height={112}
-                  className="ring-4 ring-white rounded-full shrink-0 shadow-md"
-                />
-                <div className="space-y-2 flex-1 min-w-0 w-full">
-                  <Skeleton variant="text" width={200} height={28} />
-                  <Skeleton variant="text" width={110} height={16} />
-                  <Skeleton variant="text" width="85%" height={16} />
-                  <div className="flex items-center gap-3 pt-1">
-                    <Skeleton variant="text" width={80} height={14} />
-                    <Skeleton variant="text" width={100} height={14} />
-                  </div>
-                </div>
-              </div>
-              <div className="lg:pl-8 lg:border-l lg:border-border/60 shrink-0 w-full sm:w-auto">
-                <div className="grid grid-cols-2 divide-x divide-y divide-border/60 rounded-2xl bg-white/80 overflow-hidden text-center min-w-60 sm:min-w-67.5">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="p-3.5 sm:p-4 flex flex-col items-center justify-center gap-1.5"
-                    >
-                      <Skeleton variant="circular" width={18} height={18} />
-                      <Skeleton variant="text" width={40} height={22} />
-                      <Skeleton variant="text" width={50} height={12} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+        <ProfileHeaderSkeleton />
       ) : (
-        <section className="relative bg-white border border-border/70 rounded-2xl md:rounded-3xl shadow-xs overflow-hidden">
-          {/* Soft atmospheric gradient banner */}
-          <div className="h-28 sm:h-32 bg-linear-to-r from-blue-100/60 via-purple-100/40 to-indigo-100/30" />
-
-          <div className="px-6 pb-6 sm:px-8 sm:pb-8 -mt-14 sm:-mt-16">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-              {/* Left: Avatar + Details */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 sm:gap-6 flex-1 min-w-0">
-                {/* Shared Avatar Component with 2xl size & status dot */}
-                <Avatar
-                  src={avatarUrl}
-                  alt={displayName}
-                  name={displayName}
-                  size="2xl"
-                  status="online"
-                  href={false}
-                  className="ring-4 ring-white shadow-md shrink-0"
-                />
-
-                {/* User Identity & Info */}
-                <div className="space-y-2 flex-1 min-w-0">
-                  <div>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <h1 className="text-2xl sm:text-3xl font-extrabold text-text tracking-tight">
-                        {displayName}
-                      </h1>
-                    </div>
-                    {username && (
-                      <p className="text-xs sm:text-sm font-medium text-text/50">@{username}</p>
-                    )}
-                  </div>
-
-                  {bio && (
-                    <p className="text-xs sm:text-sm text-text/80 leading-relaxed max-w-2xl">
-                      {bio}
-                    </p>
-                  )}
-
-                  {/* Social & Meta Links */}
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-text/60 pt-0.5">
-                    {location && (
-                      <span className="flex items-center gap-1">
-                        <FiMapPin className="w-3.5 h-3.5 text-text/40 shrink-0" />
-                        <span>{location}</span>
-                      </span>
-                    )}
-
-                    {website && (
-                      <>
-                        {location && <span className="text-border/80 hidden sm:inline">|</span>}
-                        <a
-                          href={`https://${website.replace(/^https?:\/\//, "")}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-blue-600 hover:underline font-medium"
-                        >
-                          <FiLink className="w-3.5 h-3.5 shrink-0" />
-                          <span>{website}</span>
-                        </a>
-                      </>
-                    )}
-
-                    {github && (
-                      <>
-                        {(location || website) && (
-                          <span className="text-border/80 hidden sm:inline">|</span>
-                        )}
-                        <a
-                          href={`https://${github.replace(/^https?:\/\//, "")}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-text/70 hover:text-text font-medium"
-                        >
-                          <FiGithub className="w-3.5 h-3.5 shrink-0" />
-                          <span>{github}</span>
-                        </a>
-                      </>
-                    )}
-
-                    {twitter && (
-                      <>
-                        {(location || website || github) && (
-                          <span className="text-border/80 hidden sm:inline">|</span>
-                        )}
-                        <a
-                          href={
-                            twitter.startsWith("http")
-                              ? twitter
-                              : `https://x.com/${twitter.replace("@", "")}`
-                          }
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-[#1DA1F2] hover:underline font-medium"
-                        >
-                          <FiTwitter className="w-3.5 h-3.5 shrink-0" />
-                          <span>{twitter}</span>
-                        </a>
-                      </>
-                    )}
-
-                    {linkedInUrl && (
-                      <>
-                        {(location || website || github || twitter) && (
-                          <span className="text-border/80 hidden sm:inline">|</span>
-                        )}
-                        <a
-                          href={
-                            linkedInUrl.startsWith("http") ? linkedInUrl : `https://${linkedInUrl}`
-                          }
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-[#0A66C2] hover:underline font-medium"
-                        >
-                          <FiLinkedin className="w-3.5 h-3.5 shrink-0" />
-                          <span>LinkedIn</span>
-                        </a>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Action Buttons using shared Button component */}
-                  <div className="flex items-center gap-2.5 pt-2">
-                    {!isOwnProfile && (
-                      <Button
-                        variant={isFollowing ? "secondary" : "primary"}
-                        size="sm"
-                        isLoading={isFollowLoading}
-                        onClick={handleFollowToggle}
-                        leftIcon={
-                          isFollowing ? (
-                            <FiCheck className="w-4 h-4" />
-                          ) : (
-                            <FiUserPlus className="w-4 h-4" />
-                          )
-                        }
-                        className="rounded-xl px-5 h-9 font-semibold"
-                      >
-                        {isFollowing ? "Following" : "Follow"}
-                      </Button>
-                    )}
-
-                    {isOwnProfile && (
-                      <Button
-                        href="/articles/new"
-                        variant="primary"
-                        size="sm"
-                        className="rounded-xl px-5 h-9 font-semibold"
-                      >
-                        Write Article
-                      </Button>
-                    )}
-
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={handleShare}
-                      aria-label="Share profile"
-                      title="Share profile"
-                      className="h-9 w-9 p-0 rounded-xl"
-                    >
-                      <FiShare2 className="w-4 h-4" />
-                    </Button>
-
-                    {!isOwnProfile && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={handleMessage}
-                        aria-label="Send message"
-                        title="Send message"
-                        className="h-9 w-9 p-0 rounded-xl"
-                      >
-                        <FiMail className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Right: 2x2 Stats Grid */}
-              <div className="lg:pl-8 lg:border-border/60 shrink-0 w-full sm:w-auto">
-                <div className="grid grid-cols-2 divide-x divide-y shadow-2xl divide-border/60  rounded-2xl bg-white/80 overflow-hidden text-center min-w-60 sm:min-w-67.5">
-                  {/* Followers */}
-                  <div className="p-3.5 sm:p-4 flex flex-col items-center justify-center gap-1">
-                    <FiUsers className="w-4.5 h-4.5 text-text/40" />
-                    <span className="text-xl sm:text-2xl font-bold text-text tracking-tight">
-                      {followersCount}
-                    </span>
-                    <span className="text-[11px] font-medium text-text/50">Followers</span>
-                  </div>
-
-                  {/* Following */}
-                  <div className="p-3.5 sm:p-4 flex flex-col items-center justify-center gap-1">
-                    <FiUserPlus className="w-4.5 h-4.5 text-text/40" />
-                    <span className="text-xl sm:text-2xl font-bold text-text tracking-tight">
-                      {followingCount}
-                    </span>
-                    <span className="text-[11px] font-medium text-text/50">Following</span>
-                  </div>
-
-                  {/* Articles */}
-                  <div className="p-3.5 sm:p-4 flex flex-col items-center justify-center gap-1">
-                    <FiFileText className="w-4.5 h-4.5 text-text/40" />
-                    <span className="text-xl sm:text-2xl font-bold text-text tracking-tight">
-                      {articlesCount}
-                    </span>
-                    <span className="text-[11px] font-medium text-text/50">Articles</span>
-                  </div>
-
-                  {/* Resources */}
-                  <div className="p-3.5 sm:p-4 flex flex-col items-center justify-center gap-1">
-                    <FiBookOpen className="w-4.5 h-4.5 text-text/40" />
-                    <span className="text-xl sm:text-2xl font-bold text-text tracking-tight">
-                      {resourcesCount}
-                    </span>
-                    <span className="text-[11px] font-medium text-text/50">Resources</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+        <ProfileHeader
+          avatarUrl={avatarUrl}
+          displayName={displayName}
+          username={username}
+          bio={bio}
+          location={location}
+          website={website}
+          github={github}
+          twitter={twitter}
+          linkedInUrl={linkedInUrl}
+          isOwnProfile={isOwnProfile}
+          isFollowing={isFollowing}
+          isFollowLoading={isFollowLoading}
+          onFollowToggle={handleFollowToggle}
+          onShare={handleShare}
+          onMessage={handleMessage}
+          followersCount={followersCount}
+          followingCount={followingCount}
+          articlesCount={articlesCount}
+          resourcesCount={resourcesCount}
+        />
       )}
 
       {/* ── Navigation Tabs using shared Tabs component ──────────────── */}
@@ -1032,278 +318,50 @@ export default function ProfilePage(): JSX.Element {
       {/* ── Tab Panels Content ────────────────────────────────────────── */}
       <section aria-label="Profile content" className="pt-2">
         {activeTab === "articles" && (
-          <div className="space-y-4">
-            {isLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} variant="rounded" className="h-72 w-full rounded-2xl" />
-                ))}
-              </div>
-            ) : articles.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {articles.map((art) => (
-                  <ArticleCard
-                    key={art.id}
-                    id={art.id}
-                    authorId={art.author?.id || art.authorId}
-                    title={art.title}
-                    excerpt={art.excerpt || art.content.slice(0, 110) + "..."}
-                    tagNames={art.tags || art.tagNames || []}
-                    coverImage={art.coverImageUrl || art.coverImage}
-                    authorName={
-                      art.author?.name || art.author?.userName || art.authorName || displayName
-                    }
-                    authorAvatar={art.author?.avatarUrl || avatarUrl}
-                    authorRole={profile?.role as string | undefined}
-                    createdAt={art.createdAt}
-                    readTimeMinutes={art.readingTimeMinutes ?? art.readingTime ?? 4}
-                    likes={art.likeCount ?? art.likes ?? 0}
-                    comments={art.commentCount ?? art.comments ?? 0}
-                    isLiked={Boolean(art.liked ?? art.isLiked)}
-                    isEditable={isOwnProfile}
-                    status={isOwnProfile ? art.status : undefined}
-                    targetHref={isOwnProfile ? `/articles/${art.id}/edit` : `/articles/${art.id}`}
-                    variant="vertical"
-                  />
-                ))}
-              </div>
-            ) : (
-              <EmptyState
-                icon={<FiFileText className="w-10 h-10 text-text/30" />}
-                title="No articles published yet"
-                description={
-                  isOwnProfile
-                    ? "You haven't written any articles yet."
-                    : `${displayName} hasn't written any articles yet.`
-                }
-                bordered
-                action={
-                  <Button href="/articles/new" size="sm" className="rounded-xl">
-                    Write an Article
-                  </Button>
-                }
-              />
-            )}
-          </div>
+          <ProfileArticlesTab
+            isLoading={isLoading}
+            articles={articles}
+            displayName={displayName}
+            avatarUrl={avatarUrl}
+            authorRole={profile?.role as string | undefined}
+            isOwnProfile={isOwnProfile}
+          />
         )}
 
         {activeTab === "resources" && (
-          <div className="space-y-5">
-            {/* Resource Engagement Stats Strip */}
-            {!isLoading && resources.length > 0 && (
-              <div className="grid grid-cols-3 gap-3 p-3.5 sm:p-4 bg-white border border-border/80 rounded-2xl shadow-2xs text-center">
-                <div className="flex flex-col items-center justify-center gap-0.5">
-                  <div className="flex items-center gap-1.5 text-xs text-text/60 font-medium">
-                    <FiArrowUp className="w-3.5 h-3.5 text-primary" />
-                    <span>Upvotes</span>
-                  </div>
-                  <span className="text-lg sm:text-xl font-bold text-text">
-                    {totalResourceUpvotes}
-                  </span>
-                </div>
-
-                <div className="flex flex-col items-center justify-center gap-0.5 border-x border-border/70">
-                  <div className="flex items-center gap-1.5 text-xs text-text/60 font-medium">
-                    <FiDownload className="w-3.5 h-3.5 text-blue-600" />
-                    <span>Downloads</span>
-                  </div>
-                  <span className="text-lg sm:text-xl font-bold text-text">
-                    {totalResourceDownloads}
-                  </span>
-                </div>
-
-                <div className="flex flex-col items-center justify-center gap-0.5">
-                  <div className="flex items-center gap-1.5 text-xs text-text/60 font-medium">
-                    <FiArrowDown className="w-3.5 h-3.5 text-rose-500" />
-                    <span>Downvotes</span>
-                  </div>
-                  <span className="text-lg sm:text-xl font-bold text-text">
-                    {totalResourceDownvotes}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {isLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} variant="rounded" className="h-64 w-full rounded-2xl" />
-                ))}
-              </div>
-            ) : resources.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {resources.map((item) => (
-                  <div key={item.id}>
-                    <ResourceLiveSync id={item.id} onCounts={handleLiveResourceCounts} />
-                    <ResourceCard
-                      resource={mapToResourceCardItem(item)}
-                      onClick={handleResourceClick}
-                      onUpvote={handleResourceUpvote}
-                      onDownvote={handleResourceDownvote}
-                      onBookmark={handleResourceBookmark}
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <EmptyState
-                icon={<FiFolder className="w-10 h-10 text-text/30" />}
-                title="No resources shared yet"
-                description={
-                  isOwnProfile
-                    ? "You haven't shared any developer resources yet."
-                    : `${displayName} hasn't shared any developer resources yet.`
-                }
-                bordered
-                action={
-                  isOwnProfile ? (
-                    <Button href="/resources" size="sm" className="rounded-xl">
-                      Browse & Add Resources
-                    </Button>
-                  ) : undefined
-                }
-              />
-            )}
-          </div>
+          <ProfileResourcesTab
+            isLoading={isLoading}
+            resources={resources}
+            isOwnProfile={isOwnProfile}
+            displayName={displayName}
+            onLiveCounts={handleLiveResourceCounts}
+            onResourceClick={handleResourceClick}
+            onUpvote={handleResourceUpvote}
+            onDownvote={handleResourceDownvote}
+            onBookmark={handleResourceBookmark}
+          />
         )}
 
         {activeTab === "activity" && (
-          <div className="bg-white border border-border rounded-2xl p-6 space-y-4">
-            <h3 className="text-sm font-bold text-text">Recent Activity</h3>
-
-            {isActivityLoading ? (
-              <div className="space-y-3 divide-y divide-border/60">
-                {Array.from({ length: 3 }).map((_, index) => (
-                  <div key={index} className="pt-3 space-y-2">
-                    <Skeleton variant="text" width="60%" height={14} />
-                    <Skeleton variant="text" width={80} height={11} />
-                  </div>
-                ))}
-              </div>
-            ) : visibleActivities.length === 0 ? (
-              <EmptyState
-                size="sm"
-                icon={<FiActivity className="w-5 h-5 text-text/40" />}
-                title="No activity yet"
-                description={
-                  isOwnProfile
-                    ? "Your reads, likes, and comments will show up here."
-                    : `${displayName} hasn't had any recent activity.`
-                }
-              />
-            ) : (
-              <div className="space-y-3 divide-y divide-border/60">
-                {visibleActivities.map((item) => {
-                  const href = getActivityLink(item);
-                  return (
-                    <div key={item.id} className="pt-3 flex items-start justify-between gap-4">
-                      <div className="space-y-0.5">
-                        <p className="text-xs text-text/60">
-                          {describeActivity(item)}:{" "}
-                          {href ? (
-                            <Link
-                              to={href}
-                              className="font-semibold text-text hover:text-primary hover:underline"
-                            >
-                              {item.targetTitle}
-                            </Link>
-                          ) : (
-                            <span className="font-semibold text-text">{item.targetTitle}</span>
-                          )}
-                        </p>
-                        <p className="text-[11px] text-text/40">{formatTimeAgo(item.createdAt)}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          <ProfileActivityTab
+            isActivityLoading={isActivityLoading}
+            visibleActivities={visibleActivities}
+            isOwnProfile={isOwnProfile}
+            displayName={displayName}
+          />
         )}
 
         {activeTab === "about" && (
-          <div className="bg-white border border-border rounded-2xl p-6 sm:p-8 space-y-6">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-base font-bold text-text mb-2">About {displayName}</h3>
-                {bio ? (
-                  <p className="text-sm text-text/70 leading-relaxed max-w-3xl">{bio}</p>
-                ) : (
-                  <p className="text-sm text-text/40 italic">No bio provided yet.</p>
-                )}
-              </div>
-
-              {isOwnProfile && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  leftIcon={<FiEdit2 className="w-3.5 h-3.5" />}
-                  onClick={() => setIsEditProfileOpen(true)}
-                  className="shrink-0"
-                >
-                  Edit Profile
-                </Button>
-              )}
-            </div>
-
-            {(website || github || twitter || linkedInUrl) && (
-              <div className="border-t border-border/60 pt-4">
-                <h4 className="text-xs font-bold text-text/50 uppercase tracking-wider mb-2.5">
-                  Links
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {website && (
-                    <a
-                      href={website.startsWith("http") ? website : `https://${website}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-blue-600 border border-border/60 hover:border-blue-300 transition-colors"
-                    >
-                      <FiLink className="w-3.5 h-3.5" />
-                      <span>Website</span>
-                    </a>
-                  )}
-                  {github && (
-                    <a
-                      href={github.startsWith("http") ? github : `https://${github}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-text border border-border/60 hover:border-text/30 transition-colors"
-                    >
-                      <FiGithub className="w-3.5 h-3.5" />
-                      <span>GitHub</span>
-                    </a>
-                  )}
-                  {twitter && (
-                    <a
-                      href={
-                        twitter.startsWith("http")
-                          ? twitter
-                          : `https://x.com/${twitter.replace("@", "")}`
-                      }
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-[#1DA1F2] border border-border/60 hover:border-sky-300 transition-colors"
-                    >
-                      <FiTwitter className="w-3.5 h-3.5" />
-                      <span>X (Twitter)</span>
-                    </a>
-                  )}
-                  {linkedInUrl && (
-                    <a
-                      href={linkedInUrl.startsWith("http") ? linkedInUrl : `https://${linkedInUrl}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-[#0A66C2] border border-border/60 hover:border-blue-300 transition-colors"
-                    >
-                      <FiLinkedin className="w-3.5 h-3.5" />
-                      <span>LinkedIn</span>
-                    </a>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+          <ProfileAboutTab
+            displayName={displayName}
+            bio={bio}
+            isOwnProfile={isOwnProfile}
+            onEditProfile={() => setIsEditProfileOpen(true)}
+            website={website}
+            github={github}
+            twitter={twitter}
+            linkedInUrl={linkedInUrl}
+          />
         )}
       </section>
 
