@@ -1,491 +1,53 @@
-import { useEffect, useRef, useState, type JSX } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { AiFillHeart, AiOutlineComment, AiOutlineHeart, AiOutlineShareAlt } from "react-icons/ai";
-import { HiOutlineEllipsisHorizontal } from "react-icons/hi2";
-import { LuBookmark, LuBookmarkCheck, LuClock } from "react-icons/lu";
+import type { JSX } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import articlePlaceholder from "@/assets/images/article-placeholder.jpg";
-import { Avatar, Button, Skeleton, Tag } from "@/shared/ui";
-import { toast } from "@/shared/hooks/useToast";
-import { confirmDialog } from "@/shared/hooks/useConfirmDialog";
-import { cn } from "@/shared/lib/utils/cn";
-import { getApiErrorMessage } from "@/shared/lib/utils/apiError";
-import {
-  deleteArticle,
-  getArticleById,
-  getArticleComments,
-  likeArticle,
-  saveArticle,
-  type Article,
-} from "@/features/articles/api/articleApi";
-import { followAuthor } from "@/features/profile/api/user.api";
-import { useAuthStore } from "@/store";
-import { useLiveHub } from "@/shared/hooks/useLiveHub";
-import ArticleComments, { countAllComments } from "@/features/articles/components/ArticleComments";
+import { Button, Tag } from "@/shared/ui";
+import ArticleComments from "@/features/articles/components/ArticleComments";
+import { useArticleDetails } from "@/features/articles/hooks/useArticleDetails";
 import RelatedArticles from "@/features/articles/components/RelatedArticles";
 import AuthorCard from "@/features/articles/components/AuthorCard";
+import { useReadingProgress } from "@/features/articles/hooks/useReadingProgress";
+import { ArticleDetailsSkeleton } from "@/features/articles/components/article-details/ArticleDetailsSkeleton";
+import { ReadingProgressBar } from "@/features/articles/components/article-details/ReadingProgressBar";
+import { ArticleActionRail } from "@/features/articles/components/article-details/ArticleActionRail";
+import { ArticleAuthorRow } from "@/features/articles/components/article-details/ArticleAuthorRow";
+import { MobileActionBar } from "@/features/articles/components/article-details/MobileActionBar";
 
-export interface DisplayArticle extends Article {
-  authorName?: string;
-  authorUserName?: string;
-  authorAvatar?: string;
-}
+export type { DisplayArticle } from "@/features/articles/hooks/useArticleDetails";
 
 export function ArticleDetailsPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const currentUser = useAuthStore((state) => state.user);
-
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-
-  const [article, setArticle] = useState<DisplayArticle | null>(null);
-
-  const [isLoading, setIsLoading] = useState(true);
-
-  const [isLiked, setIsLiked] = useState(false);
-
-  const [isBookmarked, setIsBookmarked] = useState(false);
-
-  const [isFollowing, setIsFollowing] = useState(false);
-
-  const [isFollowLoading, setIsFollowLoading] = useState(false);
-
-  const [likeCount, setLikeCount] = useState(0);
-
-  const [commentCount, setCommentCount] = useState(0);
-
-  const [isLiking, setIsLiking] = useState(false);
-
-  const [isSaving, setIsSaving] = useState(false);
-
-  const [showMoreMenu, setShowMoreMenu] = useState(false);
-
-  const [showComments, setShowComments] = useState(false);
-
-  const pageRef = useRef<HTMLDivElement>(null);
-  const articleRef = useRef<HTMLElement>(null);
-  const [readingProgress, setReadingProgress] = useState(0);
-
-  useEffect(() => {
-    const getScrollContainer = (): HTMLElement | null => {
-      return pageRef.current?.closest("main") ?? document.querySelector("main");
-    };
-
-    const handleScroll = () => {
-      const container = getScrollContainer();
-
-      const scrollTop = container
-        ? container.scrollTop
-        : window.scrollY || document.documentElement.scrollTop;
-      const clientHeight = container ? container.clientHeight : window.innerHeight;
-      const scrollHeight = container
-        ? container.scrollHeight
-        : document.documentElement.scrollHeight;
-
-      if (articleRef.current) {
-        const articleEl = articleRef.current;
-        const containerRect = container ? container.getBoundingClientRect() : { top: 0 };
-        const articleRect = articleEl.getBoundingClientRect();
-
-        // Absolute position of article relative to scroll container top
-        const articleTop = articleRect.top - containerRect.top + scrollTop;
-        const articleBottom = articleTop + articleEl.offsetHeight;
-
-        // Reading completes when bottom of article is in view
-        const targetScroll = articleBottom - clientHeight;
-
-        if (targetScroll <= 0) {
-          setReadingProgress(100);
-          return;
-        }
-
-        const progress = (scrollTop / targetScroll) * 100;
-        setReadingProgress(Math.min(100, Math.max(0, Math.round(progress))));
-      } else {
-        const maxScroll = scrollHeight - clientHeight;
-        if (maxScroll <= 0) {
-          setReadingProgress(100);
-          return;
-        }
-        const progress = (scrollTop / maxScroll) * 100;
-        setReadingProgress(Math.min(100, Math.max(0, Math.round(progress))));
-      }
-    };
-
-    const container = getScrollContainer();
-
-    if (container) {
-      container.addEventListener("scroll", handleScroll, { passive: true });
-    }
-    window.addEventListener("scroll", handleScroll, { passive: true, capture: true });
-    window.addEventListener("resize", handleScroll, { passive: true });
-
-    handleScroll();
-
-    return () => {
-      if (container) {
-        container.removeEventListener("scroll", handleScroll);
-      }
-      window.removeEventListener("scroll", handleScroll, { capture: true });
-      window.removeEventListener("resize", handleScroll);
-    };
-  }, [article?.content]);
-
-  useEffect(() => {
-    if (!id) {
-      navigate("/articles");
-      return;
-    }
-
-    const articleId = id;
-
-    let isSubscribed = true;
-
-    async function loadArticle(): Promise<void> {
-      try {
-        setIsLoading(true);
-
-        const [articleResult, commentsResult] = await Promise.allSettled([
-          getArticleById(articleId),
-          getArticleComments(articleId),
-        ]);
-
-        if (!isSubscribed) {
-          return;
-        }
-
-        if (articleResult.status !== "fulfilled" || !articleResult.value) {
-          throw new Error("Failed to load article");
-        }
-
-        const data = articleResult.value;
-
-        const articleData = data as Article & Record<string, unknown>;
-
-        const initialLikes = data.likeCount ?? data.likes ?? 0;
-
-        const initialLiked = Boolean(data.liked ?? data.isLiked ?? false);
-
-        const initialSaved = Boolean(
-          articleData.isBookmarked ?? articleData.isSaved ?? articleData.saved ?? false,
-        );
-        const articleAuthor = data.author as Record<string, unknown> | undefined;
-
-        const displayArticle: DisplayArticle = {
-          ...data,
-
-          authorName: typeof articleAuthor?.name === "string" ? articleAuthor.name : undefined,
-
-          authorAvatar:
-            typeof articleAuthor?.avatarUrl === "string" ? articleAuthor.avatarUrl : undefined,
-        };
-
-        setArticle(displayArticle);
-
-        setIsLiked(initialLiked);
-        setIsBookmarked(initialSaved);
-        setLikeCount(initialLikes);
-
-        let resolvedCommentsCount =
-          data.commentCount ??
-          data.comments ??
-          (articleData.commentsCount as number | undefined) ??
-          0;
-
-        if (commentsResult.status === "fulfilled" && Array.isArray(commentsResult.value)) {
-          resolvedCommentsCount = countAllComments(commentsResult.value);
-        }
-
-        setCommentCount(resolvedCommentsCount);
-        const initialFollowing =
-          typeof data.author?.following === "boolean"
-            ? data.author.following
-            : typeof articleData.following === "boolean"
-              ? articleData.following
-              : typeof articleData.isFollowing === "boolean"
-                ? articleData.isFollowing
-                : false;
-
-        setIsFollowing(initialFollowing);
-      } catch (error: unknown) {
-        toast.error(getApiErrorMessage(error) || "Failed to load article");
-
-        if (isSubscribed) {
-          navigate("/articles");
-        }
-      } finally {
-        if (isSubscribed) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    void loadArticle();
-
-    return () => {
-      isSubscribed = false;
-    };
-  }, [id, navigate]);
-
-  // Real-time updates via SignalR (/ws/hub/posts/{id}/live)
-  useLiveHub({
-    type: "post",
-    id,
-    onUpdate: (data: unknown) => {
-      if (!data || typeof data !== "object") return;
-      const update = data as Record<string, unknown>;
-
-      if (typeof update.likesCount === "number") {
-        setLikeCount(update.likesCount);
-      } else if (typeof update.likes === "number") {
-        setLikeCount(update.likes);
-      } else if (typeof update.likeCount === "number") {
-        setLikeCount(update.likeCount);
-      }
-
-      if (typeof update.commentCount === "number") {
-        setCommentCount(update.commentCount);
-      } else if (typeof update.commentsCount === "number") {
-        setCommentCount(update.commentsCount);
-      } else if (typeof update.comments === "number") {
-        setCommentCount(update.comments);
-      }
-
-      setArticle((prev) => (prev ? { ...prev, ...update } : null));
-    },
-  });
-
-  const handleLike = async (event?: React.MouseEvent): Promise<void> => {
-    event?.preventDefault();
-    event?.stopPropagation();
-
-    if (isLiking || !article) {
-      return;
-    }
-
-    if (!isAuthenticated && !currentUser) {
-      toast.info("Please log in to like this article");
-      return;
-    }
-
-    const previousLiked = isLiked;
-
-    setIsLiked(!previousLiked);
-
-    setLikeCount((previous) => Math.max(0, previous + (previousLiked ? -1 : 1)));
-
-    setIsLiking(true);
-
-    try {
-      await likeArticle(article.id);
-
-      toast.success(previousLiked ? "Removed like" : "Liked article");
-    } catch (error: unknown) {
-      setIsLiked(previousLiked);
-
-      setLikeCount((previous) => Math.max(0, previous + (previousLiked ? 1 : -1)));
-
-      toast.error(getApiErrorMessage(error) || "Failed to update like");
-    } finally {
-      setIsLiking(false);
-    }
-  };
-
-  const handleBookmark = async (event?: React.MouseEvent): Promise<void> => {
-    event?.preventDefault();
-    event?.stopPropagation();
-
-    if (isSaving || !article) {
-      return;
-    }
-
-    if (!isAuthenticated && !currentUser) {
-      toast.info("Please log in to save this article");
-      return;
-    }
-
-    const previousBookmarked = isBookmarked;
-
-    setIsBookmarked(!previousBookmarked);
-
-    setIsSaving(true);
-
-    try {
-      await saveArticle(article.id);
-
-      toast.success(previousBookmarked ? "Removed from bookmarks" : "Saved to bookmarks");
-    } catch (error: unknown) {
-      setIsBookmarked(previousBookmarked);
-
-      toast.error(getApiErrorMessage(error) || "Failed to update bookmark");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleFollowToggle = async (): Promise<void> => {
-    const targetAuthorId = article?.author?.id || article?.authorId;
-
-    if (isFollowLoading || !targetAuthorId) {
-      return;
-    }
-
-    if (!isAuthenticated && !currentUser) {
-      toast.info("Please log in to follow authors");
-
-      return;
-    }
-
-    if (currentUser?.id && targetAuthorId === currentUser.id) {
-      toast.info("You cannot follow yourself");
-
-      return;
-    }
-
-    const previousState = isFollowing;
-
-    const nextState = !previousState;
-
-    setIsFollowing(nextState);
-
-    setIsFollowLoading(true);
-
-    try {
-      const res = await followAuthor(targetAuthorId);
-
-      if (res && typeof res.isFollowing === "boolean") {
-        setIsFollowing(res.isFollowing);
-      }
-
-      const authorDisplayName = resolvedAuthorName;
-
-      if (nextState) {
-        toast.success(`You are now following ${authorDisplayName}`);
-      } else {
-        toast.info(`Unfollowed ${authorDisplayName}`);
-      }
-    } catch (error: unknown) {
-      setIsFollowing(previousState);
-
-      toast.error(getApiErrorMessage(error) || "Failed to update follow status");
-    } finally {
-      setIsFollowLoading(false);
-    }
-  };
-
-  const handleShare = async (): Promise<void> => {
-    if (!article) {
-      return;
-    }
-
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: article.title,
-          text: article.excerpt ?? article.title,
-          url: window.location.href,
-        });
-
-        return;
-      }
-
-      await navigator.clipboard.writeText(window.location.href);
-
-      toast.success("Link copied to clipboard");
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") {
-        return;
-      }
-
-      try {
-        await navigator.clipboard.writeText(window.location.href);
-
-        toast.success("Link copied to clipboard");
-      } catch {
-        toast.error("Unable to share article");
-      }
-    }
-  };
-
-  const handleEdit = (): void => {
-    if (!article) {
-      return;
-    }
-
-    navigate(`/articles/${article.id}/edit`);
-
-    setShowMoreMenu(false);
-  };
-
-  const handleDelete = async (): Promise<void> => {
-    if (!article) {
-      return;
-    }
-
-    const confirmed = await confirmDialog({
-      title: "Delete this article?",
-      description: "This action cannot be undone.",
-      confirmLabel: "Delete",
-      variant: "danger",
-    });
-
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      await deleteArticle(article.id);
-
-      toast.success("Article deleted successfully");
-
-      navigate("/articles");
-    } catch (error: unknown) {
-      toast.error(getApiErrorMessage(error) || "Failed to delete article");
-    }
-  };
-
-  const handleCommentsToggle = (): void => {
-    setShowComments((previous) => !previous);
-  };
+  const {
+    article,
+    isLoading,
+    currentUser,
+    isLiked,
+    isLiking,
+    likeCount,
+    isBookmarked,
+    isSaving,
+    isFollowing,
+    isFollowLoading,
+    commentCount,
+    setCommentCount,
+    showComments,
+    handleLike,
+    handleBookmark,
+    handleFollowToggle,
+    handleShare,
+    handleEdit,
+    handleDelete,
+    handleCommentsToggle,
+  } = useArticleDetails(id);
+
+  const { pageRef, articleRef, readingProgress } = useReadingProgress(article?.content);
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="mx-auto max-w-7xl px-4 py-8">
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-            <div className="hidden lg:col-span-1 lg:flex lg:flex-col lg:items-center lg:gap-4">
-              {Array.from({
-                length: 5,
-              }).map((_, index) => (
-                <Skeleton key={index} variant="circular" width={40} height={40} />
-              ))}
-            </div>
-
-            <div className="lg:col-span-6">
-              <Skeleton variant="text" width={180} height={14} className="mb-5" />
-
-              <Skeleton variant="text" width="100%" height={38} count={2} className="mb-5" />
-
-              <Skeleton variant="text" width="90%" height={16} count={2} className="mb-6" />
-
-              <Skeleton variant="rounded" width="100%" height={96} className="mb-6" />
-
-              <Skeleton variant="rounded" width="100%" height={360} className="mb-8" />
-
-              <Skeleton variant="text" width="100%" height={16} count={8} />
-            </div>
-
-            <div className="hidden lg:col-span-5 lg:block">
-              <Skeleton variant="rounded" width="100%" height={220} className="mb-6" />
-
-              <Skeleton variant="rounded" width="100%" height={300} />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return <ArticleDetailsSkeleton />;
   }
 
   if (!article) {
@@ -550,175 +112,26 @@ export function ArticleDetailsPage(): JSX.Element {
     <div ref={pageRef} className="min-h-screen w-full bg-gray-50">
       <div className="w-full px-4 py-6 sm:px-6 lg:px-8">
         {/* In-page Sticky Reading Progress Bar */}
-        <div className="sticky -top-2 sm:-top-4 md:-top-6 z-30 mb-8 bg-gray-50/95 py-2 backdrop-blur-xs">
-          <div
-            className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200"
-            role="progressbar"
-            aria-label="Reading progress"
-            aria-valuenow={Math.round(readingProgress)}
-            aria-valuemin={0}
-            aria-valuemax={100}
-          >
-            <div
-              className="h-full rounded-full bg-linear-to-r from-primary to-blue-500 transition-all duration-150 ease-out"
-              style={{ width: `${readingProgress}%` }}
-            />
-          </div>
-        </div>
+        <ReadingProgressBar readingProgress={readingProgress} />
 
         <div className="flex w-full justify-between gap-8 lg:gap-12">
           {/* Left action bar */}
-          <aside className="hidden shrink-0 lg:flex">
-            <div className="sticky top-8 flex h-fit flex-col items-center gap-1 rounded-xl border border-gray-100 bg-white p-2 shadow-sm">
-              {/* Like */}
-              <button
-                type="button"
-                onClick={handleLike}
-                disabled={isLiking}
-                title={isLiked ? "Unlike" : "Like"}
-                aria-label={isLiked ? "Unlike article" : "Like article"}
-                className={cn(
-                  "flex w-14 flex-col items-center gap-1 rounded-lg p-2.5 transition",
-                  "disabled:cursor-not-allowed disabled:opacity-50",
-                  isLiked
-                    ? "bg-red-50 text-red-500"
-                    : "text-gray-400 hover:bg-gray-50 hover:text-red-500",
-                )}
-              >
-                {isLiked ? (
-                  <AiFillHeart className="h-5 w-5" />
-                ) : (
-                  <AiOutlineHeart className="h-5 w-5" />
-                )}
-
-                <span
-                  className={cn(
-                    "text-[11px] font-semibold",
-                    isLiked ? "text-red-600" : "text-gray-500",
-                  )}
-                >
-                  {likeCount}
-                </span>
-              </button>
-
-              {/* Comments */}
-              <button
-                type="button"
-                onClick={handleCommentsToggle}
-                title={showComments ? "Hide comments" : "Show comments"}
-                aria-label={showComments ? "Hide comments" : "Show comments"}
-                className={cn(
-                  "flex w-14 flex-col items-center gap-1 rounded-lg p-2.5 transition",
-                  showComments
-                    ? "bg-primary/10 text-primary"
-                    : "text-gray-400 hover:bg-gray-50 hover:text-primary",
-                )}
-              >
-                <AiOutlineComment className="h-5 w-5" />
-
-                <span
-                  className={cn(
-                    "text-[11px] font-semibold",
-                    showComments ? "text-primary" : "text-gray-500",
-                  )}
-                >
-                  {commentCount}
-                </span>
-              </button>
-
-              {/* Bookmark */}
-              <button
-                type="button"
-                onClick={handleBookmark}
-                disabled={isSaving}
-                title={isBookmarked ? "Remove bookmark" : "Bookmark"}
-                aria-label={isBookmarked ? "Remove bookmark" : "Bookmark"}
-                className={cn(
-                  "flex w-14 flex-col items-center gap-1 rounded-lg p-2.5 transition",
-                  "disabled:cursor-not-allowed disabled:opacity-50",
-                  isBookmarked
-                    ? "bg-primary/10 text-primary"
-                    : "text-gray-400 hover:bg-gray-50 hover:text-primary",
-                )}
-              >
-                {isBookmarked ? (
-                  <LuBookmarkCheck className="h-5 w-5" />
-                ) : (
-                  <LuBookmark className="h-5 w-5" />
-                )}
-              </button>
-
-              {/* Share */}
-              <button
-                type="button"
-                onClick={handleShare}
-                title="Share"
-                aria-label="Share article"
-                className="flex w-14 flex-col items-center gap-1 rounded-lg p-2.5 text-gray-400 transition hover:bg-gray-50 hover:text-primary"
-              >
-                <AiOutlineShareAlt className="h-5 w-5" />
-              </button>
-
-              {/* More */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setShowMoreMenu((previous) => !previous)}
-                  title="More options"
-                  aria-label="More article options"
-                  className="flex w-14 flex-col items-center gap-1 rounded-lg p-2.5 text-gray-400 transition hover:bg-gray-50 hover:text-primary"
-                >
-                  <HiOutlineEllipsisHorizontal className="h-5 w-5" />
-                </button>
-
-                {showMoreMenu && (
-                  <div className="absolute left-16 top-0 z-50 min-w-44 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-xl">
-                    {isAuthor ? (
-                      <>
-                        <button
-                          type="button"
-                          onClick={handleEdit}
-                          className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
-                        >
-                          Edit Article
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowMoreMenu(false);
-
-                            void handleDelete();
-                          }}
-                          className="w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50"
-                        >
-                          Delete Article
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => setShowMoreMenu(false)}
-                          className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
-                        >
-                          Report Article
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setShowMoreMenu(false)}
-                          className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
-                        >
-                          Block Author
-                        </button>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </aside>
+          <ArticleActionRail
+            isLiked={isLiked}
+            likeCount={likeCount}
+            isLiking={isLiking}
+            onLike={handleLike}
+            showComments={showComments}
+            commentCount={commentCount}
+            onToggleComments={handleCommentsToggle}
+            isBookmarked={isBookmarked}
+            isSaving={isSaving}
+            onBookmark={handleBookmark}
+            onShare={handleShare}
+            isAuthor={isAuthor}
+            onEdit={handleEdit}
+            onDelete={() => void handleDelete()}
+          />
 
           {/* Main content */}
           <main className="min-w-0 flex-1">
@@ -747,50 +160,19 @@ export function ArticleDetailsPage(): JSX.Element {
             </header>
 
             {/* Author */}
-            <div className="my-6 flex items-center justify-between border-y border-gray-200 py-4">
-              <div className="flex min-w-0 items-center gap-3">
-                <Avatar
-                  src={resolvedAuthorAvatar}
-                  alt={resolvedAuthorName}
-                  href={authorProfileUrl}
-                  name={resolvedAuthorName}
-                  size="md"
-                  className="h-11 w-11"
-                />
-
-                <div className="min-w-0">
-                  <Link
-                    to={authorProfileUrl}
-                    className="truncate text-sm font-semibold text-gray-900 hover:text-primary hover:underline"
-                  >
-                    {resolvedAuthorUsername}
-                  </Link>
-
-                  <div className="flex items-center gap-2 text-xs text-gray-500">
-                    <span>{formattedDate}</span>
-
-                    <span>·</span>
-
-                    <span className="flex items-center gap-1">
-                      <LuClock className="h-3 w-3" />
-                      {readingTime} min read
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {!isAuthor && targetAuthorId && (
-                <Button
-                  variant={isFollowing ? "secondary" : "primary"}
-                  size="sm"
-                  isLoading={isFollowLoading}
-                  onClick={handleFollowToggle}
-                  className="ml-4 shrink-0 rounded-lg font-semibold"
-                >
-                  {isFollowing ? "Following" : "Follow"}
-                </Button>
-              )}
-            </div>
+            <ArticleAuthorRow
+              resolvedAuthorAvatar={resolvedAuthorAvatar}
+              resolvedAuthorName={resolvedAuthorName}
+              resolvedAuthorUsername={resolvedAuthorUsername}
+              authorProfileUrl={authorProfileUrl}
+              formattedDate={formattedDate}
+              readingTime={readingTime}
+              isAuthor={isAuthor}
+              targetAuthorId={targetAuthorId}
+              isFollowing={isFollowing}
+              isFollowLoading={isFollowLoading}
+              onFollowToggle={handleFollowToggle}
+            />
 
             {/* Cover image */}
             {coverImage && (
@@ -812,72 +194,19 @@ export function ArticleDetailsPage(): JSX.Element {
             </article>
 
             {/* Mobile actions */}
-            <div className="mt-8 flex items-center gap-2 overflow-x-auto border-t border-gray-200 py-4 lg:hidden">
-              {/* Like */}
-              <button
-                type="button"
-                onClick={handleLike}
-                disabled={isLiking}
-                className={cn(
-                  "flex shrink-0 items-center gap-2 rounded-lg border px-4 py-2 transition",
-                  isLiked
-                    ? "border-red-200 bg-red-50 text-red-500"
-                    : "border-gray-200 text-gray-600 hover:bg-gray-50",
-                )}
-              >
-                {isLiked ? (
-                  <AiFillHeart className="h-5 w-5" />
-                ) : (
-                  <AiOutlineHeart className="h-5 w-5" />
-                )}
-
-                <span className="text-sm font-semibold">{likeCount}</span>
-              </button>
-
-              {/* Comments */}
-              <button
-                type="button"
-                onClick={handleCommentsToggle}
-                className={cn(
-                  "flex shrink-0 items-center gap-2 rounded-lg border px-4 py-2 transition",
-                  showComments
-                    ? "border-primary/30 bg-primary/10 text-primary"
-                    : "border-gray-200 text-gray-600 hover:bg-gray-50",
-                )}
-              >
-                <AiOutlineComment className="h-5 w-5" />
-
-                <span className="text-sm font-semibold">{commentCount}</span>
-              </button>
-
-              {/* Bookmark */}
-              <button
-                type="button"
-                onClick={handleBookmark}
-                disabled={isSaving}
-                className={cn(
-                  "flex shrink-0 items-center gap-2 rounded-lg border px-4 py-2 transition",
-                  isBookmarked
-                    ? "border-primary/30 bg-primary/10 text-primary"
-                    : "border-gray-200 text-gray-600 hover:bg-gray-50",
-                )}
-              >
-                {isBookmarked ? (
-                  <LuBookmarkCheck className="h-5 w-5" />
-                ) : (
-                  <LuBookmark className="h-5 w-5" />
-                )}
-              </button>
-
-              {/* Share */}
-              <button
-                type="button"
-                onClick={handleShare}
-                className="flex shrink-0 items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-gray-600 transition hover:bg-gray-50"
-              >
-                <AiOutlineShareAlt className="h-5 w-5" />
-              </button>
-            </div>
+            <MobileActionBar
+              isLiked={isLiked}
+              likeCount={likeCount}
+              isLiking={isLiking}
+              onLike={handleLike}
+              showComments={showComments}
+              commentCount={commentCount}
+              onToggleComments={handleCommentsToggle}
+              isBookmarked={isBookmarked}
+              isSaving={isSaving}
+              onBookmark={handleBookmark}
+              onShare={handleShare}
+            />
 
             {/* Mobile comments */}
             {showComments && (
