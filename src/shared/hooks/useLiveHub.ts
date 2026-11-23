@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import * as signalR from "@microsoft/signalr";
+import type { HubConnection } from "@microsoft/signalr";
 import { createLiveHubConnection, type LiveHubType } from "@/shared/lib/signalr/signalr";
 
 export interface UseLiveHubOptions<T = unknown> {
@@ -24,7 +24,7 @@ export function useLiveHub<T = unknown>({
   onUpdate,
   enabled = true,
 }: UseLiveHubOptions<T>): void {
-  const connectionRef = useRef<signalR.HubConnection | null>(null);
+  const connectionRef = useRef<HubConnection | null>(null);
   const callbackRef = useRef(onUpdate);
 
   // Keep callback reference fresh without triggering effect reconnects
@@ -38,19 +38,23 @@ export function useLiveHub<T = unknown>({
     }
 
     let isCancelled = false;
-    const connection = createLiveHubConnection(type, id);
-    connectionRef.current = connection;
+    let connection: HubConnection | null = null;
 
-    // Backend broadcasts updates via the "update" method
-    connection.on("update", (data: T) => {
-      if (!isCancelled) {
-        callbackRef.current(data);
-      }
-    });
+    async function connect(): Promise<void> {
+      const conn = await createLiveHubConnection(type, id as string);
+      if (isCancelled) return; // unmounted while the library was loading
+      connection = conn;
+      connectionRef.current = conn;
 
-    async function start(): Promise<void> {
+      // Backend broadcasts updates via the "update" method
+      conn.on("update", (data: T) => {
+        if (!isCancelled) {
+          callbackRef.current(data);
+        }
+      });
+
       try {
-        await connection.start();
+        await conn.start();
         if (import.meta.env.DEV) {
           console.log(`[SignalR] Connected to ${type} live hub for ID: ${id}`);
         }
@@ -61,14 +65,16 @@ export function useLiveHub<T = unknown>({
       }
     }
 
-    void start();
+    void connect();
 
     return () => {
       isCancelled = true;
-      connection.off("update");
-      void connection.stop().catch(() => {
-        // Ignore stop errors on unmount
-      });
+      if (connection) {
+        connection.off("update");
+        void connection.stop().catch(() => {
+          // Ignore stop errors on unmount
+        });
+      }
       connectionRef.current = null;
     };
   }, [type, id, enabled]);

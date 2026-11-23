@@ -1,4 +1,4 @@
-import * as signalR from "@microsoft/signalr";
+import type { HubConnection } from "@microsoft/signalr";
 import { API_BASE_URL } from "@/shared/lib/api/endpoints";
 import { STORAGE_KEYS, storage } from "@/shared/lib/storage";
 
@@ -27,17 +27,11 @@ export function getLiveHubUrl(type: LiveHubType, id: string): string {
   }
 }
 
-/**
- * Creates and configures a SignalR HubConnection for real-time live updates.
- * Backend uses the "update" method name for broadcast messages.
- */
-export function createLiveHubConnection(
-  type: LiveHubType,
-  id: string,
-  token?: string | null,
-): signalR.HubConnection {
-  const url = getLiveHubUrl(type, id);
+/** Loads @microsoft/signalr on first use, so it isn't part of the initial bundle. */
+const loadSignalR = () => import("@microsoft/signalr");
 
+async function buildConnection(url: string, token?: string | null): Promise<HubConnection> {
+  const signalR = await loadSignalR();
   return new signalR.HubConnectionBuilder()
     .withUrl(url, {
       accessTokenFactory: () => {
@@ -52,21 +46,22 @@ export function createLiveHubConnection(
 }
 
 /**
+ * Creates and configures a SignalR HubConnection for real-time live updates.
+ * Backend uses the "update" method name for broadcast messages.
+ */
+export function createLiveHubConnection(
+  type: LiveHubType,
+  id: string,
+  token?: string | null,
+): Promise<HubConnection> {
+  return buildConnection(getLiveHubUrl(type, id), token);
+}
+
+/**
  * Creates a SignalR connection to the per-user notifications hub.
  * The backend pushes new notifications on the "ReceiveNotification" event.
  */
-export function createNotificationHubConnection(token?: string | null): signalR.HubConnection {
+export function createNotificationHubConnection(token?: string | null): Promise<HubConnection> {
   const baseUrl = (API_BASE_URL || "").replace(/\/+$/, "");
-
-  return new signalR.HubConnectionBuilder()
-    .withUrl(`${baseUrl}/ws/hub/notifications`, {
-      accessTokenFactory: () => {
-        if (token) return token;
-        return storage.get(STORAGE_KEYS.token) || "";
-      },
-      transport: signalR.HttpTransportType.WebSockets | signalR.HttpTransportType.LongPolling,
-    })
-    .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
-    .configureLogging(import.meta.env.DEV ? signalR.LogLevel.Information : signalR.LogLevel.Warning)
-    .build();
+  return buildConnection(`${baseUrl}/ws/hub/notifications`, token);
 }

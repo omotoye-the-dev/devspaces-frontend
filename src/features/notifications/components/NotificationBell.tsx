@@ -14,6 +14,7 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from "@/features/notifications/api/notifications.api";
+import type { HubConnection } from "@microsoft/signalr";
 import { createNotificationHubConnection } from "@/shared/lib/signalr/signalr";
 import type { NotificationItem } from "@/features/notifications/types/notifications.types";
 
@@ -86,24 +87,29 @@ export function NotificationBell({ className }: NotificationBellProps): JSX.Elem
   // Real-time pushes: /ws/hub/notifications -> "ReceiveNotification"
   useEffect(() => {
     let isCancelled = false;
-    const connection = createNotificationHubConnection();
+    let connection: HubConnection | null = null;
 
-    connection.on("ReceiveNotification", (incoming: NotificationItem) => {
-      if (isCancelled || !incoming?.id) return;
-      setItems((prev) => (prev.some((n) => n.id === incoming.id) ? prev : [incoming, ...prev]));
-      if (!incoming.isRead) setUnreadCount((c) => c + 1);
-    });
-
-    connection.start().catch((err: unknown) => {
-      if (!isCancelled) console.warn("[SignalR] Failed to connect to notifications hub:", err);
+    void createNotificationHubConnection().then((conn) => {
+      if (isCancelled) return; // unmounted while the library was loading
+      connection = conn;
+      conn.on("ReceiveNotification", (incoming: NotificationItem) => {
+        if (isCancelled || !incoming?.id) return;
+        setItems((prev) => (prev.some((n) => n.id === incoming.id) ? prev : [incoming, ...prev]));
+        if (!incoming.isRead) setUnreadCount((c) => c + 1);
+      });
+      conn.start().catch((err: unknown) => {
+        if (!isCancelled) console.warn("[SignalR] Failed to connect to notifications hub:", err);
+      });
     });
 
     return () => {
       isCancelled = true;
-      connection.off("ReceiveNotification");
-      void connection.stop().catch(() => {
-        // Ignore stop errors on unmount
-      });
+      if (connection) {
+        connection.off("ReceiveNotification");
+        void connection.stop().catch(() => {
+          // Ignore stop errors on unmount
+        });
+      }
     };
   }, []);
 
