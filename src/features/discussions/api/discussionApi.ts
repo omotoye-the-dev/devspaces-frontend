@@ -1,13 +1,13 @@
-import { apiClient } from "@/lib/api/client";
-import { ENDPOINTS } from "@/lib/api/endpoints";
-import type { ApiResponse, PaginatedResponse } from "@/types/resources.types";
+import { apiClient } from "@/shared/lib/api/client";
+import { ENDPOINTS } from "@/shared/lib/api/endpoints";
+import type { ApiResponse, PaginatedResponse } from "@/features/resources/types/resources.types";
 import type {
   CreateCommentDto,
   CreateDiscussionDto,
   Discussion,
   DiscussionAuthor,
   DiscussionComment,
-} from "@/types/discussions.types";
+} from "@/features/discussions/types/discussions.types";
 
 type DiscussionCollectionResponse =
   | ApiResponse<Discussion[]>

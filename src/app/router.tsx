@@ -1,10 +1,10 @@
 import type { ComponentType } from "react";
 import { createBrowserRouter } from "react-router-dom";
-import PageLoader from "@/components/shared/PageLoader";
-import AuthLayout from "@/layouts/AuthLayout";
-import PublicLayout from "@/layouts/PublicLayout";
-import ProtectedRoute from "@/components/shared/ProtectedRoute";
-import AuthGate from "@/components/shared/AuthGate";
+import PageLoader from "@/shared/layout/PageLoader";
+import AuthLayout from "@/features/auth/layouts/AuthLayout";
+import PublicLayout from "@/shared/layout/PublicLayout";
+import ProtectedRoute from "@/features/auth/components/ProtectedRoute";
+import AuthGate from "@/features/auth/components/AuthGate";
 
 // Pages are code-split: each one downloads only when its route is first visited.
 // React Router keeps the current page on screen while the next one loads.
@@ -20,16 +20,16 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        ...page(() => import("@/pages/HomePage")),
+        ...page(() => import("@/features/home/pages/HomePage")),
       },
       // Readable by guests; interactions are guarded inside each page
-      { path: "articles", ...page(() => import("@/pages/member/ArticlesPage")) },
-      { path: "articles/:id", ...page(() => import("@/pages/member/ArticleDetailsPage")) },
-      { path: "resources", ...page(() => import("@/pages/member/ResourcesPage")) },
-      { path: "resources/:id", ...page(() => import("@/pages/member/ResourceDetailsPage")) },
-      { path: "profile/:id", ...page(() => import("@/pages/member/ProfilePage")) },
-      { path: "people", ...page(() => import("@/pages/member/PeoplePage")) },
-      { path: "leaderboard", ...page(() => import("@/pages/member/LeaderboardPage")) },
+      { path: "articles", ...page(() => import("@/features/articles/pages/ArticlesPage")) },
+      { path: "articles/:id", ...page(() => import("@/features/articles/pages/ArticleDetailsPage")) },
+      { path: "resources", ...page(() => import("@/features/resources/pages/ResourcesPage")) },
+      { path: "resources/:id", ...page(() => import("@/features/resources/pages/ResourceDetailsPage")) },
+      { path: "profile/:id", ...page(() => import("@/features/profile/pages/ProfilePage")) },
+      { path: "people", ...page(() => import("@/features/people/pages/PeoplePage")) },
+      { path: "leaderboard", ...page(() => import("@/features/leaderboard/pages/LeaderboardPage")) },
 
       // Backend requires auth: guests see an in-place "log in" panel
       {
@@ -40,8 +40,8 @@ export const router = createBrowserRouter([
           />
         ),
         children: [
-          { path: "discussions", ...page(() => import("@/pages/member/DiscussionsPage")) },
-          { path: "discussions/:id", ...page(() => import("@/pages/member/DiscussionsPage")) },
+          { path: "discussions", ...page(() => import("@/features/discussions/pages/DiscussionsPage")) },
+          { path: "discussions/:id", ...page(() => import("@/features/discussions/pages/DiscussionsPage")) },
         ],
       },
       {
@@ -51,7 +51,7 @@ export const router = createBrowserRouter([
             description="Articles, resources and discussions you save will show up here."
           />
         ),
-        children: [{ path: "saved", ...page(() => import("@/pages/member/SavedPage")) }],
+        children: [{ path: "saved", ...page(() => import("@/features/saved/pages/SavedPage")) }],
       },
       {
         element: (
@@ -60,7 +60,7 @@ export const router = createBrowserRouter([
             description="Your recently viewed articles, resources and discussions will show up here."
           />
         ),
-        children: [{ path: "history", ...page(() => import("@/pages/member/HistoryPage")) }],
+        children: [{ path: "history", ...page(() => import("@/features/history/pages/HistoryPage")) }],
       },
       {
         element: (
@@ -69,7 +69,7 @@ export const router = createBrowserRouter([
             description="Sign in to see and edit your profile, articles and activity."
           />
         ),
-        children: [{ path: "profile", ...page(() => import("@/pages/member/ProfilePage")) }],
+        children: [{ path: "profile", ...page(() => import("@/features/profile/pages/ProfilePage")) }],
       },
 
       // Creating / editing content still redirects to sign-in
@@ -78,15 +78,15 @@ export const router = createBrowserRouter([
         children: [
           {
             path: "resources/:id/edit",
-            ...page(() => import("@/pages/member/ResourceEditorPage")),
+            ...page(() => import("@/features/resources/pages/ResourceEditorPage")),
           },
-          { path: "articles/new", ...page(() => import("@/pages/member/ArticleEditorPage")) },
-          { path: "articles/:id/edit", ...page(() => import("@/pages/member/ArticleEditorPage")) },
+          { path: "articles/new", ...page(() => import("@/features/articles/pages/ArticleEditorPage")) },
+          { path: "articles/:id/edit", ...page(() => import("@/features/articles/pages/ArticleEditorPage")) },
         ],
       },
       {
         path: "*",
-        ...page(() => import("@/pages/NotFoundPage")),
+        ...page(() => import("@/shared/pages/NotFoundPage")),
       },
     ],
   },
@@ -98,38 +98,38 @@ export const router = createBrowserRouter([
     children: [
       {
         path: "sign-in",
-        ...page(() => import("@/pages/auth/SignInPage")),
+        ...page(() => import("@/features/auth/pages/SignInPage")),
       },
       {
         path: "sign-up",
-        ...page(() => import("@/pages/auth/SignUpPage")),
+        ...page(() => import("@/features/auth/pages/SignUpPage")),
       },
       {
         path: "forgot-password",
-        ...page(() => import("@/pages/auth/ForgotPassword")),
+        ...page(() => import("@/features/auth/pages/ForgotPassword")),
       },
       {
         path: "verify-account",
-        ...page(() => import("@/pages/auth/VerifyAccount")),
+        ...page(() => import("@/features/auth/pages/VerifyAccount")),
       },
       {
         path: "callback",
-        ...page(() => import("@/pages/auth/OAuthCallbackPage")),
+        ...page(() => import("@/features/auth/pages/OAuthCallbackPage")),
       },
       {
         path: "callback/:provider",
-        ...page(() => import("@/pages/auth/OAuthCallbackPage")),
+        ...page(() => import("@/features/auth/pages/OAuthCallbackPage")),
       },
     ],
   },
   {
     path: "/playground",
     hydrateFallbackElement: <PageLoader />,
-    ...page(() => import("@/pages/Playground")),
+    ...page(() => import("@/features/playground/pages/Playground")),
   },
   {
     path: "*",
     hydrateFallbackElement: <PageLoader />,
-    ...page(() => import("@/pages/NotFoundPage")),
+    ...page(() => import("@/shared/pages/NotFoundPage")),
   },
 ]);

@@ -10,26 +10,26 @@ import {
   FiCalendar,
   FiX,
 } from "react-icons/fi";
-import { Modal, Button, Avatar, Skeleton } from "@/components/common";
+import { Modal, Button, Avatar, Skeleton } from "@/shared/ui";
 import {
   getResourceById,
   downloadResource,
   voteResource,
   saveResource,
-} from "../api/resources.api";
+} from "@/features/resources/api/resources.api";
 import {
   calculateVoteTransition,
   applyVoteResponse,
-} from "../utils/voteHelper";
+} from "@/features/resources/utils/voteHelper";
 import { ResourceLinkPreviewCard } from "./ResourceLinkPreviewCard";
 import {
   isPartAFile,
   type ResourceDetail,
   type ResourcePart,
-} from "@/types/resources.types";
-import { getApiErrorMessage } from "@/lib/utils/apiError";
-import { toast } from "@/hooks/useToast";
-import { cn } from "@/lib/utils/cn";
+} from "@/features/resources/types/resources.types";
+import { getApiErrorMessage } from "@/shared/lib/utils/apiError";
+import { toast } from "@/shared/hooks/useToast";
+import { cn } from "@/shared/lib/utils/cn";
 
 export interface ResourceDetailModalProps {
   resourceId: string | null;

@@ -5,11 +5,11 @@ import {
   Card,
   Avatar,
   Button,
-} from "@/components/common";
+} from "@/shared/ui";
 
 import type { AuthorInfo } from "@/features/articles/api/articleApi";
 import { getArticles, getMyPosts } from "@/features/articles/api/articleApi";
-import { getUserProfileById, type UserProfile } from "@/lib/api/user.api";
+import { getUserProfileById, type UserProfile } from "@/features/profile/api/user.api";
 
 export interface AuthorCardProps {
   authorId?: string;

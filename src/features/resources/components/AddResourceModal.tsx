@@ -34,18 +34,18 @@ import {
   FiTrash2,
 } from "react-icons/fi";
 import { LuGraduationCap, LuWrench } from "react-icons/lu";
-import { Modal, Button, Avatar, Tooltip } from "@/components/common";
+import { Modal, Button, Avatar, Tooltip } from "@/shared/ui";
 import { useAuthStore } from "@/store";
 import { getTags, type Tag } from "@/features/articles/api/tagApi";
-import { toast } from "@/hooks/useToast";
-import { cn } from "@/lib/utils/cn";
-import { createResource, previewLink, addResourcePart } from "../api/resources.api";
+import { toast } from "@/shared/hooks/useToast";
+import { cn } from "@/shared/lib/utils/cn";
+import { createResource, previewLink, addResourcePart } from "@/features/resources/api/resources.api";
 import {
   ResourceAccessType,
   type ResourceDetail,
-} from "@/types/resources.types";
-import { getApiErrorMessage } from "@/lib/utils/apiError";
-import { insertMarkdown as applyMarkdown } from "@/lib/utils/markdown";
+} from "@/features/resources/types/resources.types";
+import { getApiErrorMessage } from "@/shared/lib/utils/apiError";
+import { insertMarkdown as applyMarkdown } from "@/shared/lib/utils/markdown";
 
 export interface NewPartDraft {
   id: string;

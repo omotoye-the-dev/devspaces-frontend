@@ -3,7 +3,7 @@ import {
   RESOURCE_CATEGORIES,
   type ResourceCategory,
 } from "@/features/resources/constants/resourceCategories";
-import { cn } from "@/lib/utils/cn";
+import { cn } from "@/shared/lib/utils/cn";
 
 export interface CategoryPillsProps {
   selectedCategory: string;

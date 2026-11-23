@@ -9,12 +9,12 @@ import {
   HiBookmark,
   HiOutlineTrash,
 } from "react-icons/hi2";
-import { Avatar, Tag } from "@/components/common";
-import { cn } from "@/lib/utils/cn";
-import { formatTimeAgo } from "@/lib/utils/date";
-import { toast } from "@/hooks/useToast";
-import { confirmDialog } from "@/hooks/useConfirmDialog";
-import type { Discussion } from "@/types/discussions.types";
+import { Avatar, Tag } from "@/shared/ui";
+import { cn } from "@/shared/lib/utils/cn";
+import { formatTimeAgo } from "@/shared/lib/utils/date";
+import { toast } from "@/shared/hooks/useToast";
+import { confirmDialog } from "@/shared/hooks/useConfirmDialog";
+import type { Discussion } from "@/features/discussions/types/discussions.types";
 
 function formatCount(value: number): string {
   if (value >= 1000) return `${(value / 1000).toFixed(1).replace(/\.0$/, "")}k`;

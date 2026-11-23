@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import type { AuthUser } from "@/types/auth.types";
-import { STORAGE_KEYS, storage } from "@/lib/storage";
+import type { AuthUser } from "@/features/auth/types/auth.types";
+import { STORAGE_KEYS, storage } from "@/shared/lib/storage";
 
 const getDisplayName = (user?: AuthUser | null): string => {
   if (!user) return "User";

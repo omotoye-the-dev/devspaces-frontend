@@ -1,7 +1,7 @@
 import type { JSX, MouseEvent } from "react";
 import { FiBookmark, FiArrowUp, FiArrowDown } from "react-icons/fi";
-import { Avatar } from "@/components/common";
-import { cn } from "@/lib/utils/cn";
+import { Avatar } from "@/shared/ui";
+import { cn } from "@/shared/lib/utils/cn";
 
 export interface ResourceAuthor {
   id?: string;

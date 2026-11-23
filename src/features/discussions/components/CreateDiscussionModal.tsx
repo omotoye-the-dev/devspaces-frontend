@@ -1,7 +1,7 @@
 import { useState, useEffect, type JSX, type FormEvent, type KeyboardEvent } from "react";
 import { HiPlus } from "react-icons/hi2";
-import { Modal, Input, Textarea, Button, Tag } from "@/components/common";
-import { toast } from "@/hooks/useToast";
+import { Modal, Input, Textarea, Button, Tag } from "@/shared/ui";
+import { toast } from "@/shared/hooks/useToast";
 import { getTags } from "@/features/articles/api/tagApi";
 
 export interface CreateDiscussionModalProps {

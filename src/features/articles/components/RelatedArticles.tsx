@@ -1,7 +1,7 @@
 import { useState, useEffect, type JSX } from "react";
 import { Link } from "react-router-dom";
-import { Skeleton, Tag } from "@/components/common";
-import { toast } from "@/hooks/useToast";
+import { Skeleton, Tag } from "@/shared/ui";
+import { toast } from "@/shared/hooks/useToast";
 import { getArticles, type Article } from "@/features/articles/api/articleApi";
 import articlePlaceholder from "@/assets/images/article-placeholder.jpg";
 

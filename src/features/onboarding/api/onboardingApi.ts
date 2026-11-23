@@ -1,6 +1,6 @@
-import { apiClient } from "@/lib/api/client";
-import { ENDPOINTS } from "@/lib/api/endpoints";
-import type { UserProfile } from "@/lib/api/user.api";
+import { apiClient } from "@/shared/lib/api/client";
+import { ENDPOINTS } from "@/shared/lib/api/endpoints";
+import type { UserProfile } from "@/features/profile/api/user.api";
 
 export interface UpdateProfilePayload {
   firstName?: string;

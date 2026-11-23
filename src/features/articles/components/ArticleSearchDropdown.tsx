@@ -4,7 +4,7 @@ import { LuTag, LuTrendingUp, LuFlame, LuClock, LuEye } from "react-icons/lu";
 import { AiOutlineHeart } from "react-icons/ai";
 import { getTags, type Tag } from "@/features/articles/api/tagApi";
 import { getTrendingPosts, type TrendingPost } from "@/features/articles/api/articleApi";
-import { Skeleton } from "@/components/common";
+import { Skeleton } from "@/shared/ui";
 
 export interface ArticleSearchDropdownProps {
   isOpen: boolean;

@@ -1,6 +1,6 @@
-import { apiClient } from "@/lib/api/client";
-import { ENDPOINTS } from "@/lib/api/endpoints";
-import type { ArticleFormData } from "../schemas/articleSchema";
+import { apiClient } from "@/shared/lib/api/client";
+import { ENDPOINTS } from "@/shared/lib/api/endpoints";
+import type { ArticleFormData } from "@/features/articles/schemas/articleSchema";
 
 export interface Attachment {
   id?: string;

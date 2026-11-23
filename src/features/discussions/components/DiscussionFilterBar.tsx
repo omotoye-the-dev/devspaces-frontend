@@ -6,10 +6,10 @@ import {
   HiXMark,
 } from "react-icons/hi2";
 import { MdOutlineSearch, MdClear } from "react-icons/md";
-import { Input } from "@/components/common";
-import { cn } from "@/lib/utils/cn";
+import { Input } from "@/shared/ui";
+import { cn } from "@/shared/lib/utils/cn";
 import { getTags } from "@/features/articles/api/tagApi";
-import type { DiscussionSortOption } from "@/types/discussions.types";
+import type { DiscussionSortOption } from "@/features/discussions/types/discussions.types";
 
 export interface DiscussionFilterBarProps {
   activeSort: DiscussionSortOption;

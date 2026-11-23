@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import { useNavigate } from "react-router-dom";
 import { HiOutlineArrowTrendingUp, HiOutlineChatBubbleOvalLeft } from "react-icons/hi2";
-import { Skeleton } from "@/components/common";
+import { Skeleton } from "@/shared/ui";
 
 export interface TrendingDiscussion {
   id: string;

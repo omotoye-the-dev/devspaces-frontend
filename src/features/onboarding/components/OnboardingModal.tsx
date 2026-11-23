@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, type ChangeEvent, type JSX } from "react";
 import { HiOutlineCamera, HiCheck } from "react-icons/hi2";
-import { Modal, Button, Input, Textarea, Avatar } from "@/components/common";
+import { Modal, Button, Input, Textarea, Avatar } from "@/shared/ui";
 import { getTags } from "@/features/articles/api/tagApi";
 import { updateInterestedTags, updateProfile } from "@/features/onboarding/api/onboardingApi";
 import { useAuthStore } from "@/store";
-import { toast } from "@/hooks/useToast";
-import { cn } from "@/lib/utils/cn";
-import { getApiErrorMessage } from "@/lib/utils/apiError";
+import { toast } from "@/shared/hooks/useToast";
+import { cn } from "@/shared/lib/utils/cn";
+import { getApiErrorMessage } from "@/shared/lib/utils/apiError";
 
 export interface OnboardingModalProps {
   open: boolean;

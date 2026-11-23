@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback, type JSX } from "react";
-import { Avatar, Button, Skeleton } from "@/components/common";
-import { toast } from "@/hooks/useToast";
+import { Avatar, Button, Skeleton } from "@/shared/ui";
+import { toast } from "@/shared/hooks/useToast";
 import { useAuthStore } from "@/store";
-import { useLiveHub } from "@/hooks/useLiveHub";
+import { useLiveHub } from "@/shared/hooks/useLiveHub";
 import { AiFillLike, AiOutlineLike } from "react-icons/ai";
 import {
   getArticleComments,
@@ -11,11 +11,11 @@ import {
   likeComment,
   type Comment,
 } from "@/features/articles/api/articleApi";
-import { confirmDialog } from "@/hooks/useConfirmDialog";
+import { confirmDialog } from "@/shared/hooks/useConfirmDialog";
 import { HiOutlineTrash } from "react-icons/hi2";
-import { getApiErrorMessage } from "@/lib/utils/apiError";
-import { cn } from "@/lib/utils/cn";
-import type { AuthUser } from "@/types/auth.types";
+import { getApiErrorMessage } from "@/shared/lib/utils/apiError";
+import { cn } from "@/shared/lib/utils/cn";
+import type { AuthUser } from "@/features/auth/types/auth.types";
 
 export interface ArticleCommentsProps {
   articleId: string;

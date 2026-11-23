@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import { FiBookmark } from "react-icons/fi";
-import { Button } from "@/components/common";
-import { cn } from "@/lib/utils/cn";
+import { Button } from "@/shared/ui";
+import { cn } from "@/shared/lib/utils/cn";
 import {
   RESOURCE_CATEGORIES,
   type ResourceCategory,

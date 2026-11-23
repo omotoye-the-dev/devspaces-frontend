@@ -4,11 +4,11 @@ import { AiOutlineHeart, AiFillHeart } from "react-icons/ai";
 import { FiMessageCircle, FiMoreHorizontal } from "react-icons/fi";
 import { LuBookmark, LuBookmarkCheck, LuClock } from "react-icons/lu";
 import { clsx } from "clsx";
-import { Avatar } from "@/components/common";
-import { toast } from "@/hooks/useToast";
+import { Avatar } from "@/shared/ui";
+import { toast } from "@/shared/hooks/useToast";
 import articlePlaceholder from "@/assets/images/article-placeholder.jpg";
 import { likeArticle } from "@/features/articles/api/articleApi";
-import { useLiveHub } from "@/hooks/useLiveHub";
+import { useLiveHub } from "@/shared/hooks/useLiveHub";
 
 export interface ArticleCardProps {
   id: string;

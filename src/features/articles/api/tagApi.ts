@@ -1,5 +1,5 @@
-import { apiClient } from "@/lib/api/client";
-import { ENDPOINTS } from "@/lib/api/endpoints";
+import { apiClient } from "@/shared/lib/api/client";
+import { ENDPOINTS } from "@/shared/lib/api/endpoints";
 
 export interface Tag {
   id?: string;

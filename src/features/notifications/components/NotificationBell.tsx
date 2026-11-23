@@ -2,11 +2,11 @@ import { useEffect, useRef, useState, type JSX } from "react";
 import { useNavigate } from "react-router-dom";
 import { HiOutlineBell } from "react-icons/hi";
 import { HiOutlineTrash } from "react-icons/hi2";
-import { Avatar, Button, Skeleton } from "@/components/common";
-import { toast } from "@/hooks/useToast";
-import { getApiErrorMessage } from "@/lib/utils/apiError";
-import { formatTimeAgo } from "@/lib/utils/date";
-import { cn } from "@/lib/utils/cn";
+import { Avatar, Button, Skeleton } from "@/shared/ui";
+import { toast } from "@/shared/hooks/useToast";
+import { getApiErrorMessage } from "@/shared/lib/utils/apiError";
+import { formatTimeAgo } from "@/shared/lib/utils/date";
+import { cn } from "@/shared/lib/utils/cn";
 import {
   deleteNotification,
   getNotifications,
@@ -14,8 +14,8 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from "@/features/notifications/api/notifications.api";
-import { createNotificationHubConnection } from "@/lib/signalr/signalr";
-import type { NotificationItem } from "@/types/notifications.types";
+import { createNotificationHubConnection } from "@/shared/lib/signalr/signalr";
+import type { NotificationItem } from "@/features/notifications/types/notifications.types";
 
 const PAGE_SIZE = 10;
 const UNREAD_POLL_MS = 60_000;

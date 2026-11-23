@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, type JSX } from "react";
 import { FiExternalLink, FiGlobe, FiShare2, FiCheck } from "react-icons/fi";
-import { Skeleton } from "@/components/common";
-import { previewLink } from "../api/resources.api";
-import type { LinkPreviewResponseData } from "@/types/resources.types";
-import { cn } from "@/lib/utils/cn";
-import { toast } from "@/hooks/useToast";
+import { Skeleton } from "@/shared/ui";
+import { previewLink } from "@/features/resources/api/resources.api";
+import type { LinkPreviewResponseData } from "@/features/resources/types/resources.types";
+import { cn } from "@/shared/lib/utils/cn";
+import { toast } from "@/shared/hooks/useToast";
 
 export interface ResourceLinkPreviewCardProps {
   url: string;

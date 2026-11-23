@@ -11,12 +11,12 @@ import {
   HiBookmark,
   HiOutlineTrash,
 } from "react-icons/hi2";
-import { Modal, Avatar, Tag, Button, Textarea, EmptyState } from "@/components/common";
-import { cn } from "@/lib/utils/cn";
-import { formatTimeAgo } from "@/lib/utils/date";
-import { toast } from "@/hooks/useToast";
-import { confirmDialog } from "@/hooks/useConfirmDialog";
-import type { Discussion } from "@/types/discussions.types";
+import { Modal, Avatar, Tag, Button, Textarea, EmptyState } from "@/shared/ui";
+import { cn } from "@/shared/lib/utils/cn";
+import { formatTimeAgo } from "@/shared/lib/utils/date";
+import { toast } from "@/shared/hooks/useToast";
+import { confirmDialog } from "@/shared/hooks/useConfirmDialog";
+import type { Discussion } from "@/features/discussions/types/discussions.types";
 
 export interface DiscussionDetailModalProps {
   discussion: Discussion | null;

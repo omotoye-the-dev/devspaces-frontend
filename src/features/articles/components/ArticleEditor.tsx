@@ -40,12 +40,12 @@ import {
   BsArrowsFullscreen,
 } from "react-icons/bs";
 
-import { Button } from "@/components/common";
-import { toast } from "@/hooks/useToast";
-import { getApiErrorMessage } from "@/lib/utils/apiError";
-import { articleSchema, type ArticleFormData } from "../schemas/articleSchema";
-import { getTags, type Tag } from "../api/tagApi";
-import { insertMarkdown as applyMarkdown } from "@/lib/utils/markdown";
+import { Button } from "@/shared/ui";
+import { toast } from "@/shared/hooks/useToast";
+import { getApiErrorMessage } from "@/shared/lib/utils/apiError";
+import { articleSchema, type ArticleFormData } from "@/features/articles/schemas/articleSchema";
+import { getTags, type Tag } from "@/features/articles/api/tagApi";
+import { insertMarkdown as applyMarkdown } from "@/shared/lib/utils/markdown";
 
 export interface ArticleEditorProps {
   initialData?: Partial<ArticleFormData>;

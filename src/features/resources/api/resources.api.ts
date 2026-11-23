@@ -1,5 +1,5 @@
-import { apiClient } from "@/lib/api/client";
-import { ENDPOINTS } from "@/lib/api/endpoints";
+import { apiClient } from "@/shared/lib/api/client";
+import { ENDPOINTS } from "@/shared/lib/api/endpoints";
 import type {
   ApiResponse,
   PaginatedResponse,
@@ -19,7 +19,7 @@ import type {
   DownloadResourceResponseData,
   LinkPreviewResponseData,
   ResourcePart,
-} from "@/types/resources.types";
+} from "@/features/resources/types/resources.types";
 
 /**
  * Uploads a standalone logo/cover image for a resource.

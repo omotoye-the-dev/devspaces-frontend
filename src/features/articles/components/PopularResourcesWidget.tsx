@@ -1,9 +1,9 @@
 import { useState, useEffect, type JSX } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiArrowUp } from "react-icons/fi";
-import { Skeleton } from "@/components/common";
+import { Skeleton } from "@/shared/ui";
 import { getResources } from "@/features/resources/api/resources.api";
-import type { ResourceListItem } from "@/types/resources.types";
+import type { ResourceListItem } from "@/features/resources/types/resources.types";
 
 /** Category-to-color map for resource icons */
 const CATEGORY_COLORS: Record<string, string> = {
