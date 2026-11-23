@@ -1,4 +1,4 @@
-import { useEffect, useState, type JSX } from "react";
+import { type JSX } from "react";
 import {
   HiOutlineArrowTrendingUp,
   HiOutlineClock,
@@ -8,8 +8,8 @@ import {
 import { MdOutlineSearch, MdClear } from "react-icons/md";
 import { Input } from "@/shared/ui";
 import { cn } from "@/shared/lib/utils/cn";
-import { getTags } from "@/features/articles/api/tagApi";
 import type { DiscussionSortOption } from "@/features/discussions/types/discussions.types";
+import { useTags } from "@/features/articles/api/tagQueries";
 
 export interface DiscussionFilterBarProps {
   activeSort: DiscussionSortOption;
@@ -52,23 +52,8 @@ export function DiscussionFilterBar({
   onSearchChange,
   availableTags,
 }: DiscussionFilterBarProps): JSX.Element {
-  const [popularTags, setPopularTags] = useState<string[]>([]);
-
-  useEffect(() => {
-    let active = true;
-
-    getTags({ pageSize: 20 })
-      .then((tags) => {
-        if (active) setPopularTags(tags.map((t) => t.name));
-      })
-      .catch(() => {
-        if (active) setPopularTags([]);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
+  const { data: fetchedTags } = useTags(20);
+  const popularTags = (fetchedTags ?? []).map((t) => t.name);
 
   // Merge tags fetched from the backend with any dynamically created tags, removing duplicates
   const allTags = Array.from(new Set([...availableTags, ...popularTags]));

@@ -1,8 +1,8 @@
-import { useState, useEffect, type JSX, type FormEvent, type KeyboardEvent } from "react";
+import { useMemo, useState, type JSX, type FormEvent, type KeyboardEvent } from "react";
 import { HiPlus } from "react-icons/hi2";
 import { Modal, Input, Textarea, Button, Tag } from "@/shared/ui";
 import { toast } from "@/shared/hooks/useToast";
-import { getTags } from "@/features/articles/api/tagApi";
+import { useTags } from "@/features/articles/api/tagQueries";
 
 export interface CreateDiscussionModalProps {
   open: boolean;
@@ -20,24 +20,8 @@ export function CreateDiscussionModal({
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [errors, setErrors] = useState<{ title?: string; content?: string; tags?: string }>({});
-  const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
-
-  useEffect(() => {
-    if (!open) return;
-    let active = true;
-
-    getTags({ pageSize: 20 })
-      .then((fetchedTags) => {
-        if (active) setSuggestedTags(fetchedTags.map((t) => t.name));
-      })
-      .catch(() => {
-        if (active) setSuggestedTags([]);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [open]);
+  const { data: fetchedTags } = useTags(20, open);
+  const suggestedTags = useMemo(() => (fetchedTags ?? []).map((t) => t.name), [fetchedTags]);
 
   const handleAddTag = (tagToAdd: string): void => {
     const formatted = tagToAdd

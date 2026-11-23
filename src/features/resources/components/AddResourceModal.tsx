@@ -1,6 +1,5 @@
-import { useState, useRef, useEffect, type FormEvent, type ChangeEvent, type JSX } from "react";
+import { useMemo, useState, useRef, type FormEvent, type ChangeEvent, type JSX } from "react";
 import { Modal } from "@/shared/ui";
-import { getTags, type Tag } from "@/features/articles/api/tagApi";
 import { toast } from "@/shared/hooks/useToast";
 import { cn } from "@/shared/lib/utils/cn";
 import {
@@ -27,6 +26,7 @@ import { UploadSourceSection } from "./add-resource/UploadSourceSection";
 import { ChaptersBuilder } from "./add-resource/ChaptersBuilder";
 import { ResourceTagInput } from "./add-resource/ResourceTagInput";
 import { ComposerFooter } from "./add-resource/ComposerFooter";
+import { useTags } from "@/features/articles/api/tagQueries";
 
 export type {
   NewPartDraft,
@@ -69,7 +69,6 @@ export function AddResourceModal({
   const [isPreviewLoading, setIsPreviewLoading] = useState<boolean>(false);
   const [description, setDescription] = useState<string>("");
   const [tags, setTags] = useState<string[]>([]);
-  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [categoryDropdownOpen, setCategoryDropdownOpen] = useState<boolean>(false);
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -79,26 +78,9 @@ export function AddResourceModal({
   // Bumped on reset so child form sections (tag search, chapter draft) start fresh.
   const [formKey, setFormKey] = useState(0);
 
-  // Fetch available tags only when modal is open
-  useEffect(() => {
-    if (!open) return;
-
-    let isSubscribed = true;
-    async function loadTags(): Promise<void> {
-      try {
-        const data = await getTags({ pageSize: 50 });
-        if (isSubscribed && Array.isArray(data)) {
-          setAvailableTags(data);
-        }
-      } catch {
-        // Silently handle
-      }
-    }
-    void loadTags();
-    return () => {
-      isSubscribed = false;
-    };
-  }, [open]);
+  // Available tags, fetched only when the modal is open (shared cache)
+  const { data: tagsData } = useTags(50, open);
+  const availableTags = useMemo(() => tagsData ?? [], [tagsData]);
 
   const currentConfig = CATEGORIES.find((c) => c.id === category) ?? CATEGORIES[0];
 

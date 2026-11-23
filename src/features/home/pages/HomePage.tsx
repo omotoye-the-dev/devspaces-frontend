@@ -6,7 +6,7 @@ import {
   TrendingDiscussionsWidget,
   PopularResourcesWidget,
 } from "@/features/articles/components";
-import { getUserProfile, isProfileComplete } from "@/features/profile/api/user.api";
+import { isProfileComplete } from "@/features/profile/api/user.api";
 import { OnboardingModal } from "@/features/onboarding/components/OnboardingModal";
 import { useAuthStore } from "@/store";
 
@@ -21,6 +21,7 @@ import { TRENDING_FILTERS } from "@/features/home/constants";
 import { useHomeFeed } from "@/features/home/hooks/useHomeFeed";
 import { useTrendingFeed } from "@/features/home/hooks/useTrendingFeed";
 import { useSidebarTrending } from "@/features/home/hooks/useSidebarTrending";
+import { invalidateProfiles, useMyProfile } from "@/features/profile/api/profileQueries";
 
 export function HomePage(): JSX.Element {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -57,26 +58,10 @@ export function HomePage(): JSX.Element {
   } = useTrendingFeed();
 
   const { trendingSidebarItems, isSidebarLoading } = useSidebarTrending(isAuthenticated);
-  const [showOnboarding, setShowOnboarding] = useState<boolean>(false);
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    let active = true;
-
-    getUserProfile()
-      .then((profile) => {
-        if (active && !isProfileComplete(profile)) {
-          setShowOnboarding(true);
-        }
-      })
-      .catch(() => {
-        // Profile fetch failure: don't block the page with onboarding
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [isAuthenticated]);
+  const { data: myProfile } = useMyProfile(isAuthenticated);
+  const [onboardingDone, setOnboardingDone] = useState(false);
+  const showOnboarding =
+    isAuthenticated && Boolean(myProfile) && !isProfileComplete(myProfile) && !onboardingDone;
 
   // Tab switch
   useEffect(() => {
@@ -301,7 +286,13 @@ export function HomePage(): JSX.Element {
         </aside>
       </div>
 
-      <OnboardingModal open={showOnboarding} onComplete={() => setShowOnboarding(false)} />
+      <OnboardingModal
+        open={showOnboarding}
+        onComplete={() => {
+          setOnboardingDone(true);
+          void invalidateProfiles();
+        }}
+      />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type JSX } from "react";
+import { useMemo, useState, type JSX } from "react";
 import {
   HiHome,
   // HiOutlineNewspaper,
@@ -24,8 +24,9 @@ import { cn } from "@/shared/lib/utils/cn";
 import { useAuthStore } from "@/store";
 import { toast } from "@/shared/hooks/useToast";
 import { Button, Skeleton } from "@/shared/ui";
-import { getTags, type Tag } from "@/features/articles/api/tagApi";
+import type { Tag } from "@/features/articles/api/tagApi";
 import { FiHash } from "react-icons/fi";
+import { useTags } from "@/features/articles/api/tagQueries";
 
 export interface NavItem {
   id: string;
@@ -202,10 +203,6 @@ export function Sidebar({
   const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
   const [isHovered, setIsHovered] = useState(false);
 
-  const [popularTags, setPopularTags] = useState<Tag[]>([]);
-  const [isTagsLoading, setIsTagsLoading] = useState(false);
-  const hasFetchedTagsRef = useRef(false);
-
   const [prevDefaultCollapsed, setPrevDefaultCollapsed] = useState(defaultCollapsed);
   if (prevDefaultCollapsed !== defaultCollapsed) {
     setPrevDefaultCollapsed(defaultCollapsed);
@@ -214,28 +211,16 @@ export function Sidebar({
 
   const isExpanded = !isCollapsed || isHovered;
 
-  // Lazily load the top 5 most-used tags the first time the sidebar is opened/expanded.
-  // The sidebar only toggles visibility here (it never unmounts while hovering), so the
-  // fetch is allowed to resolve and update state even if the user has since moved away.
-  useEffect(() => {
-    if (!isExpanded || hasFetchedTagsRef.current) return;
-    hasFetchedTagsRef.current = true;
-    setIsTagsLoading(true);
-
-    getTags({ pageSize: 50 })
-      .then((tags) => {
-        const top5 = [...tags]
-          .sort((a, b) => (b.usageCount ?? 0) - (a.usageCount ?? 0))
-          .slice(0, 5);
-        setPopularTags(top5);
-      })
-      .catch(() => {
-        hasFetchedTagsRef.current = false;
-      })
-      .finally(() => {
-        setIsTagsLoading(false);
-      });
-  }, [isExpanded]);
+  // Lazily load the top 5 most-used tags the first time the sidebar is expanded. The list
+  // is cached app-wide, so remounting the sidebar on navigation no longer refetches it.
+  const [tagsRequested, setTagsRequested] = useState(false);
+  if (isExpanded && !tagsRequested) setTagsRequested(true);
+  const { data: allTags, isLoading: isTagsLoading } = useTags(50, tagsRequested);
+  const popularTags = useMemo(
+    () =>
+      [...(allTags ?? [])].sort((a, b) => (b.usageCount ?? 0) - (a.usageCount ?? 0)).slice(0, 5),
+    [allTags],
+  );
 
   const routeActiveItem =
     location.pathname === "/"

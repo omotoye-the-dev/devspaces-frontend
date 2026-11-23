@@ -1,4 +1,4 @@
-import { useEffect, useState, type JSX } from "react";
+import { useState, type JSX } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { FiMenu, FiX } from "react-icons/fi";
 import { FaUser } from "react-icons/fa";
@@ -6,14 +6,11 @@ import { LuPenLine } from "react-icons/lu";
 import { MdOutlineSearch } from "react-icons/md";
 import { Button, Avatar, Skeleton } from "@/shared/ui/index";
 import { useAuthStore } from "@/store";
-import {
-  getUserProfile,
-  getProfileAvatar,
-  type UserProfile,
-} from "@/features/profile/api/user.api";
+import { getProfileAvatar } from "@/features/profile/api/user.api";
 import { cn } from "@/shared/lib/utils/cn";
 import { GlobalSearchBar } from "@/features/search/components/GlobalSearchBar";
 import { NotificationBell } from "@/features/notifications/components/NotificationBell";
+import { useMyProfile } from "@/features/profile/api/profileQueries";
 
 export interface NavBarProps {
   isLoading?: boolean;
@@ -59,8 +56,8 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [hasFetchedProfile, setHasFetchedProfile] = useState(false);
+  const { data: profileData, isFetched: hasFetchedProfile } = useMyProfile(isAuthenticated);
+  const profile = profileData ?? null;
 
   const isArticlesActive =
     location.pathname === "/articles" || location.pathname.startsWith("/articles/");
@@ -68,32 +65,6 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
     location.pathname === "/resources" || location.pathname.startsWith("/resources/");
   const isDiscussionsActive =
     location.pathname === "/discussions" || location.pathname.startsWith("/discussions/");
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      return;
-    }
-
-    let isSubscribed = true;
-    getUserProfile()
-      .then((data) => {
-        if (isSubscribed && data) {
-          setProfile(data);
-        }
-      })
-      .catch(() => {
-        // Handle fetch failure gracefully
-      })
-      .finally(() => {
-        if (isSubscribed) {
-          setHasFetchedProfile(true);
-        }
-      });
-
-    return () => {
-      isSubscribed = false;
-    };
-  }, [isAuthenticated]);
 
   const isProfileLoading = isAuthenticated && !hasFetchedProfile && !profile;
 

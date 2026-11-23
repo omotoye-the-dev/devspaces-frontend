@@ -9,8 +9,8 @@ import {
 } from "react";
 import { clsx } from "clsx";
 import { toast } from "@/shared/hooks/useToast";
-import { getTags, type Tag } from "@/features/articles/api/tagApi";
 import { HiOutlineXMark, HiOutlineLockClosed } from "react-icons/hi2";
+import { useTags } from "@/features/articles/api/tagQueries";
 
 interface TagInputProps {
   /** Currently selected tag names (max 4). */
@@ -21,28 +21,12 @@ interface TagInputProps {
 /** Tag picker with server-backed suggestions and keyboard navigation. */
 export function TagInput({ tags: tagNamesValue, onChange }: TagInputProps): JSX.Element {
   const [tagInput, setTagInput] = useState("");
-  const [allTags, setAllTags] = useState<Tag[]>([]);
   const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
   const [highlightedTagIndex, setHighlightedTagIndex] = useState<number>(-1);
   const tagDropdownRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    let isMounted = true;
-    async function loadAllTags() {
-      try {
-        const data = await getTags({ pageSize: 100 });
-        if (isMounted) {
-          setAllTags(data);
-        }
-      } catch (err: unknown) {
-        console.error("Failed to load tag suggestions:", err);
-      }
-    }
-    loadAllTags();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const { data: allTagsData } = useTags(100);
+  const allTags = useMemo(() => allTagsData ?? [], [allTagsData]);
 
   useEffect(() => {
     if (!isTagDropdownOpen) return;

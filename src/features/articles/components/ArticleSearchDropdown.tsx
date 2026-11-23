@@ -2,9 +2,9 @@ import { useEffect, useState, useMemo, useRef, type JSX } from "react";
 import { clsx } from "clsx";
 import { LuTag, LuTrendingUp, LuFlame, LuClock, LuEye } from "react-icons/lu";
 import { AiOutlineHeart } from "react-icons/ai";
-import { getTags, type Tag } from "@/features/articles/api/tagApi";
 import { getTrendingPosts, type TrendingPost } from "@/features/articles/api/articleApi";
 import { Skeleton } from "@/shared/ui";
+import { useTags } from "@/features/articles/api/tagQueries";
 
 export interface ArticleSearchDropdownProps {
   isOpen: boolean;
@@ -24,9 +24,6 @@ export function ArticleSearchDropdown({
   onSelectTopic,
 }: ArticleSearchDropdownProps): JSX.Element | null {
   const containerRef = useRef<HTMLDivElement>(null);
-
-  const [tags, setTags] = useState<Tag[]>([]);
-  const [isTagsLoading, setIsTagsLoading] = useState<boolean>(true);
 
   const [trendingPosts, setTrendingPosts] = useState<TrendingPost[]>([]);
   const [isTrendingLoading, setIsTrendingLoading] = useState<boolean>(true);
@@ -56,31 +53,9 @@ export function ArticleSearchDropdown({
     };
   }, [isOpen, onClose]);
 
-  // Fetch all popular tags once opened
-  useEffect(() => {
-    if (!isOpen) return;
-    let cancelled = false;
-
-    async function loadTags(): Promise<void> {
-      try {
-        setIsTagsLoading(true);
-        const data = await getTags({ pageSize: 50 });
-        if (!cancelled) {
-          setTags(data);
-        }
-      } catch {
-        if (!cancelled) setTags([]);
-      } finally {
-        if (!cancelled) setIsTagsLoading(false);
-      }
-    }
-
-    void loadTags();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen]);
+  // Popular tags, fetched once opened (shared cache)
+  const { data: tagsData, isLoading: isTagsLoading } = useTags(50, isOpen);
+  const tags = useMemo(() => tagsData ?? [], [tagsData]);
 
   // Fetch trending topics (with debounced search query support)
   useEffect(() => {

@@ -10,6 +10,7 @@ import {
   getProfileLinks,
   type UserProfile,
 } from "@/features/profile/api/user.api";
+import { invalidateProfiles } from "@/features/profile/api/profileQueries";
 
 export interface EditProfileModalProps {
   open: boolean;
@@ -99,6 +100,7 @@ export function EditProfileModal({
 
       toast.success("Profile updated successfully");
       onUpdated(updated);
+      void invalidateProfiles();
       onClose();
     } catch (err: unknown) {
       toast.error(getApiErrorMessage(err, "Failed to update profile"));

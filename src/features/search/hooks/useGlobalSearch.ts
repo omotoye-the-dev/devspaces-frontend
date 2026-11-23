@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, useCallback, type KeyboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { getFeedArticles } from "@/features/articles/api/articleApi";
-import { getTags } from "@/features/articles/api/tagApi";
 import { getDiscussions } from "@/features/discussions/api/discussionApi";
 import { getResources } from "@/features/resources/api/resources.api";
 import type { ResourceListItem } from "@/features/resources/types/resources.types";
@@ -19,6 +18,8 @@ import type {
   PersonResult,
   SearchResult,
 } from "@/features/search/types";
+import { queryClient } from "@/shared/lib/queryClient";
+import { tagsQuery } from "@/features/articles/api/tagQueries";
 
 /**
  * Global search state: debounced query, parallel fetches across articles,
@@ -86,7 +87,7 @@ export function useGlobalSearch() {
       const [articlesRes, tagsRes, discussionsRes, resourcesRes, usersRes] =
         await Promise.allSettled([
           getFeedArticles({ page: 1, pageSize: 20 }),
-          getTags({ pageSize: 50 }),
+          queryClient.fetchQuery(tagsQuery(50)),
           getDiscussions({ search: q }),
           getResources({ search: q, pageSize: 5, page: 1 }),
           apiClient.get<{ data?: UserProfile[] } | UserProfile[]>(

@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, type JSX } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { handleOAuthCallback } from "@/features/auth/api/auth.api";
-import { getUserProfile } from "@/features/profile/api/user.api";
 import { useAuthStore } from "@/store";
 import { toast } from "@/shared/hooks/useToast";
 import { getApiErrorMessage } from "@/shared/lib/utils/apiError";
+import { queryClient } from "@/shared/lib/queryClient";
+import { myProfileQuery } from "@/features/profile/api/profileQueries";
 
 export default function OAuthCallbackPage(): JSX.Element {
   const navigate = useNavigate();
@@ -41,7 +42,7 @@ export default function OAuthCallbackPage(): JSX.Element {
       if (directToken) {
         setAuth(directToken);
         try {
-          await getUserProfile();
+          await queryClient.fetchQuery(myProfileQuery); // primes the shared cache
         } catch {
           // Gracefully continue even if profile fetch fails
         }
@@ -65,7 +66,7 @@ export default function OAuthCallbackPage(): JSX.Element {
           setAuth(authToken, response.refreshToken ?? null, response.user);
           if (!response.user) {
             try {
-              await getUserProfile();
+              await queryClient.fetchQuery(myProfileQuery); // primes the shared cache
             } catch {
               // Gracefully continue even if profile fetch fails
             }

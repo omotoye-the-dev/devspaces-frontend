@@ -1,12 +1,12 @@
-import { useEffect, useRef, useState, type ChangeEvent, type JSX } from "react";
+import { useMemo, useRef, useState, type ChangeEvent, type JSX } from "react";
 import { HiOutlineCamera, HiCheck } from "react-icons/hi2";
 import { Modal, Button, Input, Textarea, Avatar } from "@/shared/ui";
-import { getTags } from "@/features/articles/api/tagApi";
 import { updateInterestedTags, updateProfile } from "@/features/onboarding/api/onboardingApi";
 import { useAuthStore } from "@/store";
 import { toast } from "@/shared/hooks/useToast";
 import { cn } from "@/shared/lib/utils/cn";
 import { getApiErrorMessage } from "@/shared/lib/utils/apiError";
+import { useTags } from "@/features/articles/api/tagQueries";
 
 export interface OnboardingModalProps {
   open: boolean;
@@ -19,9 +19,13 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps): JSX
   const currentUser = useAuthStore((state) => state.user);
 
   const [step, setStep] = useState<OnboardingStep>("tags");
-  const [availableTags, setAvailableTags] = useState<{ id: string; name: string }[]>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
-  const [isLoadingTags, setIsLoadingTags] = useState(true);
+  // Suggested interests (shared tag cache); only tags with an id can be saved
+  const { data: tagsData, isLoading: isLoadingTags } = useTags(24, open);
+  const availableTags = useMemo(
+    () => (tagsData ?? []).filter((t) => t.id).map((t) => ({ id: t.id as string, name: t.name })),
+    [tagsData],
+  );
 
   const [bio, setBio] = useState("");
   const [xUrl, setXUrl] = useState("");
@@ -33,32 +37,6 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps): JSX
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    let active = true;
-
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- loading flag for the fetch started below
-    setIsLoadingTags(true);
-    getTags({ pageSize: 24 })
-      .then((tags) => {
-        if (active) {
-          setAvailableTags(
-            tags.filter((t) => t.id).map((t) => ({ id: t.id as string, name: t.name })),
-          );
-        }
-      })
-      .catch(() => {
-        if (active) setAvailableTags([]);
-      })
-      .finally(() => {
-        if (active) setIsLoadingTags(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [open]);
 
   if (!open) return <></>;
 

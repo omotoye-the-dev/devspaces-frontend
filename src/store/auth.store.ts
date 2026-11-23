@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { AuthUser } from "@/features/auth/types/auth.types";
 import { STORAGE_KEYS, storage } from "@/shared/lib/storage";
+import { queryClient } from "@/shared/lib/queryClient";
 
 const getDisplayName = (user?: AuthUser | null): string => {
   if (!user) return "User";
@@ -54,6 +55,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: Boolean(storage.get(STORAGE_KEYS.token)),
 
   setAuth: (token, refreshTokenOrUser, maybeUser) => {
+    queryClient.clear();
     let refreshToken: string | null = null;
     let user: AuthUser | null = null;
 
@@ -92,6 +94,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: () => {
+    queryClient.clear();
     storage.remove(
       STORAGE_KEYS.token,
       STORAGE_KEYS.refreshToken,
