@@ -1,39 +1,36 @@
-import { useState, useEffect, type JSX } from "react";
+import { useMemo, type JSX } from "react";
 import { Link } from "react-router-dom";
 import { Skeleton, Tag } from "@/shared/ui";
 import { toast } from "@/shared/hooks/useToast";
 import { getArticles, type Article } from "@/features/articles/api/articleApi";
 import articlePlaceholder from "@/assets/images/article-placeholder.jpg";
+import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/shared/lib/queryKeys";
 
 interface RelatedArticlesProps {
   currentArticleId: string;
 }
 
 export function RelatedArticles({ currentArticleId }: RelatedArticlesProps): JSX.Element {
-  const [articles, setArticles] = useState<Article[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    async function loadRelated() {
+  // Latest articles are shared with other widgets; the current one is filtered out per page.
+  const { data: latest, isLoading } = useQuery({
+    queryKey: queryKeys.articles.latest(),
+    queryFn: async (): Promise<Article[]> => {
       try {
-        setIsLoading(true);
-        const data = await getArticles();
-
-        // Filter out current article and get 3 related articles
-        const related = data
-          .filter((article) => article.id !== currentArticleId && article.status === "published")
-          .slice(0, 3);
-
-        setArticles(related);
+        return await getArticles();
       } catch {
         toast.error("Failed to load related articles");
-      } finally {
-        setIsLoading(false);
+        return [];
       }
-    }
-
-    loadRelated();
-  }, [currentArticleId]);
+    },
+  });
+  const articles = useMemo(
+    () =>
+      (latest ?? [])
+        .filter((article) => article.id !== currentArticleId && article.status === "published")
+        .slice(0, 3),
+    [latest, currentArticleId],
+  );
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-5">

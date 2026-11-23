@@ -1,9 +1,11 @@
-import { useState, useEffect, type JSX } from "react";
+import { type JSX } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiArrowUp } from "react-icons/fi";
 import { Skeleton } from "@/shared/ui";
 import { getResources } from "@/features/resources/api/resources.api";
 import type { ResourceListItem } from "@/features/resources/types/resources.types";
+import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/shared/lib/queryKeys";
 
 /** Category-to-color map for resource icons */
 const CATEGORY_COLORS: Record<string, string> = {
@@ -34,14 +36,9 @@ function getSafeResourceCategory(category: string | null | undefined): string {
 
 export function PopularResourcesWidget(): JSX.Element {
   const navigate = useNavigate();
-  const [resources, setResources] = useState<ResourceListItem[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-
-  useEffect(() => {
-    let active = true;
-
-    async function fetchPopularResources(): Promise<void> {
-      setIsLoading(true);
+  const { data: resources = [], isLoading } = useQuery({
+    queryKey: queryKeys.resources.popular(),
+    queryFn: async (): Promise<ResourceListItem[]> => {
       try {
         const response = await getResources({
           page: 1,
@@ -61,25 +58,12 @@ export function PopularResourcesWidget(): JSX.Element {
           );
         });
 
-        if (active) {
-          setResources(sortedResources);
-        }
+        return sortedResources;
       } catch {
-        if (active) {
-          setResources([]);
-        }
-      } finally {
-        if (active) {
-          setIsLoading(false);
-        }
+        return [];
       }
-    }
-
-    void fetchPopularResources();
-    return () => {
-      active = false;
-    };
-  }, []);
+    },
+  });
 
   const handleResourceClick = (id: string): void => {
     navigate(`/resources/${id}`);

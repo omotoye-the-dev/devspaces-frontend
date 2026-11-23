@@ -1,20 +1,16 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import type { TrendingDiscussion } from "@/features/articles/components";
 import { getDiscussions } from "@/features/discussions/api/discussionApi";
+import { queryKeys } from "@/shared/lib/queryKeys";
 
 /** Top 5 discussions for the sidebar widget (signed-in users only). */
 export function useSidebarTrending(isAuthenticated: boolean) {
-  const [trendingSidebarItems, setTrendingSidebarItems] = useState<TrendingDiscussion[]>([]);
-  const [isSidebarLoading, setIsSidebarLoading] = useState<boolean>(true);
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    let active = true;
-    async function loadSidebarTrending(): Promise<void> {
+  const { data: trendingSidebarItems = [], isLoading: isSidebarLoading } = useQuery({
+    queryKey: queryKeys.discussions.sidebarTrending(),
+    enabled: isAuthenticated,
+    queryFn: async (): Promise<TrendingDiscussion[]> => {
       try {
         const data = await getDiscussions({ page: 1, pageSize: 5 });
-        if (!active) return;
-
         const mapped: TrendingDiscussion[] = data.slice(0, 5).map((item, i) => {
           const colors = [
             "bg-violet-500",
@@ -43,20 +39,12 @@ export function useSidebarTrending(isAuthenticated: boolean) {
           };
         });
 
-        setTrendingSidebarItems(mapped);
+        return mapped;
       } catch {
-        if (active) {
-          setTrendingSidebarItems([]);
-        }
-      } finally {
-        if (active) setIsSidebarLoading(false);
+        return [];
       }
-    }
-    void loadSidebarTrending();
-    return () => {
-      active = false;
-    };
-  }, [isAuthenticated]);
+    },
+  });
 
   return { trendingSidebarItems, isSidebarLoading };
 }

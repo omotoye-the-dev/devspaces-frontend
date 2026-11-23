@@ -10,6 +10,18 @@ export const queryKeys = {
     all: ["tags"] as const,
     list: (pageSize: number) => ["tags", "list", { pageSize }] as const,
   },
+  articles: {
+    all: ["articles"] as const,
+    latest: () => ["articles", "latest"] as const,
+  },
+  resources: {
+    all: ["resources"] as const,
+    popular: () => ["resources", "popular"] as const,
+  },
+  discussions: {
+    all: ["discussions"] as const,
+    sidebarTrending: () => ["discussions", "sidebar-trending"] as const,
+  },
   profile: {
     all: ["profile"] as const,
     me: () => ["profile", "me"] as const,
