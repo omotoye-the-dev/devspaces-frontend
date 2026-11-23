@@ -45,6 +45,7 @@ import {
   type ResourceDetail,
 } from "@/types/resources.types";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
+import { insertMarkdown as applyMarkdown } from "@/lib/utils/markdown";
 
 export interface NewPartDraft {
   id: string;
@@ -371,23 +372,8 @@ export function AddResourceModal({
   };
 
   // Text formatting helpers for daily.dev style toolbar
-  const insertFormatting = (prefix: string, suffix: string = ""): void => {
-    if (!textareaRef.current) return;
-    const start = textareaRef.current.selectionStart;
-    const end = textareaRef.current.selectionEnd;
-    const text = description;
-    const selected = text.substring(start, end);
-    const replacement = `${prefix}${selected || "text"}${suffix}`;
-    const nextText = text.substring(0, start) + replacement + text.substring(end);
-    setDescription(nextText);
-    setTimeout(() => {
-      textareaRef.current?.focus();
-      textareaRef.current?.setSelectionRange(
-        start + prefix.length,
-        start + prefix.length + (selected.length || 4),
-      );
-    }, 0);
-  };
+  const insertFormatting = (prefix: string, suffix: string = ""): void =>
+    applyMarkdown(textareaRef.current, setDescription, prefix, suffix);
 
   const handleReset = (): void => {
     setTitle("");

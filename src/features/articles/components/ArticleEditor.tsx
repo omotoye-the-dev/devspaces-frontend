@@ -45,6 +45,7 @@ import { toast } from "@/hooks/useToast";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
 import { articleSchema, type ArticleFormData } from "../schemas/articleSchema";
 import { getTags, type Tag } from "../api/tagApi";
+import { insertMarkdown as applyMarkdown } from "@/lib/utils/markdown";
 
 export interface ArticleEditorProps {
   initialData?: Partial<ArticleFormData>;
@@ -191,29 +192,13 @@ export function ArticleEditor({
   const completedChecklistCount = checklist.filter((c) => c.isMet).length;
 
   // Insert markdown syntax into content textarea at current cursor position
-  const insertMarkdown = (before: string, after: string = "") => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const previousText = textarea.value;
-
-    const selectedText = previousText.substring(start, end) || "text";
-    const replacement = `${before}${selectedText}${after}`;
-
-    const newText = previousText.substring(0, start) + replacement + previousText.substring(end);
-
-    setValue("content", newText, { shouldValidate: true });
-
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(
-        start + before.length,
-        start + before.length + selectedText.length,
-      );
-    }, 0);
-  };
+  const insertMarkdown = (before: string, after: string = "") =>
+    applyMarkdown(
+      textareaRef.current,
+      (value) => setValue("content", value, { shouldValidate: true }),
+      before,
+      after,
+    );
 
   const tagSuggestions = useMemo(() => {
     const query = tagInput.trim().toLowerCase();
