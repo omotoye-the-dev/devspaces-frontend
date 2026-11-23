@@ -62,6 +62,64 @@ export function ArticlePreview({
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
+                // Tailwind's reset strips heading/list styles and there is no typography plugin,
+                // so style them here or `# Heading` looks like body text.
+                h1: ({ children }) => (
+                  <h1 className="text-2xl font-bold text-text tracking-tight mt-5 mb-2">
+                    {children}
+                  </h1>
+                ),
+                h2: ({ children }) => (
+                  <h2 className="text-xl font-bold text-text tracking-tight mt-4 mb-2">
+                    {children}
+                  </h2>
+                ),
+                h3: ({ children }) => (
+                  <h3 className="text-lg font-bold text-text mt-3 mb-1.5">{children}</h3>
+                ),
+                h4: ({ children }) => (
+                  <h4 className="text-base font-bold text-text mt-3 mb-1">{children}</h4>
+                ),
+                strong: ({ children }) => (
+                  <strong className="font-bold text-text">{children}</strong>
+                ),
+                a: ({ children, href }) => (
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-indigo-600 underline underline-offset-2"
+                  >
+                    {children}
+                  </a>
+                ),
+                ul: ({ children, className }) => (
+                  <ul
+                    className={
+                      className?.includes("contains-task-list")
+                        ? "list-none pl-1 space-y-1 my-2"
+                        : "list-disc pl-5 space-y-1 my-2"
+                    }
+                  >
+                    {children}
+                  </ul>
+                ),
+                ol: ({ children }) => (
+                  <ol className="list-decimal pl-5 space-y-1 my-2">{children}</ol>
+                ),
+                li: ({ children, className }) => (
+                  <li
+                    className={
+                      className?.includes("task-list-item") ? "flex items-center gap-2" : undefined
+                    }
+                  >
+                    {children}
+                  </li>
+                ),
+                hr: () => <hr className="my-4 border-border" />,
+                img: ({ src, alt }) => (
+                  <img src={src} alt={alt ?? ""} className="max-w-full h-auto rounded-lg my-2" />
+                ),
                 blockquote: ({ children }) => (
                   <blockquote className="border-l-3 border-indigo-500 bg-indigo-50/40 px-3 py-2 italic text-indigo-950 my-2 overflow rounded-r">
                     {children}
