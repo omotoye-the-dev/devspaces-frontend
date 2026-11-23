@@ -24,7 +24,7 @@ import type { Discussion } from "@/types/discussions.types";
 import type { ResourceListItem } from "@/types/resources.types";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
 import { toast } from "@/hooks/useToast";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useAuthStore } from "@/store";
 import { useLiveHub } from "@/hooks/useLiveHub";
 import {
   normalizeDiscussionUpdate,

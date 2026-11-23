@@ -5,7 +5,7 @@ import { FaUser } from "react-icons/fa";
 import { LuPenLine } from "react-icons/lu";
 import { MdOutlineSearch } from "react-icons/md";
 import { Button, Avatar, Skeleton } from "../common/index";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useAuthStore } from "@/store";
 import { getUserProfile, getProfileAvatar, type UserProfile } from "@/lib/api/user.api";
 import { cn } from "@/lib/utils/cn";
 import { GlobalSearchBar } from "./GlobalSearchBar";

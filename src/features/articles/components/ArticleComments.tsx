@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, type JSX } from "react";
 import { Avatar, Button, Skeleton } from "@/components/common";
 import { toast } from "@/hooks/useToast";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useAuthStore } from "@/store";
 import { useLiveHub } from "@/hooks/useLiveHub";
 import { AiFillLike, AiOutlineLike } from "react-icons/ai";
 import {

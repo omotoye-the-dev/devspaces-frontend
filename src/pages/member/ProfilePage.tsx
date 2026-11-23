@@ -71,7 +71,7 @@ function ResourceLiveSync({
   return null;
 }
 import type { ResourceListItem } from "@/types/resources.types";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useAuthStore } from "@/store";
 import { toast } from "@/hooks/useToast";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { getApiErrorMessage } from "@/lib/utils/apiError";

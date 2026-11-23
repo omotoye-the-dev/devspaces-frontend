@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils/cn";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
 import { deleteArticle, getArticleById, getArticleComments, likeArticle, saveArticle, type Article } from "@/features/articles/api/articleApi";
 import { followAuthor } from "@/lib/api/user.api";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useAuthStore } from "@/store";
 import { useLiveHub } from "@/hooks/useLiveHub";
 import ArticleComments, { countAllComments } from "@/features/articles/components/ArticleComments";
 import RelatedArticles from "@/features/articles/components/RelatedArticles";

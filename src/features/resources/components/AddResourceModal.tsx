@@ -35,7 +35,7 @@ import {
 } from "react-icons/fi";
 import { LuGraduationCap, LuWrench } from "react-icons/lu";
 import { Modal, Button, Avatar, Tooltip } from "@/components/common";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useAuthStore } from "@/store";
 import { getTags, type Tag } from "@/features/articles/api/tagApi";
 import { toast } from "@/hooks/useToast";
 import { cn } from "@/lib/utils/cn";

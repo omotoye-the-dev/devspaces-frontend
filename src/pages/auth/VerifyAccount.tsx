@@ -8,7 +8,7 @@ import { FaRegEnvelope, FaArrowLeft, FaCheckCircle } from "react-icons/fa";
 import { FormInput, Button, OtpInput, ResendOtpButton } from "@/components/common";
 import { toast } from "@/hooks/useToast";
 import { verifyAccount, resendOtp } from "@/features/auth/api/auth.api";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useAuthStore } from "@/store";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
 
 interface LocationState {

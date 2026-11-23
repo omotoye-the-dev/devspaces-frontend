@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type JSX } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { handleOAuthCallback } from "@/features/auth/api/auth.api";
 import { getUserProfile } from "@/lib/api/user.api";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useAuthStore } from "@/store";
 import { toast } from "@/hooks/useToast";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
 

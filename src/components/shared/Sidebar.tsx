@@ -21,7 +21,7 @@ import {
 import { useNavigate, useLocation } from "react-router-dom";
 import { FiLogOut, FiLogIn } from "react-icons/fi";
 import { cn } from "@/lib/utils/cn";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useAuthStore } from "@/store";
 import { toast } from "@/hooks/useToast";
 import { Button, Skeleton } from "@/components/common";
 import { getTags, type Tag } from "@/features/articles/api/tagApi";

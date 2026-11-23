@@ -1,8 +1,9 @@
 import axios, { type InternalAxiosRequestConfig } from "axios";
 import { API_BASE_URL } from "./endpoints";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useAuthStore } from "@/store";
 import { toast } from "@/hooks/useToast";
+import { STORAGE_KEYS, storage } from "@/lib/storage";
 
 interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
@@ -17,7 +18,7 @@ export const apiClient = axios.create({
 
 // Request interceptor to attach JWT token if present
 apiClient.interceptors.request.use((config) => {
-  const token = typeof window !== "undefined" ? localStorage.getItem("devspace_token") : null;
+  const token = storage.get(STORAGE_KEYS.token);
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -55,14 +56,11 @@ apiClient.interceptors.response.use(
     if (error.response.status === 401 && originalRequest && !originalRequest._retry) {
       // Guests have no session to expire: let the caller handle the 401 instead of
       // showing "Session expired" and bouncing them to the sign-in page.
-      if (typeof window !== "undefined" && !localStorage.getItem("devspace_token")) {
+      if (!storage.get(STORAGE_KEYS.token)) {
         return Promise.reject(error);
       }
 
-      const refreshToken =
-        typeof window !== "undefined"
-          ? localStorage.getItem("devspace_refresh_token")
-          : null;
+      const refreshToken = storage.get(STORAGE_KEYS.refreshToken);
 
       // If no refresh token exists, perform full logout
       if (!refreshToken) {
@@ -105,7 +103,7 @@ apiClient.interceptors.response.use(
           throw new Error("No access token received from refresh endpoint");
         }
 
-        // Update tokens in Zustand & localStorage
+        // Update tokens in the auth store (persisted via @/lib/storage)
         useAuthStore.getState().setTokens(newAccessToken, newRefreshToken);
 
         // Update default header and original request header

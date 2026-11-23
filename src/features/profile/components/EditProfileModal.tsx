@@ -3,7 +3,7 @@ import { HiOutlineCamera } from "react-icons/hi2";
 import { Modal, Button, Input, Textarea, Avatar } from "@/components/common";
 import { toast } from "@/hooks/useToast";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useAuthStore } from "@/store";
 import { updateProfile } from "@/features/onboarding/api/onboardingApi";
 import { getProfileAvatar, getProfileLinks, type UserProfile } from "@/lib/api/user.api";
 

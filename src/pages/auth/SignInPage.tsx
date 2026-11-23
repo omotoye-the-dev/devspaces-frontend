@@ -10,7 +10,7 @@ import { FcGoogle } from "react-icons/fc";
 import { FormInput, Button } from "@/components/common";
 import { toast } from "@/hooks/useToast";
 import { initiateOAuth, signIn } from "@/features/auth/api/auth.api";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useAuthStore } from "@/store";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
 
 const signInSchema = z.object({
@@ -54,9 +54,6 @@ export default function SignInPage() {
         password: data.password,
       });
       if (res && res.success) {
-        if (res.accessToken) localStorage.setItem("devspace_token", res.accessToken);
-        if (res.refreshToken) localStorage.setItem("devspace_refresh_token", res.refreshToken);
-
         const userFromApi = res.user ?? {
           id: res.userId,
           email: res.email,

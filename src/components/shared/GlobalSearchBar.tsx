@@ -19,6 +19,7 @@ import type { ResourceListItem } from "@/types/resources.types";
 import { apiClient } from "@/lib/api/client";
 import { ENDPOINTS } from "@/lib/api/endpoints";
 import type { UserProfile } from "@/lib/api/user.api";
+import { STORAGE_KEYS, storage } from "@/lib/storage";
 
 // ─── Result shapes ─────────────────────────────────────────────────────────────
 
@@ -140,13 +141,9 @@ export function GlobalSearchBar({
 
   const results = hasMinQuery && rawResults.query === debouncedQuery ? rawResults.items : [];
   const isLoading = hasMinQuery && rawResults.query !== debouncedQuery;
-  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
-    try {
-      return JSON.parse(localStorage.getItem("devspace_recent_searches") ?? "[]") as string[];
-    } catch {
-      return [];
-    }
-  });
+  const [recentSearches, setRecentSearches] = useState<string[]>(() =>
+    storage.getJSON<string[]>(STORAGE_KEYS.recentSearches, []),
+  );
 
   // ── Close on click outside / Escape ──────────────────────────────────────────
   useEffect(() => {
@@ -296,7 +293,7 @@ export function GlobalSearchBar({
   const saveRecent = useCallback((term: string): void => {
     setRecentSearches((prev) => {
       const next = [term, ...prev.filter((s) => s !== term)].slice(0, 5);
-      localStorage.setItem("devspace_recent_searches", JSON.stringify(next));
+      storage.setJSON(STORAGE_KEYS.recentSearches, next);
       return next;
     });
   }, []);

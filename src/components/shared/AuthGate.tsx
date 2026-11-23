@@ -1,6 +1,6 @@
 import type { JSX } from "react";
 import { Outlet } from "react-router-dom";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useAuthStore } from "@/store";
 import { LoginPrompt, type LoginPromptProps } from "./LoginPrompt";
 
 /**

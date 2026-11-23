@@ -10,7 +10,7 @@ import {
 import { Button, EmptyState, Skeleton } from "@/components/common";
 import { toast } from "@/hooks/useToast";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useAuthStore } from "@/store";
 import {
   createDiscussion,
   createDiscussionReply,

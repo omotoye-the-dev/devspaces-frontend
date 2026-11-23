@@ -26,7 +26,8 @@ import {
   type ModalSize,
 } from "@/components/common";
 import { logoutUser } from "@/features/auth/api/auth.api";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useAuthStore } from "@/store";
+import { STORAGE_KEYS, storage } from "@/lib/storage";
 
 export default function Playground(): JSX.Element {
   const navigate = useNavigate();
@@ -37,13 +38,12 @@ export default function Playground(): JSX.Element {
 
   const handleLogout = async (): Promise<void> => {
     setIsLoggingOut(true);
-    const refreshToken = localStorage.getItem("devspace_refresh") || "";
+    const refreshToken = storage.get(STORAGE_KEYS.refreshToken) || "";
     try {
       await logoutUser({ refreshToken });
     } catch {
       // Proceed with client logout even if backend request fails
     } finally {
-      localStorage.removeItem("devspace_refresh");
       logoutStore();
       success("Logged out successfully", {
         description: "You have been redirected to the home page.",

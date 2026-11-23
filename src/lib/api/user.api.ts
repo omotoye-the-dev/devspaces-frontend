@@ -1,6 +1,6 @@
 import { apiClient } from "./client";
 import { ENDPOINTS } from "./endpoints";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useAuthStore } from "@/store";
 import type { AuthUser } from "@/types/auth.types";
 
 export interface UserProfile {

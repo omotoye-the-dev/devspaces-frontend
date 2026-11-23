@@ -1,6 +1,6 @@
 import type { JSX } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useAuthStore } from "@/store";
 
 export interface ProtectedRouteProps {
   children?: JSX.Element;

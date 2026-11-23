@@ -32,7 +32,7 @@ import { normalizeResourceUpdate } from "@/features/resources/utils/liveUpdate";
 import { ResourceLinkPreviewCard } from "@/features/resources/components/ResourceLinkPreviewCard";
 import { isPartAFile, type ResourceDetail, type ResourcePart, type LinkPreviewResponseData } from "@/types/resources.types";
 import { getApiErrorMessage } from "@/lib/utils/apiError";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useAuthStore } from "@/store";
 import { useLiveHub } from "@/hooks/useLiveHub";
 import { toast } from "@/hooks/useToast";
 import { useRequireAuth } from "@/hooks/useRequireAuth";

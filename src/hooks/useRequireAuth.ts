@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useAuthStore } from "@/store";
 import { toast } from "@/hooks/useToast";
 
 /**

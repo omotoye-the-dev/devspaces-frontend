@@ -38,7 +38,7 @@ import type { Discussion } from "@/types/discussions.types";
 import type { ResourceListItem } from "@/types/resources.types";
 import { getUserProfile, isProfileComplete } from "@/lib/api/user.api";
 import { OnboardingModal } from "@/features/onboarding/components/OnboardingModal";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useAuthStore } from "@/store";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { LoginPrompt } from "@/components/shared/LoginPrompt";
 

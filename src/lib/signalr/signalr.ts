@@ -1,5 +1,6 @@
 import * as signalR from "@microsoft/signalr";
 import { API_BASE_URL } from "@/lib/api/endpoints";
+import { STORAGE_KEYS, storage } from "@/lib/storage";
 
 export type LiveHubType = "post" | "comment" | "resource" | "discussion" | "discussion-comment";
 
@@ -41,11 +42,7 @@ export function createLiveHubConnection(
     .withUrl(url, {
       accessTokenFactory: () => {
         if (token) return token;
-        return (
-          (typeof window !== "undefined"
-            ? localStorage.getItem("devspace_token")
-            : null) || ""
-        );
+        return storage.get(STORAGE_KEYS.token) || "";
       },
       transport:
         signalR.HttpTransportType.WebSockets |
@@ -69,11 +66,7 @@ export function createNotificationHubConnection(token?: string | null): signalR.
     .withUrl(`${baseUrl}/ws/hub/notifications`, {
       accessTokenFactory: () => {
         if (token) return token;
-        return (
-          (typeof window !== "undefined"
-            ? localStorage.getItem("devspace_token")
-            : null) || ""
-        );
+        return storage.get(STORAGE_KEYS.token) || "";
       },
       transport:
         signalR.HttpTransportType.WebSockets |
