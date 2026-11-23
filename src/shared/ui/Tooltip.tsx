@@ -1,4 +1,4 @@
-import { useState, useRef, useId, type ReactNode, type JSX } from "react";
+import { useEffect, useState, useRef, useId, type ReactNode, type JSX } from "react";
 import { cn } from "@/shared/lib/utils/cn";
 
 export type TooltipPosition = "top" | "bottom" | "left" | "right";
@@ -29,19 +29,34 @@ export function Tooltip({
 }: TooltipProps): JSX.Element {
   const [isVisible, setIsVisible] = useState<boolean>(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Visible while hovered OR focused; tracked separately so one ending doesn't hide the other.
+  const activeRef = useRef({ hover: false, focus: false });
   const tooltipId = useId();
+
+  // Never fire a pending show after unmount.
+  useEffect(
+    () => () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    },
+    [],
+  );
 
   if (!content || disabled) {
     return <>{children}</>;
   }
 
-  const showTooltip = (): void => {
+  const showTooltip = (source: "hover" | "focus"): void => {
+    activeRef.current[source] = true;
+    // Restart the delay with a single pending timer, so hiding can always cancel it.
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
       setIsVisible(true);
     }, delay);
   };
 
-  const hideTooltip = (): void => {
+  const hideTooltip = (source: "hover" | "focus"): void => {
+    activeRef.current[source] = false;
+    if (activeRef.current.hover || activeRef.current.focus) return;
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
@@ -52,10 +67,10 @@ export function Tooltip({
   return (
     <div
       className="relative inline-flex items-center"
-      onMouseEnter={showTooltip}
-      onMouseLeave={hideTooltip}
-      onFocus={showTooltip}
-      onBlur={hideTooltip}
+      onMouseEnter={() => showTooltip("hover")}
+      onMouseLeave={() => hideTooltip("hover")}
+      onFocus={() => showTooltip("focus")}
+      onBlur={() => hideTooltip("focus")}
     >
       {children}
 

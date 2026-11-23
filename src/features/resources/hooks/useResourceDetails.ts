@@ -33,9 +33,11 @@ export function useResourceDetails() {
   const query = useQuery({
     queryKey,
     enabled: Boolean(id),
-    queryFn: async () => (await getResourceById(id as string)).data,
+    retry: false, // show "not found" immediately, as before
+    // A missing record is null ("not found" UI), never undefined (TanStack treats that as an error)
+    queryFn: async () => (await getResourceById(id as string)).data ?? null,
   });
-  const [resource, setResource] = useCacheValue<ResourceDetail>(queryKey, query.data);
+  const [resource, setResource] = useCacheValue<ResourceDetail | null>(queryKey, query.data);
   const isLoading = Boolean(id) && query.isLoading;
   const error = query.error
     ? getApiErrorMessage(query.error, "Failed to load resource details.")

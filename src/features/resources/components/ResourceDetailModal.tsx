@@ -81,7 +81,7 @@ export function ResourceDetailModal({
     retry: false,
     queryFn: async ({ signal }) => {
       try {
-        return (await getResourceById(resourceId as string)).data;
+        return (await getResourceById(resourceId as string)).data ?? null;
       } catch (err: unknown) {
         toast.error(getApiErrorMessage(err, "Failed to load resource details"));
         if (!signal.aborted) onClose();
@@ -89,7 +89,7 @@ export function ResourceDetailModal({
       }
     },
   });
-  const [cachedDetail, setDetail] = useCacheValue<ResourceDetail>(queryKey, query.data);
+  const [cachedDetail, setDetail] = useCacheValue<ResourceDetail | null>(queryKey, query.data);
   const detail = open ? cachedDetail : null;
   const isLoading = open && Boolean(resourceId) && query.isLoading;
   const [isDownloading, setIsDownloading] = useState<boolean>(false);

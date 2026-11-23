@@ -42,7 +42,7 @@ export function ArticleActionRail({
 
   return (
     <aside className="hidden shrink-0 lg:flex">
-      <div className="sticky top-8 flex h-fit flex-col items-center gap-1 rounded-xl border border-gray-100 bg-white p-2 shadow-sm">
+      <div className="sticky top-8 z-20 flex h-fit flex-col items-center gap-1 rounded-xl border border-gray-100 bg-white p-2 shadow-sm">
         {/* Like */}
         <button
           type="button"

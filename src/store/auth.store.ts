@@ -57,13 +57,16 @@ export const useAuthStore = create<AuthState>((set) => ({
   setAuth: (token, refreshTokenOrUser, maybeUser) => {
     queryClient.clear();
     let refreshToken: string | null = null;
-    let user: AuthUser | null = null;
+    let user: AuthUser | null;
 
     if (typeof refreshTokenOrUser === "string") {
       refreshToken = refreshTokenOrUser;
       user = maybeUser ?? null;
     } else if (refreshTokenOrUser && typeof refreshTokenOrUser === "object") {
       user = refreshTokenOrUser;
+    } else {
+      // setAuth(token, null, user): no refresh token from the backend, but keep the user
+      user = maybeUser ?? null;
     }
 
     storage.set(STORAGE_KEYS.token, token);
