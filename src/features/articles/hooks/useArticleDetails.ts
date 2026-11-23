@@ -1,4 +1,7 @@
-import { useEffect, useState, type MouseEvent } from "react";
+import { useEffect, useMemo, useState, type MouseEvent } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/shared/lib/queryKeys";
+import { useCacheField } from "@/shared/lib/useCacheField";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/shared/hooks/useToast";
 import { confirmDialog } from "@/shared/hooks/useConfirmDialog";
@@ -15,11 +18,22 @@ import { followAuthor } from "@/features/profile/api/user.api";
 import { useAuthStore } from "@/store";
 import { useLiveHub } from "@/shared/hooks/useLiveHub";
 import { countAllComments } from "@/features/articles/utils/commentTree";
+import { invalidateArticles, removeArticleFromCache } from "@/features/articles/api/articleQueries";
 
 export interface DisplayArticle extends Article {
   authorName?: string;
   authorUserName?: string;
   authorAvatar?: string;
+}
+
+/** Cached snapshot behind the article page (article + the reader's interaction state). */
+interface ArticleDetailState {
+  article: DisplayArticle | null;
+  isLiked: boolean;
+  isBookmarked: boolean;
+  isFollowing: boolean;
+  likeCount: number;
+  commentCount: number;
 }
 
 /**
@@ -33,21 +47,7 @@ export function useArticleDetails(id: string | undefined) {
 
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
-  const [article, setArticle] = useState<DisplayArticle | null>(null);
-
-  const [isLoading, setIsLoading] = useState(true);
-
-  const [isLiked, setIsLiked] = useState(false);
-
-  const [isBookmarked, setIsBookmarked] = useState(false);
-
-  const [isFollowing, setIsFollowing] = useState(false);
-
   const [isFollowLoading, setIsFollowLoading] = useState(false);
-
-  const [likeCount, setLikeCount] = useState(0);
-
-  const [commentCount, setCommentCount] = useState(0);
 
   const [isLiking, setIsLiking] = useState(false);
 
@@ -56,27 +56,23 @@ export function useArticleDetails(id: string | undefined) {
   const [showComments, setShowComments] = useState(false);
 
   useEffect(() => {
-    if (!id) {
-      navigate("/articles");
-      return;
-    }
+    if (!id) navigate("/articles");
+  }, [id, navigate]);
 
-    const articleId = id;
-
-    let isSubscribed = true;
-
-    async function loadArticle(): Promise<void> {
+  // Server state lives in the query cache; the optimistic handlers below write to it
+  // through useCacheField, so a revisit shows the latest like/save/follow state.
+  const queryKey = useMemo(() => queryKeys.articles.detail(id ?? ""), [id]);
+  const { data, isLoading: isQueryLoading } = useQuery({
+    queryKey,
+    enabled: Boolean(id),
+    retry: false,
+    queryFn: async ({ signal }): Promise<ArticleDetailState> => {
+      const articleId = id as string;
       try {
-        setIsLoading(true);
-
         const [articleResult, commentsResult] = await Promise.allSettled([
           getArticleById(articleId),
           getArticleComments(articleId),
         ]);
-
-        if (!isSubscribed) {
-          return;
-        }
 
         if (articleResult.status !== "fulfilled" || !articleResult.value) {
           throw new Error("Failed to load article");
@@ -104,12 +100,6 @@ export function useArticleDetails(id: string | undefined) {
             typeof articleAuthor?.avatarUrl === "string" ? articleAuthor.avatarUrl : undefined,
         };
 
-        setArticle(displayArticle);
-
-        setIsLiked(initialLiked);
-        setIsBookmarked(initialSaved);
-        setLikeCount(initialLikes);
-
         let resolvedCommentsCount =
           data.commentCount ??
           data.comments ??
@@ -120,7 +110,6 @@ export function useArticleDetails(id: string | undefined) {
           resolvedCommentsCount = countAllComments(commentsResult.value);
         }
 
-        setCommentCount(resolvedCommentsCount);
         const initialFollowing =
           typeof data.author?.following === "boolean"
             ? data.author.following
@@ -130,26 +119,29 @@ export function useArticleDetails(id: string | undefined) {
                 ? articleData.isFollowing
                 : false;
 
-        setIsFollowing(initialFollowing);
+        return {
+          article: displayArticle,
+          isLiked: initialLiked,
+          isBookmarked: initialSaved,
+          isFollowing: initialFollowing,
+          likeCount: initialLikes,
+          commentCount: resolvedCommentsCount,
+        };
       } catch (error: unknown) {
         toast.error(getApiErrorMessage(error) || "Failed to load article");
-
-        if (isSubscribed) {
-          navigate("/articles");
-        }
-      } finally {
-        if (isSubscribed) {
-          setIsLoading(false);
-        }
+        if (!signal.aborted) navigate("/articles");
+        throw error;
       }
-    }
+    },
+  });
+  const isLoading = !id || isQueryLoading;
 
-    void loadArticle();
-
-    return () => {
-      isSubscribed = false;
-    };
-  }, [id, navigate]);
+  const [article, setArticle] = useCacheField(queryKey, data, "article", null);
+  const [isLiked, setIsLiked] = useCacheField(queryKey, data, "isLiked", false);
+  const [isBookmarked, setIsBookmarked] = useCacheField(queryKey, data, "isBookmarked", false);
+  const [isFollowing, setIsFollowing] = useCacheField(queryKey, data, "isFollowing", false);
+  const [likeCount, setLikeCount] = useCacheField(queryKey, data, "likeCount", 0);
+  const [commentCount, setCommentCount] = useCacheField(queryKey, data, "commentCount", 0);
 
   // Real-time updates via SignalR (/ws/hub/posts/{id}/live)
   useLiveHub({
@@ -361,6 +353,8 @@ export function useArticleDetails(id: string | undefined) {
 
     try {
       await deleteArticle(article.id);
+      removeArticleFromCache(article.id);
+      void invalidateArticles();
 
       toast.success("Article deleted successfully");
 

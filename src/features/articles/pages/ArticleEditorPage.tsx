@@ -10,6 +10,7 @@ import {
 import type { ArticleFormData } from "@/features/articles/schemas/articleSchema";
 import { toast } from "@/shared/hooks/useToast";
 import { getApiErrorMessage } from "@/shared/lib/utils/apiError";
+import { invalidateArticles } from "@/features/articles/api/articleQueries";
 
 export function ArticleEditorPage(): JSX.Element {
   const { id } = useParams<{ id?: string }>();
@@ -85,6 +86,7 @@ export function ArticleEditorPage(): JSX.Element {
           coverImage: coverImageFile ? undefined : data.coverImage,
         });
         toast.success("Draft updated successfully!");
+        void invalidateArticles();
       } else {
         const created = await createArticle({ ...data, status: "draft" });
         const targetId = created.id || (created as unknown as { _id?: string })._id;
@@ -98,6 +100,7 @@ export function ArticleEditorPage(): JSX.Element {
           }
         }
         toast.success("Draft saved!");
+        void invalidateArticles();
         if (targetId) {
           navigate(`/articles/${targetId}/edit`, { replace: true });
         }
@@ -122,6 +125,7 @@ export function ArticleEditorPage(): JSX.Element {
           coverImage: coverImageFile ? undefined : data.coverImage,
         });
         toast.success("Article updated and published!");
+        void invalidateArticles();
       } else {
         const created = await createArticle(data);
         const targetId = created.id || (created as unknown as { _id?: string })._id;
@@ -136,6 +140,7 @@ export function ArticleEditorPage(): JSX.Element {
           }
         }
         toast.success("Article published successfully!");
+        void invalidateArticles();
       }
       navigate("/articles");
     } catch (err: unknown) {

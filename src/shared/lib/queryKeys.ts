@@ -13,6 +13,7 @@ export const queryKeys = {
   articles: {
     all: ["articles"] as const,
     latest: () => ["articles", "latest"] as const,
+    detail: (id: string) => ["articles", "detail", id] as const,
   },
   resources: {
     all: ["resources"] as const,
