@@ -16,10 +16,7 @@ import {
   createDiscussionReply,
   voteDiscussionReply,
 } from "@/features/discussions/api/discussionApi";
-import {
-  DiscussionCard,
-  DiscussionDetailModal,
-} from "@/features/discussions/components";
+import { DiscussionCard, DiscussionDetailModal } from "@/features/discussions/components";
 import type { Discussion } from "@/features/discussions/types/discussions.types";
 import type { ResourceListItem } from "@/features/resources/types/resources.types";
 import { getApiErrorMessage } from "@/shared/lib/utils/apiError";
@@ -167,33 +164,25 @@ export default function SavedPage(): JSX.Element {
   }, []);
 
   // Patch live count updates from SignalR into discussion state
-  const handleLiveDiscussionCounts = useCallback(
-    (id: string, counts: DiscussionCounts): void => {
-      setDiscussions((prev) =>
-        prev.map((d) => (d.id === id ? { ...d, ...counts } : d)),
-      );
-    },
-    [],
-  );
+  const handleLiveDiscussionCounts = useCallback((id: string, counts: DiscussionCounts): void => {
+    setDiscussions((prev) => prev.map((d) => (d.id === id ? { ...d, ...counts } : d)));
+  }, []);
 
   // Patch live count updates from SignalR into resource state
-  const handleLiveResourceCounts = useCallback(
-    (id: string, counts: ResourceCounts): void => {
-      setResources((prev) =>
-        prev.map((r) =>
-          r.id === id
-            ? {
-                ...r,
-                upvoteCount: counts.upvoteCount ?? r.upvoteCount,
-                downvoteCount: counts.downvoteCount ?? r.downvoteCount,
-                saveCount: counts.saveCount ?? r.saveCount,
-              }
-            : r,
-        ),
-      );
-    },
-    [],
-  );
+  const handleLiveResourceCounts = useCallback((id: string, counts: ResourceCounts): void => {
+    setResources((prev) =>
+      prev.map((r) =>
+        r.id === id
+          ? {
+              ...r,
+              upvoteCount: counts.upvoteCount ?? r.upvoteCount,
+              downvoteCount: counts.downvoteCount ?? r.downvoteCount,
+              saveCount: counts.saveCount ?? r.saveCount,
+            }
+          : r,
+      ),
+    );
+  }, []);
 
   // Refresh comments for the open discussion in SavedPage when comment hub fires
   const handleLiveCommentUpdate = useCallback(async (): Promise<void> => {
@@ -398,8 +387,7 @@ export default function SavedPage(): JSX.Element {
       search
         ? discussions.filter(
             (d) =>
-              d.title.toLowerCase().includes(search) ||
-              d.content.toLowerCase().includes(search),
+              d.title.toLowerCase().includes(search) || d.content.toLowerCase().includes(search),
           )
         : discussions,
     [discussions, search],
@@ -499,10 +487,7 @@ export default function SavedPage(): JSX.Element {
               <div className="space-y-3">
                 {filteredDiscussions.map((discussion) => (
                   <div key={`discussion-${discussion.id}`}>
-                    <DiscussionLiveSync
-                      id={discussion.id}
-                      onCounts={handleLiveDiscussionCounts}
-                    />
+                    <DiscussionLiveSync id={discussion.id} onCounts={handleLiveDiscussionCounts} />
                     <DiscussionCard
                       discussion={discussion}
                       onOpenDetails={(d) => void handleOpenDiscussionDetails(d)}
@@ -545,10 +530,7 @@ export default function SavedPage(): JSX.Element {
                 {showResources &&
                   filteredResources.map((resource) => (
                     <div key={`resource-${resource.id}`}>
-                      <ResourceLiveSync
-                        id={resource.id}
-                        onCounts={handleLiveResourceCounts}
-                      />
+                      <ResourceLiveSync id={resource.id} onCounts={handleLiveResourceCounts} />
                       <ResourceCard
                         resource={mapToResourceCardItem(resource)}
                         onBookmark={() => void handleUnsaveResource(resource.id)}

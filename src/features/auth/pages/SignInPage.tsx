@@ -150,9 +150,7 @@ export default function SignInPage() {
       <div className="my-4 flex w-full items-center gap-3">
         <div className="h-px flex-1 bg-slate-200" />
 
-        <span className="whitespace-nowrap text-xs text-slate-500">
-          Or continue with
-        </span>
+        <span className="whitespace-nowrap text-xs text-slate-500">Or continue with</span>
 
         <div className="h-px flex-1 bg-slate-200" />
       </div>
@@ -183,12 +181,12 @@ export default function SignInPage() {
 
       {/* Footer Navigation */}
       <div className="text-center text-base text-text/70">
-        New to DevSpace? {" "}
+        New to DevSpace?{" "}
         <Link
           to="/auth/sign-up"
           className="text-primary font-semibold hover:underline transition-colors"
         >
-         Create account
+          Create account
         </Link>
       </div>
 

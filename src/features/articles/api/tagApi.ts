@@ -62,12 +62,7 @@ export async function getTags(params?: GetTagsParams): Promise<Tag[]> {
     return normalizeTags(body);
   }
 
-  if (
-    body &&
-    typeof body === "object" &&
-    "data" in body &&
-    Array.isArray(body.data)
-  ) {
+  if (body && typeof body === "object" && "data" in body && Array.isArray(body.data)) {
     return normalizeTags(body.data);
   }
 

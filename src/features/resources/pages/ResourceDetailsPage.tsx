@@ -24,13 +24,15 @@ import {
   voteResource,
   saveResource,
 } from "@/features/resources/api/resources.api";
-import {
-  calculateVoteTransition,
-  applyVoteResponse,
-} from "@/features/resources/utils/voteHelper";
+import { calculateVoteTransition, applyVoteResponse } from "@/features/resources/utils/voteHelper";
 import { normalizeResourceUpdate } from "@/features/resources/utils/liveUpdate";
 import { ResourceLinkPreviewCard } from "@/features/resources/components/ResourceLinkPreviewCard";
-import { isPartAFile, type ResourceDetail, type ResourcePart, type LinkPreviewResponseData } from "@/features/resources/types/resources.types";
+import {
+  isPartAFile,
+  type ResourceDetail,
+  type ResourcePart,
+  type LinkPreviewResponseData,
+} from "@/features/resources/types/resources.types";
 import { getApiErrorMessage } from "@/shared/lib/utils/apiError";
 import { useAuthStore } from "@/store";
 import { useLiveHub } from "@/shared/hooks/useLiveHub";
@@ -380,9 +382,7 @@ export function ResourceDetailsPage(): JSX.Element {
     );
   }
 
-  const isOwner =
-    Boolean(currentUser?.id) &&
-    (currentUser?.id === resource.uploader?.userId);
+  const isOwner = Boolean(currentUser?.id) && currentUser?.id === resource.uploader?.userId;
 
   return (
     <div className="min-h-full bg-background overflow-y-auto">
@@ -468,7 +468,9 @@ export function ResourceDetailsPage(): JSX.Element {
                     : "bg-white text-text hover:text-primary hover:bg-slate-50",
                 )}
                 aria-label={`Upvote (${resource.upvoteCount ?? 0})`}
-                title={resource.isDownvotedByMe ? "Remove downvote first before upvoting" : undefined}
+                title={
+                  resource.isDownvotedByMe ? "Remove downvote first before upvoting" : undefined
+                }
               >
                 <FiArrowUp className="w-4 h-4" />
                 <span>Upvote ({resource.upvoteCount ?? 0})</span>
@@ -512,9 +514,9 @@ export function ResourceDetailsPage(): JSX.Element {
           <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
             {Boolean(
               currentUser &&
-                (resource.uploader?.userId === currentUser.id ||
-                  resource.uploader?.username?.toLowerCase() ===
-                    (currentUser.username || currentUser.userName)?.toLowerCase()),
+              (resource.uploader?.userId === currentUser.id ||
+                resource.uploader?.username?.toLowerCase() ===
+                  (currentUser.username || currentUser.userName)?.toLowerCase()),
             ) && (
               <Button
                 variant="secondary"
@@ -770,9 +772,7 @@ export function ResourceDetailsPage(): JSX.Element {
                 <h3 className="text-base font-bold text-text">
                   {resource.uploader?.name || resource.uploader?.username || "Contributor"}
                 </h3>
-                <p className="text-xs text-text/50">
-                  @{resource.uploader?.username || "devspace"}
-                </p>
+                <p className="text-xs text-text/50">@{resource.uploader?.username || "devspace"}</p>
               </div>
 
               {resource.uploader?.userId && (

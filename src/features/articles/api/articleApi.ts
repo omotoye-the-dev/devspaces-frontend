@@ -29,8 +29,7 @@ export interface AuthorInfo {
   postsCount?: number;
 }
 
-export interface Article
-  extends Omit<Partial<ArticleFormData>, "status"> {
+export interface Article extends Omit<Partial<ArticleFormData>, "status"> {
   id: string;
   authorId: string;
 
@@ -69,13 +68,7 @@ export interface Article
   commentCount?: number;
   comments?: number;
 
-  status?:
-    | "draft"
-    | "published"
-    | 0
-    | 1
-    | string
-    | number;
+  status?: "draft" | "published" | 0 | 1 | string | number;
 
   createdAt: string;
   updatedAt?: string | null;
@@ -229,30 +222,20 @@ export async function getPersonalizedPosts(params?: GetFeedParams): Promise<Arti
  * GET /api/posts/my-posts
  */
 export async function getMyPosts(): Promise<Article[]> {
-  const response =
-    await apiClient.get<
-      | MyPostsResponse
-      | Article[]
-      | {
-          data?: Article[];
-        }
-    >(
-      ENDPOINTS.POSTS.MY_POSTS,
-    );
+  const response = await apiClient.get<
+    | MyPostsResponse
+    | Article[]
+    | {
+        data?: Article[];
+      }
+  >(ENDPOINTS.POSTS.MY_POSTS);
 
   if (Array.isArray(response.data)) {
     return response.data;
   }
 
-  if (
-    response.data &&
-    Array.isArray(
-      (response.data as MyPostsResponse).data,
-    )
-  ) {
-    return (
-      response.data as MyPostsResponse
-    ).data;
+  if (response.data && Array.isArray((response.data as MyPostsResponse).data)) {
+    return (response.data as MyPostsResponse).data;
   }
 
   return [];
@@ -332,13 +315,8 @@ export async function getArticleHistory(
 /**
  * GET /api/posts/{id}
  */
-export async function getArticleById(
-  id: string,
-): Promise<Article> {
-  const response =
-    await apiClient.get<Article>(
-      ENDPOINTS.POSTS.DETAIL(id),
-    );
+export async function getArticleById(id: string): Promise<Article> {
+  const response = await apiClient.get<Article>(ENDPOINTS.POSTS.DETAIL(id));
 
   return response.data;
 }
@@ -346,20 +324,12 @@ export async function getArticleById(
 /**
  * POST /api/posts
  */
-export async function createArticle(
-  data: ArticleFormData,
-): Promise<Article> {
+export async function createArticle(data: ArticleFormData): Promise<Article> {
   const isHttpUrl =
     typeof data.coverImage === "string" &&
-    (data.coverImage.startsWith(
-      "http://",
-    ) ||
-      data.coverImage.startsWith(
-        "https://",
-      ));
+    (data.coverImage.startsWith("http://") || data.coverImage.startsWith("https://"));
 
-  const isPublished =
-    data.status === "published";
+  const isPublished = data.status === "published";
 
   const payload = {
     title: data.title,
@@ -375,11 +345,7 @@ export async function createArticle(
     publishImmediately: isPublished,
   };
 
-  const response =
-    await apiClient.post<Article>(
-      ENDPOINTS.POSTS.CREATE,
-      payload,
-    );
+  const response = await apiClient.post<Article>(ENDPOINTS.POSTS.CREATE, payload);
 
   return response.data;
 }
@@ -387,60 +353,28 @@ export async function createArticle(
 /**
  * PUT /api/posts/{id}
  */
-export async function updateArticle(
-  id: string,
-  data: Partial<ArticleFormData>,
-): Promise<Article> {
-  const {
-    status,
-    ...rest
-  } = data;
+export async function updateArticle(id: string, data: Partial<ArticleFormData>): Promise<Article> {
+  const { status, ...rest } = data;
 
   const isHttpUrl =
     typeof data.coverImage === "string" &&
-    (data.coverImage.startsWith(
-      "http://",
-    ) ||
-      data.coverImage.startsWith(
-        "https://",
-      ));
+    (data.coverImage.startsWith("http://") || data.coverImage.startsWith("https://"));
 
-  const isPublished =
-    status === "published";
+  const isPublished = status === "published";
 
   const payload = {
     ...rest,
 
-    status:
-      status !== undefined
-        ? isPublished
-          ? 1
-          : 0
-        : undefined,
+    status: status !== undefined ? (isPublished ? 1 : 0) : undefined,
 
-    publishImmediately:
-      status !== undefined
-        ? isPublished
-        : undefined,
+    publishImmediately: status !== undefined ? isPublished : undefined,
 
-    tags:
-      data.tagNames !== undefined
-        ? data.tagNames
-        : undefined,
+    tags: data.tagNames !== undefined ? data.tagNames : undefined,
 
-    coverImageUrl:
-      data.coverImage !== undefined
-        ? isHttpUrl
-          ? data.coverImage
-          : null
-        : undefined,
+    coverImageUrl: data.coverImage !== undefined ? (isHttpUrl ? data.coverImage : null) : undefined,
   };
 
-  const response =
-    await apiClient.put<Article>(
-      ENDPOINTS.POSTS.DETAIL(id),
-      payload,
-    );
+  const response = await apiClient.put<Article>(ENDPOINTS.POSTS.DETAIL(id), payload);
 
   return response.data;
 }
@@ -462,17 +396,11 @@ export async function uploadArticleCoverImage(
 
   formData.append("file", file);
 
-  const response =
-    await apiClient.post(
-      ENDPOINTS.POSTS.COVER_IMAGE(id),
-      formData,
-      {
-        headers: {
-          "Content-Type":
-            "multipart/form-data",
-        },
-      },
-    );
+  const response = await apiClient.post(ENDPOINTS.POSTS.COVER_IMAGE(id), formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
 
   return response.data;
 }
@@ -480,36 +408,22 @@ export async function uploadArticleCoverImage(
 /**
  * DELETE /api/posts/{id}
  */
-export async function deleteArticle(
-  id: string,
-): Promise<void> {
-  await apiClient.delete(
-    ENDPOINTS.POSTS.DETAIL(id),
-  );
+export async function deleteArticle(id: string): Promise<void> {
+  await apiClient.delete(ENDPOINTS.POSTS.DETAIL(id));
 }
 
 /**
  * POST /api/posts/{id}/like
  */
-export async function likeArticle(
-  id: string,
-): Promise<void> {
-  await apiClient.post(
-    ENDPOINTS.POSTS.LIKE(id),
-    {},
-  );
+export async function likeArticle(id: string): Promise<void> {
+  await apiClient.post(ENDPOINTS.POSTS.LIKE(id), {});
 }
 
 /**
  * POST /api/posts/{id}/save
  */
-export async function saveArticle(
-  id: string,
-): Promise<void> {
-  await apiClient.post(
-    `/api/posts/${id}/save`,
-    {},
-  );
+export async function saveArticle(id: string): Promise<void> {
+  await apiClient.post(`/api/posts/${id}/save`, {});
 }
 
 /**
@@ -535,23 +449,17 @@ export async function saveArticle(
  *
  *   Authorization: Bearer <token>
  */
-export async function getArticleComments(
-  postId: string,
-  parentId?: string,
-): Promise<Comment[]> {
-  const response =
-    await apiClient.get<
-      Comment[] | { data?: Comment[] }
-    >(
-      `/api/posts/${postId}/comments`,
-      {
-        params: parentId
-          ? {
-              parentId,
-            }
-          : undefined,
-      },
-    );
+export async function getArticleComments(postId: string, parentId?: string): Promise<Comment[]> {
+  const response = await apiClient.get<Comment[] | { data?: Comment[] }>(
+    `/api/posts/${postId}/comments`,
+    {
+      params: parentId
+        ? {
+            parentId,
+          }
+        : undefined,
+    },
+  );
 
   if (Array.isArray(response.data)) {
     return response.data;
@@ -612,10 +520,11 @@ export async function createComment(
   );
 
   const resData = response.data;
-  const dataObj =
-    (resData && typeof resData === "object"
-      ? (resData.data || resData.comment || resData.result || resData.item || resData)
-      : null) as Record<string, unknown> | null;
+  const dataObj = (
+    resData && typeof resData === "object"
+      ? resData.data || resData.comment || resData.result || resData.item || resData
+      : null
+  ) as Record<string, unknown> | null;
 
   const returnedMessage =
     typeof dataObj?.message === "string" &&
@@ -627,7 +536,9 @@ export async function createComment(
       : message;
 
   return {
-    id: (dataObj?.id || dataObj?.commentId || `temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`) as string,
+    id: (dataObj?.id ||
+      dataObj?.commentId ||
+      `temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`) as string,
     postId,
     userId: (dataObj?.userId || "") as string,
     message: returnedMessage,
@@ -651,10 +562,7 @@ export async function deleteComment(postId: string, commentId: string): Promise<
  * POST /api/posts/comments/{commentId}/like
  */
 export async function likeComment(commentId: string): Promise<void> {
-  await apiClient.post(
-    ENDPOINTS.POSTS.LIKE_COMMENT(commentId),
-    {},
-  );
+  await apiClient.post(ENDPOINTS.POSTS.LIKE_COMMENT(commentId), {});
 }
 
 /**
@@ -771,5 +679,3 @@ export async function getTrendingPosts(params?: GetTrendingParams): Promise<Arti
   const result = await getTrendingArticles(params);
   return result.data;
 }
-
-

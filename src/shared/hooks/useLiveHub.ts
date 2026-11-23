@@ -72,5 +72,4 @@ export function useLiveHub<T = unknown>({
       connectionRef.current = null;
     };
   }, [type, id, enabled]);
-
 }

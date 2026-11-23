@@ -50,9 +50,17 @@ export async function getUserProfile(id?: string): Promise<UserProfile> {
     try {
       const response = await apiClient.get<Record<string, unknown>>(ENDPOINTS.USER.PROFILE);
       if (response.data && typeof response.data === "object") {
-        if ("data" in response.data && response.data.data && typeof response.data.data === "object") {
+        if (
+          "data" in response.data &&
+          response.data.data &&
+          typeof response.data.data === "object"
+        ) {
           profileData = response.data.data as UserProfile;
-        } else if ("user" in response.data && response.data.user && typeof response.data.user === "object") {
+        } else if (
+          "user" in response.data &&
+          response.data.user &&
+          typeof response.data.user === "object"
+        ) {
           profileData = response.data.user as UserProfile;
         } else {
           profileData = response.data as UserProfile;
@@ -78,7 +86,11 @@ export async function getUserProfile(id?: string): Promise<UserProfile> {
         );
         let authorData: UserProfile = {};
         if (authorRes.data && typeof authorRes.data === "object") {
-          if ("data" in authorRes.data && authorRes.data.data && typeof authorRes.data.data === "object") {
+          if (
+            "data" in authorRes.data &&
+            authorRes.data.data &&
+            typeof authorRes.data.data === "object"
+          ) {
             authorData = authorRes.data.data as UserProfile;
           } else {
             authorData = authorRes.data as UserProfile;
@@ -94,8 +106,14 @@ export async function getUserProfile(id?: string): Promise<UserProfile> {
       const resolvedUser: AuthUser = {
         id: (profileData.id as string) || (profileData.userId as string) || currentAuthUser?.id,
         email: (profileData.email as string) || currentAuthUser?.email,
-        username: (profileData.username as string) || (profileData.userName as string) || currentAuthUser?.username,
-        userName: (profileData.userName as string) || (profileData.username as string) || currentAuthUser?.userName,
+        username:
+          (profileData.username as string) ||
+          (profileData.userName as string) ||
+          currentAuthUser?.username,
+        userName:
+          (profileData.userName as string) ||
+          (profileData.username as string) ||
+          currentAuthUser?.userName,
         firstName: (profileData.firstName as string) || currentAuthUser?.firstName,
         lastName: (profileData.lastName as string) || currentAuthUser?.lastName,
         avatarUrl:
@@ -133,12 +151,10 @@ const profileCache = new Map<string, Promise<UserProfile>>();
 
 // follow user API
 
-  export async function followAuthor(authorId: string): Promise<FollowResponse> {
-    const response = await apiClient.post<FollowResponse>(ENDPOINTS.AUTHORS.FOLLOW(authorId),
-  {}
-);
-    return response.data;
-  }
+export async function followAuthor(authorId: string): Promise<FollowResponse> {
+  const response = await apiClient.post<FollowResponse>(ENDPOINTS.AUTHORS.FOLLOW(authorId), {});
+  return response.data;
+}
 
 /**
  * Fetches a user profile with deduplication and in-memory caching by user ID.
@@ -180,13 +196,16 @@ export function formatProfileName(
     .join(" ")
     .trim();
   if (fullName) return fullName;
-  if (typeof profile.fullName === "string" && profile.fullName.trim()) return profile.fullName.trim();
+  if (typeof profile.fullName === "string" && profile.fullName.trim())
+    return profile.fullName.trim();
   if (typeof p.FullName === "string" && p.FullName.trim()) return p.FullName.trim();
   if (typeof profile.name === "string" && profile.name.trim()) return profile.name.trim();
   if (typeof p.Name === "string" && p.Name.trim()) return p.Name.trim();
-  if (typeof profile.userName === "string" && profile.userName.trim()) return profile.userName.trim();
+  if (typeof profile.userName === "string" && profile.userName.trim())
+    return profile.userName.trim();
   if (typeof p.UserName === "string" && p.UserName.trim()) return p.UserName.trim();
-  if (typeof profile.username === "string" && profile.username.trim()) return profile.username.trim();
+  if (typeof profile.username === "string" && profile.username.trim())
+    return profile.username.trim();
   if (typeof p.Username === "string" && p.Username.trim()) return p.Username.trim();
   return fallback;
 }
@@ -242,26 +261,18 @@ export function getProfileLinks(profile?: UserProfile | null): ProfileLinks {
   const social = nested && typeof nested === "object" ? (nested as Record<string, unknown>) : {};
 
   return {
-    websiteUrl: readStringField(
-      social,
-      "websiteUrl",
-      "WebsiteUrl",
-    ) ?? readStringField(p, "websiteUrl", "WebsiteUrl", "website", "Website"),
-    githubUrl: readStringField(
-      social,
-      "githubUrl",
-      "GithubUrl",
-    ) ?? readStringField(p, "githubUrl", "GithubUrl", "github", "Github"),
-    xUrl: readStringField(
-      social,
-      "xUrl",
-      "XUrl",
-    ) ?? readStringField(p, "xUrl", "XUrl", "twitter", "Twitter"),
-    linkedInUrl: readStringField(
-      social,
-      "linkedInUrl",
-      "LinkedInUrl",
-    ) ?? readStringField(p, "linkedInUrl", "LinkedInUrl", "linkedin", "LinkedIn"),
+    websiteUrl:
+      readStringField(social, "websiteUrl", "WebsiteUrl") ??
+      readStringField(p, "websiteUrl", "WebsiteUrl", "website", "Website"),
+    githubUrl:
+      readStringField(social, "githubUrl", "GithubUrl") ??
+      readStringField(p, "githubUrl", "GithubUrl", "github", "Github"),
+    xUrl:
+      readStringField(social, "xUrl", "XUrl") ??
+      readStringField(p, "xUrl", "XUrl", "twitter", "Twitter"),
+    linkedInUrl:
+      readStringField(social, "linkedInUrl", "LinkedInUrl") ??
+      readStringField(p, "linkedInUrl", "LinkedInUrl", "linkedin", "LinkedIn"),
   };
 }
 
@@ -271,7 +282,8 @@ export function getProfileLinks(profile?: UserProfile | null): ProfileLinks {
  */
 export function isProfileComplete(profile?: UserProfile | null): boolean {
   if (!profile) return false;
-  const value = profile.isProfileCompleted ?? (profile as Record<string, unknown>).IsProfileCompleted;
+  const value =
+    profile.isProfileCompleted ?? (profile as Record<string, unknown>).IsProfileCompleted;
   return Boolean(value);
 }
 
@@ -309,11 +321,15 @@ interface UserActivityApiResponse {
 
 function normalizeActivityItem(raw: Record<string, unknown>): UserActivityItem {
   return {
-    id: String(raw.activityId ?? raw.id ?? `${raw.targetId ?? "activity"}-${raw.createdAt ?? Date.now()}`),
+    id: String(
+      raw.activityId ?? raw.id ?? `${raw.targetId ?? "activity"}-${raw.createdAt ?? Date.now()}`,
+    ),
     action: typeof raw.action === "string" && raw.action.trim() ? raw.action : "Activity",
-    targetType: typeof raw.targetType === "string" && raw.targetType.trim() ? raw.targetType : "Item",
+    targetType:
+      typeof raw.targetType === "string" && raw.targetType.trim() ? raw.targetType : "Item",
     targetId: typeof raw.targetId === "string" ? raw.targetId : "",
-    targetTitle: typeof raw.targetTitle === "string" && raw.targetTitle.trim() ? raw.targetTitle : "Untitled",
+    targetTitle:
+      typeof raw.targetTitle === "string" && raw.targetTitle.trim() ? raw.targetTitle : "Untitled",
     targetSlug: typeof raw.targetSlug === "string" ? raw.targetSlug : undefined,
     visibility: typeof raw.visibility === "string" ? raw.visibility : undefined,
     createdAt: typeof raw.createdAt === "string" ? raw.createdAt : new Date().toISOString(),
@@ -357,24 +373,22 @@ export async function getUserActivity(
   userId: string,
   params?: { page?: number; pageSize?: number },
 ): Promise<UserActivityPage> {
-  const response = await apiClient.get<UserActivityApiResponse>(
-    ENDPOINTS.USER.ACTIVITY(userId),
-    { params },
-  );
+  const response = await apiClient.get<UserActivityApiResponse>(ENDPOINTS.USER.ACTIVITY(userId), {
+    params,
+  });
 
   const rawItems = Array.isArray(response.data?.data) ? response.data.data : [];
   const items = rawItems.map(normalizeActivityItem);
 
   return {
     items,
-    pagination:
-      response.data?.pagination ?? {
-        currentPage: 1,
-        pageSize: items.length,
-        totalCount: items.length,
-        totalPages: 1,
-        hasNext: false,
-        hasPrevious: false,
-      },
+    pagination: response.data?.pagination ?? {
+      currentPage: 1,
+      pageSize: items.length,
+      totalCount: items.length,
+      totalPages: 1,
+      hasNext: false,
+      hasPrevious: false,
+    },
   };
 }

@@ -24,12 +24,21 @@ export const router = createBrowserRouter([
       },
       // Readable by guests; interactions are guarded inside each page
       { path: "articles", ...page(() => import("@/features/articles/pages/ArticlesPage")) },
-      { path: "articles/:id", ...page(() => import("@/features/articles/pages/ArticleDetailsPage")) },
+      {
+        path: "articles/:id",
+        ...page(() => import("@/features/articles/pages/ArticleDetailsPage")),
+      },
       { path: "resources", ...page(() => import("@/features/resources/pages/ResourcesPage")) },
-      { path: "resources/:id", ...page(() => import("@/features/resources/pages/ResourceDetailsPage")) },
+      {
+        path: "resources/:id",
+        ...page(() => import("@/features/resources/pages/ResourceDetailsPage")),
+      },
       { path: "profile/:id", ...page(() => import("@/features/profile/pages/ProfilePage")) },
       { path: "people", ...page(() => import("@/features/people/pages/PeoplePage")) },
-      { path: "leaderboard", ...page(() => import("@/features/leaderboard/pages/LeaderboardPage")) },
+      {
+        path: "leaderboard",
+        ...page(() => import("@/features/leaderboard/pages/LeaderboardPage")),
+      },
 
       // Backend requires auth: guests see an in-place "log in" panel
       {
@@ -40,8 +49,14 @@ export const router = createBrowserRouter([
           />
         ),
         children: [
-          { path: "discussions", ...page(() => import("@/features/discussions/pages/DiscussionsPage")) },
-          { path: "discussions/:id", ...page(() => import("@/features/discussions/pages/DiscussionsPage")) },
+          {
+            path: "discussions",
+            ...page(() => import("@/features/discussions/pages/DiscussionsPage")),
+          },
+          {
+            path: "discussions/:id",
+            ...page(() => import("@/features/discussions/pages/DiscussionsPage")),
+          },
         ],
       },
       {
@@ -60,7 +75,9 @@ export const router = createBrowserRouter([
             description="Your recently viewed articles, resources and discussions will show up here."
           />
         ),
-        children: [{ path: "history", ...page(() => import("@/features/history/pages/HistoryPage")) }],
+        children: [
+          { path: "history", ...page(() => import("@/features/history/pages/HistoryPage")) },
+        ],
       },
       {
         element: (
@@ -69,7 +86,9 @@ export const router = createBrowserRouter([
             description="Sign in to see and edit your profile, articles and activity."
           />
         ),
-        children: [{ path: "profile", ...page(() => import("@/features/profile/pages/ProfilePage")) }],
+        children: [
+          { path: "profile", ...page(() => import("@/features/profile/pages/ProfilePage")) },
+        ],
       },
 
       // Creating / editing content still redirects to sign-in
@@ -80,8 +99,14 @@ export const router = createBrowserRouter([
             path: "resources/:id/edit",
             ...page(() => import("@/features/resources/pages/ResourceEditorPage")),
           },
-          { path: "articles/new", ...page(() => import("@/features/articles/pages/ArticleEditorPage")) },
-          { path: "articles/:id/edit", ...page(() => import("@/features/articles/pages/ArticleEditorPage")) },
+          {
+            path: "articles/new",
+            ...page(() => import("@/features/articles/pages/ArticleEditorPage")),
+          },
+          {
+            path: "articles/:id/edit",
+            ...page(() => import("@/features/articles/pages/ArticleEditorPage")),
+          },
         ],
       },
       {

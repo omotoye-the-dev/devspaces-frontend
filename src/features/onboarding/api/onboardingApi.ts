@@ -48,7 +48,13 @@ export async function updateProfile(payload: UpdateProfilePayload): Promise<User
   );
 
   const body = response.data;
-  if (body && typeof body === "object" && "data" in body && body.data && typeof body.data === "object") {
+  if (
+    body &&
+    typeof body === "object" &&
+    "data" in body &&
+    body.data &&
+    typeof body.data === "object"
+  ) {
     return body.data as UserProfile;
   }
   return body as UserProfile;

@@ -6,11 +6,14 @@ import { LuPenLine } from "react-icons/lu";
 import { MdOutlineSearch } from "react-icons/md";
 import { Button, Avatar, Skeleton } from "@/shared/ui/index";
 import { useAuthStore } from "@/store";
-import { getUserProfile, getProfileAvatar, type UserProfile } from "@/features/profile/api/user.api";
+import {
+  getUserProfile,
+  getProfileAvatar,
+  type UserProfile,
+} from "@/features/profile/api/user.api";
 import { cn } from "@/shared/lib/utils/cn";
 import { GlobalSearchBar } from "@/features/search/components/GlobalSearchBar";
 import { NotificationBell } from "@/features/notifications/components/NotificationBell";
-
 
 export interface NavBarProps {
   isLoading?: boolean;
@@ -59,9 +62,12 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [hasFetchedProfile, setHasFetchedProfile] = useState(false);
 
-  const isArticlesActive = location.pathname === "/articles" || location.pathname.startsWith("/articles/");
-  const isResourcesActive = location.pathname === "/resources" || location.pathname.startsWith("/resources/");
-  const isDiscussionsActive = location.pathname === "/discussions" || location.pathname.startsWith("/discussions/");
+  const isArticlesActive =
+    location.pathname === "/articles" || location.pathname.startsWith("/articles/");
+  const isResourcesActive =
+    location.pathname === "/resources" || location.pathname.startsWith("/resources/");
+  const isDiscussionsActive =
+    location.pathname === "/discussions" || location.pathname.startsWith("/discussions/");
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -186,7 +192,8 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
                 type="button"
                 className={cn(
                   "whitespace-nowrap transition-colors",
-                  isDiscussionsActive && "font-semibold text-primary bg-primary/10 border-primary/20",
+                  isDiscussionsActive &&
+                    "font-semibold text-primary bg-primary/10 border-primary/20",
                 )}
                 onClick={() => handleNavigation("/discussions")}
               >
@@ -291,15 +298,17 @@ export function NavBar({ isLoading: isLoadingProp }: NavBarProps = {}): JSX.Elem
 
         {/* Mobile Menu Panel */}
         <div
-          className={`md:hidden fixed inset-0 z-50 transition-opacity duration-1000 ${mobileOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
-            }`}
+          className={`md:hidden fixed inset-0 z-50 transition-opacity duration-1000 ${
+            mobileOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+          }`}
           onClick={() => setMobileOpen(false)}
         >
           <div className="absolute inset-0 bg-black/10" />
 
           <div
-            className={`absolute inset-y-0 right-0 w-[82%] max-w-sm bg-white border-l border-border shadow-2xl flex flex-col transition-transform duration-300 ease-out ${mobileOpen ? "translate-x-0" : "translate-x-full"
-              }`}
+            className={`absolute inset-y-0 right-0 w-[82%] max-w-sm bg-white border-l border-border shadow-2xl flex flex-col transition-transform duration-300 ease-out ${
+              mobileOpen ? "translate-x-0" : "translate-x-full"
+            }`}
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-border/60 shrink-0">

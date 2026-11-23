@@ -155,7 +155,9 @@ export function Modal({
         className={cn(
           "relative w-full bg-white text-text font-inter border border-border shadow-xl overflow-hidden flex flex-col",
           "animate-in zoom-in-95 duration-200 focus:outline-none",
-          size === "full" ? "w-screen h-screen max-w-none max-h-none rounded-none border-0" : sizeStyles[size],
+          size === "full"
+            ? "w-screen h-screen max-w-none max-h-none rounded-none border-0"
+            : sizeStyles[size],
           className,
         )}
       >

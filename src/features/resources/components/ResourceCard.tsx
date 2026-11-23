@@ -164,7 +164,9 @@ export function ResourceCard({
             <p className="text-xs sm:text-sm font-semibold text-text truncate leading-tight">
               {author.name}
             </p>
-            <p className="text-[10px] sm:text-[11px] text-text/50 truncate leading-tight mt-0.5">{updatedAt}</p>
+            <p className="text-[10px] sm:text-[11px] text-text/50 truncate leading-tight mt-0.5">
+              {updatedAt}
+            </p>
           </div>
         </div>
 

@@ -5,7 +5,11 @@ import { toast } from "@/shared/hooks/useToast";
 import { getApiErrorMessage } from "@/shared/lib/utils/apiError";
 import { useAuthStore } from "@/store";
 import { updateProfile } from "@/features/onboarding/api/onboardingApi";
-import { getProfileAvatar, getProfileLinks, type UserProfile } from "@/features/profile/api/user.api";
+import {
+  getProfileAvatar,
+  getProfileLinks,
+  type UserProfile,
+} from "@/features/profile/api/user.api";
 
 export interface EditProfileModalProps {
   open: boolean;

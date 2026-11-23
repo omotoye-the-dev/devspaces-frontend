@@ -1,10 +1,4 @@
-import type {
-  AnchorHTMLAttributes,
-  ButtonHTMLAttributes,
-  JSX,
-  MouseEvent,
-  ReactNode,
-} from "react";
+import type { AnchorHTMLAttributes, ButtonHTMLAttributes, JSX, MouseEvent, ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { cn } from "@/shared/lib/utils/cn";
 
@@ -178,4 +172,3 @@ export function Button({
     </button>
   );
 }
-

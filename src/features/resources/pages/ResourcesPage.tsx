@@ -1,13 +1,14 @@
-import { useState, useEffect, useCallback, useMemo, Fragment, type JSX, type MouseEvent } from "react";
-import { useNavigate } from "react-router-dom";
 import {
-  Button,
-  Input,
-  Select,
-  EmptyState,
-  Skeleton,
-  type SelectOption,
-} from "@/shared/ui";
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  Fragment,
+  type JSX,
+  type MouseEvent,
+} from "react";
+import { useNavigate } from "react-router-dom";
+import { Button, Input, Select, EmptyState, Skeleton, type SelectOption } from "@/shared/ui";
 import { MdOutlineSearch, MdClear, MdSort } from "react-icons/md";
 import { FiFolder, FiChevronLeft, FiChevronRight, FiRefreshCw } from "react-icons/fi";
 import { ResourceSidebar } from "@/features/resources/components/ResourceSidebar";
@@ -21,10 +22,7 @@ import {
   voteResource,
   saveResource,
 } from "@/features/resources/api/resources.api";
-import {
-  calculateVoteTransition,
-  applyVoteResponse,
-} from "@/features/resources/utils/voteHelper";
+import { calculateVoteTransition, applyVoteResponse } from "@/features/resources/utils/voteHelper";
 import type { ResourceListItem } from "@/features/resources/types/resources.types";
 import { getApiErrorMessage } from "@/shared/lib/utils/apiError";
 import { toast } from "@/shared/hooks/useToast";
@@ -166,9 +164,7 @@ export default function ResourcesPage(): JSX.Element {
 
   // Patch live count updates from SignalR into the resource list state
   const handleLiveCounts = useCallback((id: string, counts: ResourceCounts): void => {
-    setResources((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, ...counts } : r)),
-    );
+    setResources((prev) => prev.map((r) => (r.id === id ? { ...r, ...counts } : r)));
   }, []);
 
   const [refreshKey, setRefreshKey] = useState<number>(0);
@@ -462,9 +458,7 @@ export default function ResourcesPage(): JSX.Element {
 
     const nextSaved = !target.isSavedByMe;
 
-    setResources((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, isSavedByMe: nextSaved } : r)),
-    );
+    setResources((prev) => prev.map((r) => (r.id === id ? { ...r, isSavedByMe: nextSaved } : r)));
 
     try {
       await saveResource(id, nextSaved);
@@ -509,9 +503,7 @@ export default function ResourcesPage(): JSX.Element {
   };
 
   const handleSaveChangeFromModal = (resId: string, isSaved: boolean): void => {
-    setResources((prev) =>
-      prev.map((r) => (r.id === resId ? { ...r, isSavedByMe: isSaved } : r)),
-    );
+    setResources((prev) => prev.map((r) => (r.id === resId ? { ...r, isSavedByMe: isSaved } : r)));
   };
 
   const handleCreateSuccess = (): void => {

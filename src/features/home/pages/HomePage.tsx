@@ -29,10 +29,7 @@ import {
   PopularResourcesWidget,
   type TrendingDiscussion,
 } from "@/features/articles/components";
-import {
-  getDiscussions,
-  likeDiscussion,
-} from "@/features/discussions/api/discussionApi";
+import { getDiscussions, likeDiscussion } from "@/features/discussions/api/discussionApi";
 import { getResources } from "@/features/resources/api/resources.api";
 import type { Discussion } from "@/features/discussions/types/discussions.types";
 import type { ResourceListItem } from "@/features/resources/types/resources.types";
@@ -66,30 +63,57 @@ interface ArticleFeedItem {
 
 interface TrendingPostItem {
   kind: "post";
-  id: string; title: string; excerpt: string; coverImage?: string;
-  authorName: string; authorAvatar?: string; date: string; tags: string[];
-  likes: number; comments: number; readTime: string; liked: boolean; saved: boolean;
+  id: string;
+  title: string;
+  excerpt: string;
+  coverImage?: string;
+  authorName: string;
+  authorAvatar?: string;
+  date: string;
+  tags: string[];
+  likes: number;
+  comments: number;
+  readTime: string;
+  liked: boolean;
+  saved: boolean;
 }
 
 interface TrendingDiscussionItem {
   kind: "discussion";
-  id: string; title: string; content: string;
-  authorName: string; authorAvatar?: string; date: string; tags: string[];
-  upvotes: number; comments: number; liked: boolean;
+  id: string;
+  title: string;
+  content: string;
+  authorName: string;
+  authorAvatar?: string;
+  date: string;
+  tags: string[];
+  upvotes: number;
+  comments: number;
+  liked: boolean;
 }
 
 interface TrendingResourceItem {
   kind: "resource";
-  id: string; title: string; description: string; category: string; logoUrl?: string;
-  uploaderName: string; uploaderAvatar?: string; date: string; tags: string[];
-  upvotes: number; downloads: number; saved: boolean;
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  logoUrl?: string;
+  uploaderName: string;
+  uploaderAvatar?: string;
+  date: string;
+  tags: string[];
+  upvotes: number;
+  downloads: number;
+  saved: boolean;
 }
 
 type TrendingFeedItem = TrendingPostItem | TrendingDiscussionItem | TrendingResourceItem;
 type TrendingFilter = "All" | "Posts" | "Discussions" | "Resources";
 
 function mapApiArticleToFeedItem(art: Article): ArticleFeedItem {
-  const authorName = art.author?.name || art.author?.userName || art.authorName || "DevSpace Author";
+  const authorName =
+    art.author?.name || art.author?.userName || art.authorName || "DevSpace Author";
   const authorTitle = art.author?.userName ? `@${art.author.userName}` : "Developer";
   const formattedDate = art.createdAt
     ? new Date(art.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })
@@ -128,15 +152,62 @@ function mapApiArticleToFeedItem(art: Article): ArticleFeedItem {
 }
 
 function mapTrendingPost(art: Article): TrendingPostItem {
-  return { kind: "post", id: art.id, title: art.title || "Untitled", excerpt: art.excerpt || art.content?.slice(0, 160) || "", coverImage: art.coverImageUrl || art.coverImage || undefined, authorName: art.author?.name || art.author?.userName || art.authorName || "DevSpace Author", authorAvatar: art.author?.avatarUrl || undefined, date: art.createdAt ? new Date(art.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "Recently", tags: art.tags || art.tagNames || [], likes: art.likeCount ?? art.likes ?? 0, comments: art.commentCount ?? art.comments ?? 0, readTime: `${art.readingTimeMinutes ?? art.readingTime ?? 4} min read`, liked: Boolean(art.liked ?? art.isLiked), saved: Boolean(art.saved ?? art.isBookmarked) };
+  return {
+    kind: "post",
+    id: art.id,
+    title: art.title || "Untitled",
+    excerpt: art.excerpt || art.content?.slice(0, 160) || "",
+    coverImage: art.coverImageUrl || art.coverImage || undefined,
+    authorName: art.author?.name || art.author?.userName || art.authorName || "DevSpace Author",
+    authorAvatar: art.author?.avatarUrl || undefined,
+    date: art.createdAt
+      ? new Date(art.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+      : "Recently",
+    tags: art.tags || art.tagNames || [],
+    likes: art.likeCount ?? art.likes ?? 0,
+    comments: art.commentCount ?? art.comments ?? 0,
+    readTime: `${art.readingTimeMinutes ?? art.readingTime ?? 4} min read`,
+    liked: Boolean(art.liked ?? art.isLiked),
+    saved: Boolean(art.saved ?? art.isBookmarked),
+  };
 }
 
 function mapTrendingDiscussion(d: Discussion): TrendingDiscussionItem {
-  return { kind: "discussion", id: d.id, title: d.title, content: d.content?.slice(0, 200) || "", authorName: d.author?.name || d.author?.username || "DevSpace", authorAvatar: d.author?.avatarUrl || undefined, date: d.createdAt ? new Date(d.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "Recently", tags: d.tags || [], upvotes: d.upvotes ?? d.likeCount ?? 0, comments: d.commentsCount ?? 0, liked: Boolean(d.isLiked) };
+  return {
+    kind: "discussion",
+    id: d.id,
+    title: d.title,
+    content: d.content?.slice(0, 200) || "",
+    authorName: d.author?.name || d.author?.username || "DevSpace",
+    authorAvatar: d.author?.avatarUrl || undefined,
+    date: d.createdAt
+      ? new Date(d.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+      : "Recently",
+    tags: d.tags || [],
+    upvotes: d.upvotes ?? d.likeCount ?? 0,
+    comments: d.commentsCount ?? 0,
+    liked: Boolean(d.isLiked),
+  };
 }
 
 function mapTrendingResource(r: ResourceListItem): TrendingResourceItem {
-  return { kind: "resource", id: r.id, title: r.title, description: r.description?.slice(0, 160) || "", category: r.category || "General", logoUrl: r.logoUrl || undefined, uploaderName: r.uploader?.name || r.uploader?.username || "DevSpace", uploaderAvatar: r.uploader?.avatarUrl || undefined, date: r.createdAt ? new Date(r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "Recently", tags: r.tags?.map((t) => t.name) || [], upvotes: r.upvoteCount ?? 0, downloads: r.downloadCount ?? 0, saved: Boolean(r.isSavedByMe) };
+  return {
+    kind: "resource",
+    id: r.id,
+    title: r.title,
+    description: r.description?.slice(0, 160) || "",
+    category: r.category || "General",
+    logoUrl: r.logoUrl || undefined,
+    uploaderName: r.uploader?.name || r.uploader?.username || "DevSpace",
+    uploaderAvatar: r.uploader?.avatarUrl || undefined,
+    date: r.createdAt
+      ? new Date(r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+      : "Recently",
+    tags: r.tags?.map((t) => t.name) || [],
+    upvotes: r.upvoteCount ?? 0,
+    downloads: r.downloadCount ?? 0,
+    saved: Boolean(r.isSavedByMe),
+  };
 }
 
 function HomeArticleCard({
@@ -200,12 +271,7 @@ function HomeArticleCard({
 
           <div className="flex flex-wrap items-center gap-1.5">
             {article.tags.map((tag) => (
-              <Tag
-                key={tag.label}
-                variant={tag.variant}
-                size="sm"
-                clickable
-              >
+              <Tag key={tag.label} variant={tag.variant} size="sm" clickable>
                 {tag.label}
               </Tag>
             ))}
@@ -231,9 +297,7 @@ function HomeArticleCard({
             type="button"
             onClick={onLike}
             className={`flex items-center gap-1.5 text-xs transition-colors cursor-pointer ${
-              article.liked
-                ? "text-rose-500"
-                : "text-text/45 hover:text-rose-500"
+              article.liked ? "text-rose-500" : "text-text/45 hover:text-rose-500"
             }`}
           >
             {article.liked ? (
@@ -256,9 +320,7 @@ function HomeArticleCard({
             type="button"
             onClick={onSave}
             className={`flex items-center gap-1.5 text-xs transition-colors cursor-pointer ${
-              article.saved
-                ? "text-primary"
-                : "text-text/45 hover:text-primary"
+              article.saved ? "text-primary" : "text-text/45 hover:text-primary"
             }`}
           >
             <HiOutlineBookmark className="w-4 h-4" />
@@ -266,56 +328,171 @@ function HomeArticleCard({
           </button>
         </div>
 
-        <span className="text-[11px] text-text/40 font-medium">
-          {article.readTime}
-        </span>
+        <span className="text-[11px] text-text/40 font-medium">{article.readTime}</span>
       </div>
     </article>
   );
 }
 
-function TrendingPostCard({ item, onLike, onSave }: { item: TrendingPostItem; onLike: () => void; onSave: () => void }): JSX.Element {
+function TrendingPostCard({
+  item,
+  onLike,
+  onSave,
+}: {
+  item: TrendingPostItem;
+  onLike: () => void;
+  onSave: () => void;
+}): JSX.Element {
   const navigate = useNavigate();
   return (
-    <article className="bg-white border border-border rounded-lg p-4 sm:p-5 hover:border-primary/30 hover:shadow-sm transition-all duration-200 group cursor-pointer" onClick={() => navigate(`/articles/${item.id}`)}>
+    <article
+      className="bg-white border border-border rounded-lg p-4 sm:p-5 hover:border-primary/30 hover:shadow-sm transition-all duration-200 group cursor-pointer"
+      onClick={() => navigate(`/articles/${item.id}`)}
+    >
       <div className="flex gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
-            <Avatar src={item.authorAvatar} name={item.authorName} size="sm" href={null} className="shrink-0" />
-            <div className="min-w-0 flex-1"><span className="text-[12px] font-semibold text-text truncate block">{item.authorName}</span><span className="text-[11px] text-text/40">{item.date}</span></div>
-            <span className="text-[10px] font-bold text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded-sm uppercase tracking-wider shrink-0 flex items-center gap-1"><LuFileText className="w-2.5 h-2.5" /> Post</span>
+            <Avatar
+              src={item.authorAvatar}
+              name={item.authorName}
+              size="sm"
+              href={null}
+              className="shrink-0"
+            />
+            <div className="min-w-0 flex-1">
+              <span className="text-[12px] font-semibold text-text truncate block">
+                {item.authorName}
+              </span>
+              <span className="text-[11px] text-text/40">{item.date}</span>
+            </div>
+            <span className="text-[10px] font-bold text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded-sm uppercase tracking-wider shrink-0 flex items-center gap-1">
+              <LuFileText className="w-2.5 h-2.5" /> Post
+            </span>
           </div>
-          <h3 className="text-[15px] font-bold text-text leading-snug tracking-tight mb-1 group-hover:text-primary transition-colors line-clamp-2">{item.title}</h3>
-          <p className="text-[12px] text-text/55 leading-relaxed line-clamp-2 mb-2.5">{item.excerpt}</p>
-          <div className="flex flex-wrap gap-1 mb-3">{item.tags.slice(0, 3).map((tag) => <Tag key={tag} variant="neutral" size="sm" clickable>{tag}</Tag>)}</div>
+          <h3 className="text-[15px] font-bold text-text leading-snug tracking-tight mb-1 group-hover:text-primary transition-colors line-clamp-2">
+            {item.title}
+          </h3>
+          <p className="text-[12px] text-text/55 leading-relaxed line-clamp-2 mb-2.5">
+            {item.excerpt}
+          </p>
+          <div className="flex flex-wrap gap-1 mb-3">
+            {item.tags.slice(0, 3).map((tag) => (
+              <Tag key={tag} variant="neutral" size="sm" clickable>
+                {tag}
+              </Tag>
+            ))}
+          </div>
           <div className="flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
-            <button type="button" onClick={onLike} className={`flex items-center gap-1.5 text-xs transition-colors cursor-pointer ${item.liked ? "text-rose-500" : "text-text/40 hover:text-rose-500"}`}>{item.liked ? <HiHeart className="w-3.5 h-3.5" /> : <HiOutlineHeart className="w-3.5 h-3.5" />}<span className="font-medium">{item.likes}</span></button>
-            <button type="button" className="flex items-center gap-1.5 text-xs text-text/40 hover:text-primary transition-colors cursor-pointer"><HiOutlineChatBubbleOvalLeft className="w-3.5 h-3.5" /><span className="font-medium">{item.comments}</span></button>
-            <button type="button" onClick={onSave} className={`flex items-center gap-1.5 text-xs transition-colors cursor-pointer ${item.saved ? "text-primary" : "text-text/40 hover:text-primary"}`}><HiOutlineBookmark className="w-3.5 h-3.5" /><span className="font-medium">{item.saved ? "Saved" : "Save"}</span></button>
+            <button
+              type="button"
+              onClick={onLike}
+              className={`flex items-center gap-1.5 text-xs transition-colors cursor-pointer ${item.liked ? "text-rose-500" : "text-text/40 hover:text-rose-500"}`}
+            >
+              {item.liked ? (
+                <HiHeart className="w-3.5 h-3.5" />
+              ) : (
+                <HiOutlineHeart className="w-3.5 h-3.5" />
+              )}
+              <span className="font-medium">{item.likes}</span>
+            </button>
+            <button
+              type="button"
+              className="flex items-center gap-1.5 text-xs text-text/40 hover:text-primary transition-colors cursor-pointer"
+            >
+              <HiOutlineChatBubbleOvalLeft className="w-3.5 h-3.5" />
+              <span className="font-medium">{item.comments}</span>
+            </button>
+            <button
+              type="button"
+              onClick={onSave}
+              className={`flex items-center gap-1.5 text-xs transition-colors cursor-pointer ${item.saved ? "text-primary" : "text-text/40 hover:text-primary"}`}
+            >
+              <HiOutlineBookmark className="w-3.5 h-3.5" />
+              <span className="font-medium">{item.saved ? "Saved" : "Save"}</span>
+            </button>
             <span className="ml-auto text-[11px] text-text/40 font-medium">{item.readTime}</span>
           </div>
         </div>
-        {item.coverImage && <div className="hidden sm:block w-24 h-24 rounded-lg overflow-hidden shrink-0 bg-border/30"><img src={item.coverImage} alt={item.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" onError={(e) => { (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=80&w=400&auto=format&fit=crop"; }} /></div>}
+        {item.coverImage && (
+          <div className="hidden sm:block w-24 h-24 rounded-lg overflow-hidden shrink-0 bg-border/30">
+            <img
+              src={item.coverImage}
+              alt={item.title}
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src =
+                  "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=80&w=400&auto=format&fit=crop";
+              }}
+            />
+          </div>
+        )}
       </div>
     </article>
   );
 }
 
-function TrendingDiscussionCard({ item, onLike }: { item: TrendingDiscussionItem; onLike: () => void }): JSX.Element {
+function TrendingDiscussionCard({
+  item,
+  onLike,
+}: {
+  item: TrendingDiscussionItem;
+  onLike: () => void;
+}): JSX.Element {
   const navigate = useNavigate();
   return (
-    <article className="bg-white border border-border rounded-lg p-4 sm:p-5 hover:border-violet-300 hover:shadow-sm transition-all duration-200 group cursor-pointer" onClick={() => navigate(`/discussions/${item.id}`)}>
+    <article
+      className="bg-white border border-border rounded-lg p-4 sm:p-5 hover:border-violet-300 hover:shadow-sm transition-all duration-200 group cursor-pointer"
+      onClick={() => navigate(`/discussions/${item.id}`)}
+    >
       <div className="flex items-center gap-2 mb-2">
-        <Avatar src={item.authorAvatar} name={item.authorName} size="sm" href={null} className="shrink-0" />
-        <div className="min-w-0 flex-1"><span className="text-[12px] font-semibold text-text truncate block">{item.authorName}</span><span className="text-[11px] text-text/40">{item.date}</span></div>
-        <span className="text-[10px] font-bold text-violet-600 bg-violet-50 border border-violet-200 px-1.5 py-0.5 rounded-sm uppercase tracking-wider shrink-0 flex items-center gap-1"><LuMessageSquare className="w-2.5 h-2.5" /> Discussion</span>
+        <Avatar
+          src={item.authorAvatar}
+          name={item.authorName}
+          size="sm"
+          href={null}
+          className="shrink-0"
+        />
+        <div className="min-w-0 flex-1">
+          <span className="text-[12px] font-semibold text-text truncate block">
+            {item.authorName}
+          </span>
+          <span className="text-[11px] text-text/40">{item.date}</span>
+        </div>
+        <span className="text-[10px] font-bold text-violet-600 bg-violet-50 border border-violet-200 px-1.5 py-0.5 rounded-sm uppercase tracking-wider shrink-0 flex items-center gap-1">
+          <LuMessageSquare className="w-2.5 h-2.5" /> Discussion
+        </span>
       </div>
-      <h3 className="text-[15px] font-bold text-text leading-snug tracking-tight mb-1 group-hover:text-violet-600 transition-colors line-clamp-2">{item.title}</h3>
+      <h3 className="text-[15px] font-bold text-text leading-snug tracking-tight mb-1 group-hover:text-violet-600 transition-colors line-clamp-2">
+        {item.title}
+      </h3>
       <p className="text-[12px] text-text/55 leading-relaxed line-clamp-2 mb-2.5">{item.content}</p>
-      <div className="flex flex-wrap gap-1 mb-3">{item.tags.slice(0, 3).map((tag) => <Tag key={tag} variant="outline" size="sm" clickable>{tag}</Tag>)}</div>
+      <div className="flex flex-wrap gap-1 mb-3">
+        {item.tags.slice(0, 3).map((tag) => (
+          <Tag key={tag} variant="outline" size="sm" clickable>
+            {tag}
+          </Tag>
+        ))}
+      </div>
       <div className="flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
-        <button type="button" onClick={onLike} className={`flex items-center gap-1.5 text-xs transition-colors cursor-pointer ${item.liked ? "text-rose-500" : "text-text/40 hover:text-rose-500"}`}>{item.liked ? <HiHeart className="w-3.5 h-3.5" /> : <HiOutlineHeart className="w-3.5 h-3.5" />}<span className="font-medium">{item.upvotes}</span></button>
-        <button type="button" className="flex items-center gap-1.5 text-xs text-text/40 hover:text-violet-600 transition-colors cursor-pointer"><HiOutlineChatBubbleOvalLeft className="w-3.5 h-3.5" /><span className="font-medium">{item.comments}</span></button>
+        <button
+          type="button"
+          onClick={onLike}
+          className={`flex items-center gap-1.5 text-xs transition-colors cursor-pointer ${item.liked ? "text-rose-500" : "text-text/40 hover:text-rose-500"}`}
+        >
+          {item.liked ? (
+            <HiHeart className="w-3.5 h-3.5" />
+          ) : (
+            <HiOutlineHeart className="w-3.5 h-3.5" />
+          )}
+          <span className="font-medium">{item.upvotes}</span>
+        </button>
+        <button
+          type="button"
+          className="flex items-center gap-1.5 text-xs text-text/40 hover:text-violet-600 transition-colors cursor-pointer"
+        >
+          <HiOutlineChatBubbleOvalLeft className="w-3.5 h-3.5" />
+          <span className="font-medium">{item.comments}</span>
+        </button>
       </div>
     </article>
   );
@@ -324,20 +501,52 @@ function TrendingDiscussionCard({ item, onLike }: { item: TrendingDiscussionItem
 function TrendingResourceCard({ item }: { item: TrendingResourceItem }): JSX.Element {
   const navigate = useNavigate();
   return (
-    <article className="bg-white border border-border rounded-lg p-4 sm:p-5 hover:border-emerald-300 hover:shadow-sm transition-all duration-200 group cursor-pointer" onClick={() => navigate(`/resources/${item.id}`)}>
+    <article
+      className="bg-white border border-border rounded-lg p-4 sm:p-5 hover:border-emerald-300 hover:shadow-sm transition-all duration-200 group cursor-pointer"
+      onClick={() => navigate(`/resources/${item.id}`)}
+    >
       <div className="flex gap-3">
-        <div className="shrink-0 w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-200 overflow-hidden flex items-center justify-center">{item.logoUrl ? <img src={item.logoUrl} alt={item.title} className="w-full h-full object-cover" /> : <LuPackage className="w-5 h-5 text-emerald-600" />}</div>
+        <div className="shrink-0 w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-200 overflow-hidden flex items-center justify-center">
+          {item.logoUrl ? (
+            <img src={item.logoUrl} alt={item.title} className="w-full h-full object-cover" />
+          ) : (
+            <LuPackage className="w-5 h-5 text-emerald-600" />
+          )}
+        </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2 mb-1">
             <div className="min-w-0">
-              <h3 className="text-[14px] font-bold text-text leading-tight group-hover:text-emerald-700 transition-colors truncate">{item.title}</h3>
-              <div className="flex items-center gap-1.5 mt-0.5"><span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-sm uppercase tracking-wider flex items-center gap-1"><LuPackage className="w-2.5 h-2.5" /> Resource</span><span className="text-[11px] text-text/40">{item.category} · {item.date}</span></div>
+              <h3 className="text-[14px] font-bold text-text leading-tight group-hover:text-emerald-700 transition-colors truncate">
+                {item.title}
+              </h3>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-sm uppercase tracking-wider flex items-center gap-1">
+                  <LuPackage className="w-2.5 h-2.5" /> Resource
+                </span>
+                <span className="text-[11px] text-text/40">
+                  {item.category} · {item.date}
+                </span>
+              </div>
             </div>
             <HiOutlineArrowTopRightOnSquare className="w-4 h-4 text-text/30 group-hover:text-emerald-600 transition-colors shrink-0 mt-0.5" />
           </div>
-          <p className="text-[12px] text-text/55 leading-relaxed line-clamp-2 mb-2">{item.description}</p>
-          <div className="flex flex-wrap gap-1 mb-2">{item.tags.slice(0, 3).map((tag) => <Tag key={tag} variant="teal" size="sm" clickable>{tag}</Tag>)}</div>
-          <div className="flex items-center gap-3 text-[11px] text-text/40"><span>{item.upvotes} upvotes</span><span>·</span><span>{item.downloads} downloads</span><span>·</span><span>by {item.uploaderName}</span></div>
+          <p className="text-[12px] text-text/55 leading-relaxed line-clamp-2 mb-2">
+            {item.description}
+          </p>
+          <div className="flex flex-wrap gap-1 mb-2">
+            {item.tags.slice(0, 3).map((tag) => (
+              <Tag key={tag} variant="teal" size="sm" clickable>
+                {tag}
+              </Tag>
+            ))}
+          </div>
+          <div className="flex items-center gap-3 text-[11px] text-text/40">
+            <span>{item.upvotes} upvotes</span>
+            <span>·</span>
+            <span>{item.downloads} downloads</span>
+            <span>·</span>
+            <span>by {item.uploaderName}</span>
+          </div>
         </div>
       </div>
     </article>
@@ -349,10 +558,19 @@ function FeedSkeleton(): JSX.Element {
     <div className="space-y-4">
       {Array.from({ length: 3 }).map((_, idx) => (
         <div key={idx} className="bg-white border border-border rounded-lg p-5 space-y-3">
-          <div className="flex items-center gap-3"><Skeleton variant="circular" width={36} height={36} /><div className="space-y-1"><Skeleton variant="text" width={120} height={14} /><Skeleton variant="text" width={80} height={10} /></div></div>
+          <div className="flex items-center gap-3">
+            <Skeleton variant="circular" width={36} height={36} />
+            <div className="space-y-1">
+              <Skeleton variant="text" width={120} height={14} />
+              <Skeleton variant="text" width={80} height={10} />
+            </div>
+          </div>
           <Skeleton variant="text" width="90%" height={20} />
           <Skeleton variant="text" width="100%" height={14} />
-          <div className="flex gap-2"><Skeleton variant="rounded" width={60} height={20} /><Skeleton variant="rounded" width={60} height={20} /></div>
+          <div className="flex gap-2">
+            <Skeleton variant="rounded" width={60} height={20} />
+            <Skeleton variant="rounded" width={60} height={20} />
+          </div>
         </div>
       ))}
     </div>
@@ -423,45 +641,62 @@ export function HomePage(): JSX.Element {
     };
   }, [isAuthenticated]);
 
-  const fetchArticles = useCallback(async (tab: string, page: number, isInitial: boolean): Promise<void> => {
-    if (isInitial) setIsLoading(true); else setIsFetchingMore(true);
-    try {
-      let response: { data: Article[]; pagination?: Pagination };
-      if (tab === "Following") {
-        response = await getFollowingArticles({ page, pageSize: PAGE_SIZE });
-      } else if (tab === "For You") {
-        if (isAuthenticated) {
-          try {
-            response = await getPersonalizedArticles({ page, pageSize: PAGE_SIZE });
-            if (isInitial && (!response.data || response.data.length === 0)) {
+  const fetchArticles = useCallback(
+    async (tab: string, page: number, isInitial: boolean): Promise<void> => {
+      if (isInitial) setIsLoading(true);
+      else setIsFetchingMore(true);
+      try {
+        let response: { data: Article[]; pagination?: Pagination };
+        if (tab === "Following") {
+          response = await getFollowingArticles({ page, pageSize: PAGE_SIZE });
+        } else if (tab === "For You") {
+          if (isAuthenticated) {
+            try {
+              response = await getPersonalizedArticles({ page, pageSize: PAGE_SIZE });
+              if (isInitial && (!response.data || response.data.length === 0)) {
+                response = await getFeedArticles({ page, pageSize: PAGE_SIZE });
+              }
+            } catch {
               response = await getFeedArticles({ page, pageSize: PAGE_SIZE });
             }
-          } catch {
+          } else {
             response = await getFeedArticles({ page, pageSize: PAGE_SIZE });
           }
         } else {
           response = await getFeedArticles({ page, pageSize: PAGE_SIZE });
         }
-      } else {
-        response = await getFeedArticles({ page, pageSize: PAGE_SIZE });
+        const incoming = response.data?.map(mapApiArticleToFeedItem) ?? [];
+        const paginationInfo = response.pagination;
+        if (isInitial) {
+          setArticles(incoming);
+        } else {
+          setArticles((prev) => [
+            ...prev,
+            ...incoming.filter((a) => !prev.some((p) => p.id === a.id)),
+          ]);
+        }
+        const more = paginationInfo?.hasNext ?? incoming.length === PAGE_SIZE;
+        setHasMore(more);
+        if (more) nextPageRef.current = page + 1;
+      } catch {
+        if (isInitial) setArticles([]);
+        setHasMore(false);
+      } finally {
+        if (isInitial) setIsLoading(false);
+        else setIsFetchingMore(false);
       }
-      const incoming = response.data?.map(mapApiArticleToFeedItem) ?? [];
-      const paginationInfo = response.pagination;
-      if (isInitial) { setArticles(incoming); }
-      else { setArticles((prev) => [...prev, ...incoming.filter((a) => !prev.some((p) => p.id === a.id))]); }
-      const more = paginationInfo?.hasNext ?? (incoming.length === PAGE_SIZE);
-      setHasMore(more);
-      if (more) nextPageRef.current = page + 1;
-    } catch {
-      if (isInitial) setArticles([]);
-      setHasMore(false);
-    } finally { if (isInitial) setIsLoading(false); else setIsFetchingMore(false); }
-  }, [isAuthenticated]);
+    },
+    [isAuthenticated],
+  );
 
   const fetchTrendingInitial = useCallback(async () => {
     setIsTrendingInitLoading(true);
-    trendingPostsPageRef.current = 1; trendingDiscPageRef.current = 1; trendingResPageRef.current = 1;
-    updateHasMore("posts", true); updateHasMore("disc", true); updateHasMore("res", true);
+    trendingPostsPageRef.current = 1;
+    trendingDiscPageRef.current = 1;
+    trendingResPageRef.current = 1;
+    updateHasMore("posts", true);
+    updateHasMore("disc", true);
+    updateHasMore("res", true);
     const [postsRes, discRes, resRes] = await Promise.allSettled([
       getTrendingArticles({ page: 1, pageSize: PAGE_SIZE }),
       getDiscussions({ sort: "trending", page: 1, pageSize: PAGE_SIZE }),
@@ -472,55 +707,96 @@ export function HomePage(): JSX.Element {
       setTrendingPosts(data.map(mapTrendingPost));
       updateHasMore("posts", postsRes.value.pagination?.hasNext ?? data.length >= PAGE_SIZE);
       if (hasMoreTrendingRef.current.posts) trendingPostsPageRef.current = 2;
-    } else { setTrendingPosts([]); updateHasMore("posts", false); }
+    } else {
+      setTrendingPosts([]);
+      updateHasMore("posts", false);
+    }
     if (discRes.status === "fulfilled") {
       const data = discRes.value;
       setTrendingDiscussions(data.map(mapTrendingDiscussion));
       updateHasMore("disc", data.length >= PAGE_SIZE);
       if (hasMoreTrendingRef.current.disc) trendingDiscPageRef.current = 2;
-    } else { setTrendingDiscussions([]); updateHasMore("disc", false); }
+    } else {
+      setTrendingDiscussions([]);
+      updateHasMore("disc", false);
+    }
     if (resRes.status === "fulfilled") {
       const data = resRes.value.data ?? [];
       setTrendingResources(data.map(mapTrendingResource));
       updateHasMore("res", resRes.value.pagination?.hasNext ?? data.length >= PAGE_SIZE);
       if (hasMoreTrendingRef.current.res) trendingResPageRef.current = 2;
-    } else { setTrendingResources([]); updateHasMore("res", false); }
+    } else {
+      setTrendingResources([]);
+      updateHasMore("res", false);
+    }
     setIsTrendingInitLoading(false);
   }, [updateHasMore]);
 
   const loadMoreTrending = useCallback(async () => {
     if (isTrendingFetchingMore || isTrendingInitLoading) return;
-    const needPosts = (trendingFilter === "All" || trendingFilter === "Posts") && hasMoreTrendingRef.current.posts;
-    const needDisc = (trendingFilter === "All" || trendingFilter === "Discussions") && hasMoreTrendingRef.current.disc;
-    const needRes = (trendingFilter === "All" || trendingFilter === "Resources") && hasMoreTrendingRef.current.res;
+    const needPosts =
+      (trendingFilter === "All" || trendingFilter === "Posts") && hasMoreTrendingRef.current.posts;
+    const needDisc =
+      (trendingFilter === "All" || trendingFilter === "Discussions") &&
+      hasMoreTrendingRef.current.disc;
+    const needRes =
+      (trendingFilter === "All" || trendingFilter === "Resources") &&
+      hasMoreTrendingRef.current.res;
     if (!needPosts && !needDisc && !needRes) return;
     setIsTrendingFetchingMore(true);
     const promises: Promise<void>[] = [];
     if (needPosts) {
       const page = trendingPostsPageRef.current;
-      promises.push(getTrendingArticles({ page, pageSize: PAGE_SIZE }).then((res) => {
-        const data = res.data ?? [];
-        setTrendingPosts((prev) => [...prev, ...data.map(mapTrendingPost).filter((p) => !prev.some((x) => x.id === p.id))]);
-        updateHasMore("posts", res.pagination?.hasNext ?? data.length >= PAGE_SIZE);
-        if (hasMoreTrendingRef.current.posts) trendingPostsPageRef.current = page + 1;
-      }).catch(() => { updateHasMore("posts", false); }));
+      promises.push(
+        getTrendingArticles({ page, pageSize: PAGE_SIZE })
+          .then((res) => {
+            const data = res.data ?? [];
+            setTrendingPosts((prev) => [
+              ...prev,
+              ...data.map(mapTrendingPost).filter((p) => !prev.some((x) => x.id === p.id)),
+            ]);
+            updateHasMore("posts", res.pagination?.hasNext ?? data.length >= PAGE_SIZE);
+            if (hasMoreTrendingRef.current.posts) trendingPostsPageRef.current = page + 1;
+          })
+          .catch(() => {
+            updateHasMore("posts", false);
+          }),
+      );
     }
     if (needDisc) {
       const page = trendingDiscPageRef.current;
-      promises.push(getDiscussions({ sort: "trending", page, pageSize: PAGE_SIZE }).then((data) => {
-        setTrendingDiscussions((prev) => [...prev, ...data.map(mapTrendingDiscussion).filter((d) => !prev.some((x) => x.id === d.id))]);
-        updateHasMore("disc", data.length >= PAGE_SIZE);
-        if (hasMoreTrendingRef.current.disc) trendingDiscPageRef.current = page + 1;
-      }).catch(() => { updateHasMore("disc", false); }));
+      promises.push(
+        getDiscussions({ sort: "trending", page, pageSize: PAGE_SIZE })
+          .then((data) => {
+            setTrendingDiscussions((prev) => [
+              ...prev,
+              ...data.map(mapTrendingDiscussion).filter((d) => !prev.some((x) => x.id === d.id)),
+            ]);
+            updateHasMore("disc", data.length >= PAGE_SIZE);
+            if (hasMoreTrendingRef.current.disc) trendingDiscPageRef.current = page + 1;
+          })
+          .catch(() => {
+            updateHasMore("disc", false);
+          }),
+      );
     }
     if (needRes) {
       const page = trendingResPageRef.current;
-      promises.push(getResources({ page, pageSize: PAGE_SIZE } as Parameters<typeof getResources>[0]).then((res) => {
-        const data = res.data ?? [];
-        setTrendingResources((prev) => [...prev, ...data.map(mapTrendingResource).filter((r) => !prev.some((x) => x.id === r.id))]);
-        updateHasMore("res", res.pagination?.hasNext ?? data.length >= PAGE_SIZE);
-        if (hasMoreTrendingRef.current.res) trendingResPageRef.current = page + 1;
-      }).catch(() => { updateHasMore("res", false); }));
+      promises.push(
+        getResources({ page, pageSize: PAGE_SIZE } as Parameters<typeof getResources>[0])
+          .then((res) => {
+            const data = res.data ?? [];
+            setTrendingResources((prev) => [
+              ...prev,
+              ...data.map(mapTrendingResource).filter((r) => !prev.some((x) => x.id === r.id)),
+            ]);
+            updateHasMore("res", res.pagination?.hasNext ?? data.length >= PAGE_SIZE);
+            if (hasMoreTrendingRef.current.res) trendingResPageRef.current = page + 1;
+          })
+          .catch(() => {
+            updateHasMore("res", false);
+          }),
+      );
     }
     await Promise.allSettled(promises);
     setIsTrendingFetchingMore(false);
@@ -582,7 +858,9 @@ export function HomePage(): JSX.Element {
     activeTabRef.current = activeTab;
     if (isGuestGated) return;
     if (activeTab === "Trending") {
-      queueMicrotask(() => { void fetchTrendingInitial(); });
+      queueMicrotask(() => {
+        void fetchTrendingInitial();
+      });
     } else {
       nextPageRef.current = 1;
       queueMicrotask(() => {
@@ -597,11 +875,14 @@ export function HomePage(): JSX.Element {
     if (activeTab === "Trending" || isGuestGated) return;
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting && hasMore && !isFetchingMore && !isLoading) {
-        void fetchArticles(activeTabRef.current, nextPageRef.current, false);
-      }
-    }, { rootMargin: "200px" });
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && hasMore && !isFetchingMore && !isLoading) {
+          void fetchArticles(activeTabRef.current, nextPageRef.current, false);
+        }
+      },
+      { rootMargin: "200px" },
+    );
     observer.observe(sentinel);
     return () => observer.disconnect();
   }, [activeTab, isGuestGated, hasMore, isFetchingMore, isLoading, fetchArticles]);
@@ -611,11 +892,14 @@ export function HomePage(): JSX.Element {
     if (activeTab !== "Trending" || isGuestGated) return;
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting && !isTrendingInitLoading && !isTrendingFetchingMore) {
-        void loadMoreTrending();
-      }
-    }, { rootMargin: "250px" });
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !isTrendingInitLoading && !isTrendingFetchingMore) {
+          void loadMoreTrending();
+        }
+      },
+      { rootMargin: "250px" },
+    );
     observer.observe(sentinel);
     return () => observer.disconnect();
   }, [activeTab, isGuestGated, isTrendingInitLoading, isTrendingFetchingMore, loadMoreTrending]);
@@ -624,43 +908,61 @@ export function HomePage(): JSX.Element {
     if (!requireAuth("like this article")) return;
     setArticles((prev) =>
       prev.map((a) =>
-        a.id === id
-          ? { ...a, liked: !a.liked, likes: a.liked ? a.likes - 1 : a.likes + 1 }
-          : a,
+        a.id === id ? { ...a, liked: !a.liked, likes: a.liked ? a.likes - 1 : a.likes + 1 } : a,
       ),
     );
     try {
       await likeArticle(id);
     } catch {
-       // errors 
+      // errors
     }
   };
 
   const handleTrendingLikePost = async (id: string): Promise<void> => {
     if (!requireAuth("like this article")) return;
-    setTrendingPosts((prev) => prev.map((p) => p.id === id ? { ...p, liked: !p.liked, likes: p.liked ? p.likes - 1 : p.likes + 1 } : p));
-    try { await likeArticle(id); } catch { /* silent */ }
+    setTrendingPosts((prev) =>
+      prev.map((p) =>
+        p.id === id ? { ...p, liked: !p.liked, likes: p.liked ? p.likes - 1 : p.likes + 1 } : p,
+      ),
+    );
+    try {
+      await likeArticle(id);
+    } catch {
+      /* silent */
+    }
   };
   const handleTrendingSavePost = async (id: string): Promise<void> => {
     if (!requireAuth("save this article")) return;
     setTrendingPosts((prev) => prev.map((p) => (p.id === id ? { ...p, saved: !p.saved } : p)));
-    try { await saveArticle(id); } catch { /* silent */ }
+    try {
+      await saveArticle(id);
+    } catch {
+      /* silent */
+    }
   };
   const handleTrendingLikeDiscussion = async (id: string): Promise<void> => {
     if (!requireAuth("like this discussion")) return;
-    setTrendingDiscussions((prev) => prev.map((d) => d.id === id ? { ...d, liked: !d.liked, upvotes: d.liked ? d.upvotes - 1 : d.upvotes + 1 } : d));
-    try { await likeDiscussion(id); } catch { /* silent */ }
+    setTrendingDiscussions((prev) =>
+      prev.map((d) =>
+        d.id === id
+          ? { ...d, liked: !d.liked, upvotes: d.liked ? d.upvotes - 1 : d.upvotes + 1 }
+          : d,
+      ),
+    );
+    try {
+      await likeDiscussion(id);
+    } catch {
+      /* silent */
+    }
   };
 
   const handleSave = async (id: string): Promise<void> => {
     if (!requireAuth("save this article")) return;
-    setArticles((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, saved: !a.saved } : a)),
-    );
+    setArticles((prev) => prev.map((a) => (a.id === id ? { ...a, saved: !a.saved } : a)));
     try {
       await saveArticle(id);
     } catch {
-      // errors 
+      // errors
     }
   };
 
@@ -669,7 +971,11 @@ export function HomePage(): JSX.Element {
     if (trendingFilter === "Posts") return trendingPosts;
     if (trendingFilter === "Discussions") return trendingDiscussions;
     if (trendingFilter === "Resources") return trendingResources;
-    const maxLen = Math.max(trendingPosts.length, trendingDiscussions.length, trendingResources.length);
+    const maxLen = Math.max(
+      trendingPosts.length,
+      trendingDiscussions.length,
+      trendingResources.length,
+    );
     const merged: TrendingFeedItem[] = [];
     for (let i = 0; i < maxLen; i++) {
       if (i < trendingPosts.length) merged.push(trendingPosts[i]);
@@ -698,7 +1004,15 @@ export function HomePage(): JSX.Element {
           {activeTab === "Trending" && isAuthenticated && (
             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
               {TRENDING_FILTERS.map(({ label, icon }) => (
-                <button key={label} type="button" onClick={() => setTrendingFilter(label)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium whitespace-nowrap transition-all duration-150 cursor-pointer border ${trendingFilter === label ? "bg-primary text-white border-primary shadow-sm" : "bg-white text-text/60 border-border hover:border-primary/40 hover:text-text"}`}>{icon}{label}</button>
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => setTrendingFilter(label)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium whitespace-nowrap transition-all duration-150 cursor-pointer border ${trendingFilter === label ? "bg-primary text-white border-primary shadow-sm" : "bg-white text-text/60 border-border hover:border-primary/40 hover:text-text"}`}
+                >
+                  {icon}
+                  {label}
+                </button>
               ))}
             </div>
           )}
@@ -706,29 +1020,78 @@ export function HomePage(): JSX.Element {
           <div className="space-y-4 min-h-75">
             {isGuestGated ? (
               <LoginPrompt
-                icon={activeTab === "Following" ? <HiOutlineUserGroup className="w-6 h-6" /> : <HiOutlineFire className="w-6 h-6" />}
-                title={activeTab === "Following" ? "Log in to see posts from people you follow" : "Log in to see what's trending"}
-                description={activeTab === "Following" ? "Follow developers and their latest articles will show up here." : "Trending posts, discussions and resources from across DevSpace."}
+                icon={
+                  activeTab === "Following" ? (
+                    <HiOutlineUserGroup className="w-6 h-6" />
+                  ) : (
+                    <HiOutlineFire className="w-6 h-6" />
+                  )
+                }
+                title={
+                  activeTab === "Following"
+                    ? "Log in to see posts from people you follow"
+                    : "Log in to see what's trending"
+                }
+                description={
+                  activeTab === "Following"
+                    ? "Follow developers and their latest articles will show up here."
+                    : "Trending posts, discussions and resources from across DevSpace."
+                }
               />
             ) : activeTab === "Trending" ? (
-              isTrendingInitLoading ? <FeedSkeleton /> : trendingFeed.length === 0 ? (
+              isTrendingInitLoading ? (
+                <FeedSkeleton />
+              ) : trendingFeed.length === 0 ? (
                 <div className="bg-white border border-border rounded-lg p-10 text-center space-y-2">
                   <HiOutlineFire className="w-7 h-7 text-text/20 mx-auto mb-1" />
                   <p className="text-base font-semibold text-text">Nothing trending yet</p>
                   <p className="text-xs text-text/50">Check back soon for hot content.</p>
                 </div>
-              ) : trendingFeed.map((item) => {
-                if (item.kind === "post") return <TrendingPostCard key={`post-${item.id}`} item={item} onLike={() => handleTrendingLikePost(item.id)} onSave={() => handleTrendingSavePost(item.id)} />;
-                if (item.kind === "discussion") return <TrendingDiscussionCard key={`disc-${item.id}`} item={item} onLike={() => handleTrendingLikeDiscussion(item.id)} />;
-                return <TrendingResourceCard key={`res-${item.id}`} item={item} />;
-              })
-            ) : isLoading ? <FeedSkeleton /> : articles.length === 0 ? (
+              ) : (
+                trendingFeed.map((item) => {
+                  if (item.kind === "post")
+                    return (
+                      <TrendingPostCard
+                        key={`post-${item.id}`}
+                        item={item}
+                        onLike={() => handleTrendingLikePost(item.id)}
+                        onSave={() => handleTrendingSavePost(item.id)}
+                      />
+                    );
+                  if (item.kind === "discussion")
+                    return (
+                      <TrendingDiscussionCard
+                        key={`disc-${item.id}`}
+                        item={item}
+                        onLike={() => handleTrendingLikeDiscussion(item.id)}
+                      />
+                    );
+                  return <TrendingResourceCard key={`res-${item.id}`} item={item} />;
+                })
+              )
+            ) : isLoading ? (
+              <FeedSkeleton />
+            ) : articles.length === 0 ? (
               <div className="bg-white border border-border rounded-lg p-10 text-center space-y-2">
-                <p className="text-base font-semibold text-text">No articles found in {activeTab}</p>
-                <p className="text-xs text-text/50">{activeTab === "Following" ? "Follow authors to see their latest articles here." : "Check back later for updates."}</p>
+                <p className="text-base font-semibold text-text">
+                  No articles found in {activeTab}
+                </p>
+                <p className="text-xs text-text/50">
+                  {activeTab === "Following"
+                    ? "Follow authors to see their latest articles here."
+                    : "Check back later for updates."}
+                </p>
               </div>
-            ) : articles.map((article) => <HomeArticleCard key={article.id} article={article} onLike={() => handleLike(article.id)} onSave={() => handleSave(article.id)} />)
-            }
+            ) : (
+              articles.map((article) => (
+                <HomeArticleCard
+                  key={article.id}
+                  article={article}
+                  onLike={() => handleLike(article.id)}
+                  onSave={() => handleSave(article.id)}
+                />
+              ))
+            )}
           </div>
 
           {/* Infinite scroll sentinel */}
@@ -747,7 +1110,9 @@ export function HomePage(): JSX.Element {
                 >
                   <circle
                     className="opacity-25"
-                    cx="12" cy="12" r="10"
+                    cx="12"
+                    cy="12"
+                    r="10"
                     stroke="currentColor"
                     strokeWidth="3"
                   />
@@ -762,17 +1127,40 @@ export function HomePage(): JSX.Element {
             </div>
           )}
 
-          {activeTab !== "Trending" && !isLoading && !isFetchingMore && !hasMore && articles.length > 0 && (
-            <div className="flex items-center justify-center py-6"><div className="flex items-center gap-2 text-text/30"><div className="h-px w-16 bg-border" /><span className="text-xs font-medium">You are all caught up</span><div className="h-px w-16 bg-border" /></div></div>
-          )}
-          {activeTab === "Trending" && !isTrendingInitLoading && !isTrendingFetchingMore && !trendingHasMore && trendingFeed.length > 0 && (
-            <div className="flex items-center justify-center py-6"><div className="flex items-center gap-2 text-text/30"><div className="h-px w-16 bg-border" /><span className="text-xs font-medium">You are all caught up</span><div className="h-px w-16 bg-border" /></div></div>
-          )}
+          {activeTab !== "Trending" &&
+            !isLoading &&
+            !isFetchingMore &&
+            !hasMore &&
+            articles.length > 0 && (
+              <div className="flex items-center justify-center py-6">
+                <div className="flex items-center gap-2 text-text/30">
+                  <div className="h-px w-16 bg-border" />
+                  <span className="text-xs font-medium">You are all caught up</span>
+                  <div className="h-px w-16 bg-border" />
+                </div>
+              </div>
+            )}
+          {activeTab === "Trending" &&
+            !isTrendingInitLoading &&
+            !isTrendingFetchingMore &&
+            !trendingHasMore &&
+            trendingFeed.length > 0 && (
+              <div className="flex items-center justify-center py-6">
+                <div className="flex items-center gap-2 text-text/30">
+                  <div className="h-px w-16 bg-border" />
+                  <span className="text-xs font-medium">You are all caught up</span>
+                  <div className="h-px w-16 bg-border" />
+                </div>
+              </div>
+            )}
         </div>
 
         <aside className="hidden lg:flex flex-col gap-4 w-72 xl:w-80 shrink-0 sticky top-6 self-start max-h-[calc(100vh-3rem)] overflow-y-auto hover-scrollbar">
           {isAuthenticated && (
-            <TrendingDiscussionsWidget discussions={trendingSidebarItems} isLoading={isSidebarLoading} />
+            <TrendingDiscussionsWidget
+              discussions={trendingSidebarItems}
+              isLoading={isSidebarLoading}
+            />
           )}
           <PopularResourcesWidget />
         </aside>

@@ -9,9 +9,7 @@ interface RelatedArticlesProps {
   currentArticleId: string;
 }
 
-export function RelatedArticles({
-  currentArticleId,
-}: RelatedArticlesProps): JSX.Element {
+export function RelatedArticles({ currentArticleId }: RelatedArticlesProps): JSX.Element {
   const [articles, setArticles] = useState<Article[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -20,12 +18,12 @@ export function RelatedArticles({
       try {
         setIsLoading(true);
         const data = await getArticles();
-        
+
         // Filter out current article and get 3 related articles
         const related = data
           .filter((article) => article.id !== currentArticleId && article.status === "published")
           .slice(0, 3);
-        
+
         setArticles(related);
       } catch {
         toast.error("Failed to load related articles");
@@ -51,9 +49,7 @@ export function RelatedArticles({
           ))}
         </div>
       ) : articles.length === 0 ? (
-        <p className="text-sm text-gray-500 text-center py-4">
-          No related articles found
-        </p>
+        <p className="text-sm text-gray-500 text-center py-4">No related articles found</p>
       ) : (
         <div className="space-y-5">
           {articles.map((article) => (
@@ -84,18 +80,12 @@ export function RelatedArticles({
               {article.tagNames && article.tagNames.length > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {article.tagNames.slice(0, 2).map((tag) => (
-                    <Tag
-                      key={tag}
-                      variant="outline"
-                      size="sm"
-                    >
+                    <Tag key={tag} variant="outline" size="sm">
                       {tag}
                     </Tag>
                   ))}
                   {article.tagNames.length > 2 && (
-                    <span className="text-xs text-gray-400">
-                      +{article.tagNames.length - 2}
-                    </span>
+                    <span className="text-xs text-gray-400">+{article.tagNames.length - 2}</span>
                   )}
                 </div>
               )}

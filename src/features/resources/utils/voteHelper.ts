@@ -1,4 +1,7 @@
-import type { VoteAction, VoteResourceResponseData } from "@/features/resources/types/resources.types";
+import type {
+  VoteAction,
+  VoteResourceResponseData,
+} from "@/features/resources/types/resources.types";
 
 export interface VoteState {
   upvoteCount: number;

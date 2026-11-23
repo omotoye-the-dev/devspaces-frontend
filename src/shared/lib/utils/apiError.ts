@@ -68,7 +68,7 @@ export function getApiErrorMessage(
         const detailMsgs = detailVal
           .map((item) =>
             typeof item === "object" && item
-              ? item.msg ?? item.message ?? String(item)
+              ? (item.msg ?? item.message ?? String(item))
               : String(item),
           )
           .filter(Boolean);
@@ -133,4 +133,3 @@ export function getApiErrorMessage(
 
   return fallbackMessage;
 }
-

@@ -48,9 +48,7 @@ export async function uploadResourceImage(
  * Uploads a standalone raw document or file attachment before or alongside resource creation.
  * POST /api/resources/upload-file
  */
-export async function uploadResourceFile(
-  file: File,
-): Promise<ApiResponse<UploadFileResponseData>> {
+export async function uploadResourceFile(file: File): Promise<ApiResponse<UploadFileResponseData>> {
   const formData = new FormData();
   formData.append("file", file);
 
@@ -166,12 +164,8 @@ export async function getResourceHistory(
  * Fetches full resource details by ID including sub-parts.
  * GET /api/resources/{id}
  */
-export async function getResourceById(
-  id: string,
-): Promise<ApiResponse<ResourceDetail>> {
-  const response = await apiClient.get<ApiResponse<ResourceDetail>>(
-    ENDPOINTS.RESOURCES.DETAIL(id),
-  );
+export async function getResourceById(id: string): Promise<ApiResponse<ResourceDetail>> {
+  const response = await apiClient.get<ApiResponse<ResourceDetail>>(ENDPOINTS.RESOURCES.DETAIL(id));
 
   return response.data;
 }
@@ -180,9 +174,7 @@ export async function getResourceById(
  * Returns available categories in use along with live resource counts.
  * GET /api/resources/categories
  */
-export async function getResourceCategories(): Promise<
-  ApiResponse<ResourceCategoryItem[]>
-> {
+export async function getResourceCategories(): Promise<ApiResponse<ResourceCategoryItem[]>> {
   const response = await apiClient.get<ApiResponse<ResourceCategoryItem[]>>(
     ENDPOINTS.RESOURCES.CATEGORIES,
   );
@@ -197,9 +189,7 @@ const linkPreviewCache = new Map<string, ApiResponse<LinkPreviewResponseData>>()
  * Scrapes OpenGraph tags for external links in real time.
  * POST /api/resources/preview-link
  */
-export async function previewLink(
-  url: string,
-): Promise<ApiResponse<LinkPreviewResponseData>> {
+export async function previewLink(url: string): Promise<ApiResponse<LinkPreviewResponseData>> {
   const normalized = url.trim();
   const cached = linkPreviewCache.get(normalized);
   if (cached) {
@@ -268,12 +258,8 @@ export async function updateResource(
  * Permanently deletes a resource.
  * DELETE /api/resources/{id}
  */
-export async function deleteResource(
-  id: string,
-): Promise<ApiResponse<unknown>> {
-  const response = await apiClient.delete<ApiResponse<unknown>>(
-    ENDPOINTS.RESOURCES.DETAIL(id),
-  );
+export async function deleteResource(id: string): Promise<ApiResponse<unknown>> {
+  const response = await apiClient.delete<ApiResponse<unknown>>(ENDPOINTS.RESOURCES.DETAIL(id));
 
   return response.data;
 }
@@ -301,13 +287,8 @@ export async function voteResource(
  * Saves or unsaves (bookmarks) a resource.
  * POST /api/resources/{id}/save?saved=true (or saved=false)
  */
-export async function saveResource(
-  id: string,
-  saved: boolean,
-): Promise<ApiResponse<unknown>> {
-  const response = await apiClient.post<ApiResponse<unknown>>(
-    ENDPOINTS.RESOURCES.SAVE(id, saved),
-  );
+export async function saveResource(id: string, saved: boolean): Promise<ApiResponse<unknown>> {
+  const response = await apiClient.post<ApiResponse<unknown>>(ENDPOINTS.RESOURCES.SAVE(id, saved));
 
   return response.data;
 }

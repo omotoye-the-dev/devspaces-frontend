@@ -1,13 +1,5 @@
 import type { ReactNode } from "react";
-import {
-  FiGrid,
-  FiBookOpen,
-  FiVideo,
-  FiCode,
-  FiTool,
-  FiFileText,
-  FiAward,
-} from "react-icons/fi";
+import { FiGrid, FiBookOpen, FiVideo, FiCode, FiTool, FiFileText, FiAward } from "react-icons/fi";
 
 export interface ResourceCategory {
   id: string;

@@ -52,15 +52,13 @@ export function PopularResourcesWidget(): JSX.Element {
         const nextResources = Array.isArray(response?.data) ? response.data : [];
         const sortedResources = [...nextResources].sort((a, b) => {
           const engagementA =
-            Number(a.upvoteCount ?? 0) +
-            Number(a.saveCount ?? 0) +
-            Number(a.downloadCount ?? 0);
+            Number(a.upvoteCount ?? 0) + Number(a.saveCount ?? 0) + Number(a.downloadCount ?? 0);
           const engagementB =
-            Number(b.upvoteCount ?? 0) +
-            Number(b.saveCount ?? 0) +
-            Number(b.downloadCount ?? 0);
+            Number(b.upvoteCount ?? 0) + Number(b.saveCount ?? 0) + Number(b.downloadCount ?? 0);
 
-          return engagementB - engagementA || Number(b.upvoteCount ?? 0) - Number(a.upvoteCount ?? 0);
+          return (
+            engagementB - engagementA || Number(b.upvoteCount ?? 0) - Number(a.upvoteCount ?? 0)
+          );
         });
 
         if (active) {
@@ -90,9 +88,7 @@ export function PopularResourcesWidget(): JSX.Element {
   return (
     <div className="bg-white border border-border rounded-lg p-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-bold text-text tracking-tight">
-          Popular Resources
-        </h3>
+        <h3 className="text-sm font-bold text-text tracking-tight">Popular Resources</h3>
         <button
           type="button"
           className="text-[11px] text-primary font-medium hover:underline cursor-pointer"
@@ -105,10 +101,7 @@ export function PopularResourcesWidget(): JSX.Element {
       <div className="space-y-0.5">
         {isLoading ? (
           Array.from({ length: 4 }).map((_, idx) => (
-            <div
-              key={idx}
-              className="flex items-center gap-2.5 py-2 px-1"
-            >
+            <div key={idx} className="flex items-center gap-2.5 py-2 px-1">
               <Skeleton variant="rounded" width={32} height={32} />
               <div className="flex-1 space-y-1">
                 <Skeleton variant="text" width="75%" height={13} />
@@ -126,12 +119,13 @@ export function PopularResourcesWidget(): JSX.Element {
             const title = resource.title || "Untitled Resource";
             const category = getSafeResourceCategory(resource.category);
             const color = getCategoryColor(category);
-            const initials = title
-              .split(" ")
-              .slice(0, 2)
-              .map((word) => word[0])
-              .join("")
-              .toUpperCase() || "R";
+            const initials =
+              title
+                .split(" ")
+                .slice(0, 2)
+                .map((word) => word[0])
+                .join("")
+                .toUpperCase() || "R";
             const uploaderLabel = resource.uploader?.username
               ? `@${resource.uploader.username}`
               : resource.uploader?.name || "DevSpace";

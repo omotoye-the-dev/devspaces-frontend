@@ -1,11 +1,4 @@
-import {
-  useEffect,
-  useRef,
-  useState,
-  useCallback,
-  type JSX,
-  type KeyboardEvent,
-} from "react";
+import { useEffect, useRef, useState, useCallback, type JSX, type KeyboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { MdOutlineSearch } from "react-icons/md";
 import { FiX, FiHash, FiUser, FiFileText, FiBox, FiMessageSquare } from "react-icons/fi";
@@ -62,12 +55,7 @@ interface PersonResult {
   role?: string;
 }
 
-type SearchResult =
-  | ArticleResult
-  | ResourceResult
-  | DiscussionResult
-  | TagResult
-  | PersonResult;
+type SearchResult = ArticleResult | ResourceResult | DiscussionResult | TagResult | PersonResult;
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -82,13 +70,14 @@ function useDebounce<T>(value: T, delay: number): T {
 
 const MAX_PER_SECTION = 3;
 
-function filterArticles(items: Awaited<ReturnType<typeof getFeedArticles>>["data"], q: string): ArticleResult[] {
+function filterArticles(
+  items: Awaited<ReturnType<typeof getFeedArticles>>["data"],
+  q: string,
+): ArticleResult[] {
   const lower = q.toLowerCase();
   return items
     .filter(
-      (a) =>
-        a.title?.toLowerCase().includes(lower) ||
-        a.excerpt?.toLowerCase().includes(lower),
+      (a) => a.title?.toLowerCase().includes(lower) || a.excerpt?.toLowerCase().includes(lower),
     )
     .slice(0, MAX_PER_SECTION)
     .map((a) => ({
@@ -252,12 +241,16 @@ export function GlobalSearchBar({
         const people: UserProfile[] = Array.isArray(body)
           ? body
           : Array.isArray((body as { data?: UserProfile[] })?.data)
-            ? ((body as { data: UserProfile[] }).data)
+            ? (body as { data: UserProfile[] }).data
             : [];
 
         const personResults: PersonResult[] = people
           .filter((u) => {
-            const name = (u.name ?? u.fullName ?? `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim()).toLowerCase();
+            const name = (
+              u.name ??
+              u.fullName ??
+              `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim()
+            ).toLowerCase();
             const uname = (u.username ?? u.userName ?? "").toLowerCase();
             return name.includes(q.toLowerCase()) || uname.includes(q.toLowerCase());
           })
@@ -265,7 +258,9 @@ export function GlobalSearchBar({
           .map((u): PersonResult => ({
             kind: "person",
             id: (u.id ?? "") as string,
-            name: (u.name ?? u.fullName ?? `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim()) || (u.username ?? u.userName ?? "Unknown"),
+            name:
+              (u.name ?? u.fullName ?? `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim()) ||
+              (u.username ?? u.userName ?? "Unknown"),
             username: (u.username ?? u.userName ?? "") as string,
             avatarUrl: u.avatarUrl ?? u.avatar ?? u.profilePictureUrl,
             role: u.role,
@@ -476,7 +471,9 @@ export function GlobalSearchBar({
           {!isLoading && showEmpty && (
             <div className="px-4 py-8 text-center">
               <MdOutlineSearch className="w-8 h-8 text-text/20 mx-auto mb-2" />
-              <p className="text-sm text-text/50">No results for <strong className="text-text/70">"{debouncedQuery}"</strong></p>
+              <p className="text-sm text-text/50">
+                No results for <strong className="text-text/70">"{debouncedQuery}"</strong>
+              </p>
               <p className="text-xs text-text/40 mt-1">Try a different keyword</p>
             </div>
           )}
@@ -484,14 +481,16 @@ export function GlobalSearchBar({
           {/* Results */}
           {!isLoading && results.length > 0 && (
             <div className="py-1 max-h-120 overflow-y-auto hover-scrollbar">
-
               {/* Articles */}
               {articles.length > 0 && (
                 <Section
                   icon={<FiFileText className="w-3.5 h-3.5" />}
                   label="Articles"
                   viewAllHref={`/articles?search=${encodeURIComponent(debouncedQuery)}`}
-                  onViewAll={() => { setIsOpen(false); setQuery(""); }}
+                  onViewAll={() => {
+                    setIsOpen(false);
+                    setQuery("");
+                  }}
                 >
                   {articles.map((r) => (
                     <ResultRow
@@ -512,7 +511,10 @@ export function GlobalSearchBar({
                   icon={<FiBox className="w-3.5 h-3.5" />}
                   label="Resources"
                   viewAllHref={`/resources?search=${encodeURIComponent(debouncedQuery)}`}
-                  onViewAll={() => { setIsOpen(false); setQuery(""); }}
+                  onViewAll={() => {
+                    setIsOpen(false);
+                    setQuery("");
+                  }}
                 >
                   {resources.map((r) => (
                     <ResultRow
@@ -533,7 +535,10 @@ export function GlobalSearchBar({
                   icon={<FiMessageSquare className="w-3.5 h-3.5" />}
                   label="Discussions"
                   viewAllHref={`/discussions`}
-                  onViewAll={() => { setIsOpen(false); setQuery(""); }}
+                  onViewAll={() => {
+                    setIsOpen(false);
+                    setQuery("");
+                  }}
                 >
                   {discussions.map((r) => (
                     <ResultRow
@@ -550,16 +555,15 @@ export function GlobalSearchBar({
 
               {/* Tags */}
               {tags.length > 0 && (
-                <Section
-                  icon={<FiHash className="w-3.5 h-3.5" />}
-                  label="Tags"
-                >
+                <Section icon={<FiHash className="w-3.5 h-3.5" />} label="Tags">
                   {tags.map((r) => (
                     <ResultRow
                       key={r.name}
                       icon={<FiHash className="w-3.5 h-3.5 text-amber-500" />}
                       primary={`#${r.name}`}
-                      secondary={r.usageCount !== undefined ? `${r.usageCount} articles` : undefined}
+                      secondary={
+                        r.usageCount !== undefined ? `${r.usageCount} articles` : undefined
+                      }
                       isActive={getGlobalIndex(r) === activeIndex}
                       onClick={() => handleSelect(r)}
                     />
@@ -573,7 +577,10 @@ export function GlobalSearchBar({
                   icon={<FiUser className="w-3.5 h-3.5" />}
                   label="People"
                   viewAllHref={`/people`}
-                  onViewAll={() => { setIsOpen(false); setQuery(""); }}
+                  onViewAll={() => {
+                    setIsOpen(false);
+                    setQuery("");
+                  }}
                 >
                   {people.map((r) => (
                     <ResultRow
@@ -626,19 +633,11 @@ export function GlobalSearchBar({
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
-function SectionHeader({
-  icon,
-  label,
-}: {
-  icon: JSX.Element;
-  label: string;
-}): JSX.Element {
+function SectionHeader({ icon, label }: { icon: JSX.Element; label: string }): JSX.Element {
   return (
     <div className="flex items-center gap-1.5 px-4 pt-3 pb-1">
       <span className="text-text/40">{icon}</span>
-      <span className="text-[10px] font-bold uppercase tracking-wider text-text/40">
-        {label}
-      </span>
+      <span className="text-[10px] font-bold uppercase tracking-wider text-text/40">{label}</span>
     </div>
   );
 }

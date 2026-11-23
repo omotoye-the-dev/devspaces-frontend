@@ -15,14 +15,7 @@ import {
   FiX,
   FiEye,
 } from "react-icons/fi";
-import {
-  Button,
-  Input,
-  Textarea,
-  Modal,
-  Skeleton,
-  EmptyState,
-} from "@/shared/ui";
+import { Button, Input, Textarea, Modal, Skeleton, EmptyState } from "@/shared/ui";
 import {
   getResourceById,
   updateResource,
@@ -621,9 +614,7 @@ export default function ResourceEditorPage(): JSX.Element {
               </div>
               <div className="p-3 bg-slate-50 rounded-xl border border-border/60">
                 <p className="text-xs text-text/50 font-medium">Downloads</p>
-                <p className="text-lg font-bold text-text mt-0.5">
-                  {resource?.downloadCount ?? 0}
-                </p>
+                <p className="text-lg font-bold text-text mt-0.5">{resource?.downloadCount ?? 0}</p>
               </div>
               <div className="p-3 bg-slate-50 rounded-xl border border-border/60">
                 <p className="text-xs text-text/50 font-medium">Bookmarks</p>
@@ -640,9 +631,7 @@ export default function ResourceEditorPage(): JSX.Element {
           <div>
             <div className="flex items-center gap-2">
               <FiLayers className="w-5 h-5 text-primary" />
-              <h2 className="text-lg font-bold text-text">
-                Sub-Parts & Chapters ({parts.length})
-              </h2>
+              <h2 className="text-lg font-bold text-text">Sub-Parts & Chapters ({parts.length})</h2>
             </div>
             <p className="text-xs text-text/60 mt-0.5">
               Break this resource into sequential modules, lessons, or downloadable parts.
@@ -684,9 +673,7 @@ export default function ResourceEditorPage(): JSX.Element {
                           <span
                             className={cn(
                               "text-[10px] font-semibold px-2 py-0.5 rounded-md uppercase tracking-wider",
-                              isFile
-                                ? "bg-amber-100 text-amber-800"
-                                : "bg-blue-100 text-blue-800",
+                              isFile ? "bg-amber-100 text-amber-800" : "bg-blue-100 text-blue-800",
                             )}
                           >
                             {isFile ? "File" : "External Link"}
@@ -939,8 +926,8 @@ export default function ResourceEditorPage(): JSX.Element {
             <div className="text-xs leading-relaxed">
               <p className="font-bold">This action cannot be undone.</p>
               <p className="mt-1 text-rose-700">
-                This will permanently delete <strong>{title}</strong> and all associated
-                sub-parts, votes, and bookmark references from DevSpace.
+                This will permanently delete <strong>{title}</strong> and all associated sub-parts,
+                votes, and bookmark references from DevSpace.
               </p>
             </div>
           </div>

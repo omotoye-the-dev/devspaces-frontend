@@ -37,15 +37,8 @@ import {
 } from "@/features/profile/api/user.api";
 import { getArticles, getMyPosts, type Article } from "@/features/articles/api/articleApi";
 import { ArticleCard } from "@/features/articles/components/ArticleCard";
-import {
-  getResources,
-  voteResource,
-  saveResource,
-} from "@/features/resources/api/resources.api";
-import {
-  calculateVoteTransition,
-  applyVoteResponse,
-} from "@/features/resources/utils/voteHelper";
+import { getResources, voteResource, saveResource } from "@/features/resources/api/resources.api";
+import { calculateVoteTransition, applyVoteResponse } from "@/features/resources/utils/voteHelper";
 import { ResourceCard, type ResourceItem } from "@/features/resources/components/ResourceCard";
 import { useLiveHub } from "@/shared/hooks/useLiveHub";
 import {
@@ -80,7 +73,13 @@ import { formatTimeAgo } from "@/shared/lib/utils/date";
 function describeActivity(item: UserActivityItem): string {
   const type = item.targetType.toLowerCase();
   const article = type === "article" || type === "post";
-  const typeLabel = article ? "article" : type === "resource" ? "resource" : type === "discussion" ? "discussion" : type;
+  const typeLabel = article
+    ? "article"
+    : type === "resource"
+      ? "resource"
+      : type === "discussion"
+        ? "discussion"
+        : type;
   const articleIndicator = article ? "an" : "a";
 
   switch (item.action) {
@@ -172,10 +171,10 @@ export default function ProfilePage(): JSX.Element {
 
   const isOwnProfile = Boolean(
     !id ||
-      id === "me" ||
-      (currentUser?.id && id === currentUser.id) ||
-      (currentUser?.userName && id === currentUser.userName) ||
-      (currentUser?.username && id === currentUser.username),
+    id === "me" ||
+    (currentUser?.id && id === currentUser.id) ||
+    (currentUser?.userName && id === currentUser.userName) ||
+    (currentUser?.username && id === currentUser.username),
   );
 
   const [prevId, setPrevId] = useState<string | undefined>(id);
@@ -212,10 +211,10 @@ export default function ProfilePage(): JSX.Element {
 
         const isViewingSelf = Boolean(
           !id ||
-            id === "me" ||
-            (myId && id === myId) ||
-            (myUsername && id.toLowerCase() === myUsername) ||
-            (currentUser?.id && profileRes.id && currentUser.id === profileRes.id),
+          id === "me" ||
+          (myId && id === myId) ||
+          (myUsername && id.toLowerCase() === myUsername) ||
+          (currentUser?.id && profileRes.id && currentUser.id === profileRes.id),
         );
 
         let userArticles: Article[] = [];
@@ -238,7 +237,9 @@ export default function ProfilePage(): JSX.Element {
               if (Array.isArray(allPosts)) {
                 userArticles = allPosts.filter((art) => {
                   const authorId = art.author?.id || art.authorId;
-                  const authorUsername = (art.author?.userName || art.author?.username)?.toLowerCase();
+                  const authorUsername = (
+                    art.author?.userName || art.author?.username
+                  )?.toLowerCase();
                   if (myId && authorId && authorId === myId) return true;
                   if (myUsername && authorUsername && authorUsername === myUsername) return true;
                   return false;
@@ -260,11 +261,14 @@ export default function ProfilePage(): JSX.Element {
 
               userArticles = allPosts.filter((art) => {
                 const authorId = art.author?.id || art.authorId;
-                const authorUsername = (art.author?.userName || art.author?.username)?.toLowerCase();
+                const authorUsername = (
+                  art.author?.userName || art.author?.username
+                )?.toLowerCase();
                 const authorName = (art.author?.name || art.authorName)?.toLowerCase();
 
                 if (targetId && authorId && authorId === targetId) return true;
-                if (targetUsername && authorUsername && authorUsername === targetUsername) return true;
+                if (targetUsername && authorUsername && authorUsername === targetUsername)
+                  return true;
                 if (targetName && authorName && authorName === targetName) return true;
                 return false;
               });
@@ -279,9 +283,7 @@ export default function ProfilePage(): JSX.Element {
           const targetResId = isViewingSelf ? myId : (profileRes.id as string | undefined) || id;
           const targetResUsername = isViewingSelf
             ? myUsername
-            : (
-                (profileRes.userName || profileRes.username) as string | undefined
-              )?.toLowerCase();
+            : ((profileRes.userName || profileRes.username) as string | undefined)?.toLowerCase();
 
           // Try querying getResources with uploaderId filter
           const resQuery = await getResources({
@@ -299,7 +301,8 @@ export default function ProfilePage(): JSX.Element {
                 const uploaderId = r.uploader?.userId;
                 const uploaderUsername = r.uploader?.username?.toLowerCase();
                 if (targetResId && uploaderId && uploaderId === targetResId) return true;
-                if (targetResUsername && uploaderUsername && uploaderUsername === targetResUsername) return true;
+                if (targetResUsername && uploaderUsername && uploaderUsername === targetResUsername)
+                  return true;
                 return false;
               });
             }
@@ -409,8 +412,12 @@ export default function ProfilePage(): JSX.Element {
   const avatarUrl = getProfileAvatar(profile) || (isOwnProfile ? undefined : firstArticleAvatar);
 
   const location = (profile?.location as string | undefined) || "";
-  const { websiteUrl: website, githubUrl: github, xUrl: twitter, linkedInUrl } =
-    getProfileLinks(profile);
+  const {
+    websiteUrl: website,
+    githubUrl: github,
+    xUrl: twitter,
+    linkedInUrl,
+  } = getProfileLinks(profile);
 
   const getStatNumber = (...candidates: unknown[]): number => {
     for (const val of candidates) {
@@ -470,31 +477,38 @@ export default function ProfilePage(): JSX.Element {
 
   const profileTabs: TabItem[] = useMemo(
     () => [
-      { id: "articles", label: "Articles", count: articlesCount, icon: <FiFileText className="w-4 h-4" /> },
-      { id: "resources", label: "Resources", count: resourcesCount, icon: <FiFolder className="w-4 h-4" /> },
+      {
+        id: "articles",
+        label: "Articles",
+        count: articlesCount,
+        icon: <FiFileText className="w-4 h-4" />,
+      },
+      {
+        id: "resources",
+        label: "Resources",
+        count: resourcesCount,
+        icon: <FiFolder className="w-4 h-4" />,
+      },
       { id: "activity", label: "Activity", icon: <FiActivity className="w-4 h-4" /> },
       { id: "about", label: "About", icon: <FiUser className="w-4 h-4" /> },
     ],
     [articlesCount, resourcesCount],
   );
 
-  const handleLiveResourceCounts = useCallback(
-    (id: string, counts: ResourceCounts): void => {
-      setResources((prev) =>
-        prev.map((r) =>
-          r.id === id
-            ? {
-                ...r,
-                upvoteCount: counts.upvoteCount ?? r.upvoteCount,
-                downvoteCount: counts.downvoteCount ?? r.downvoteCount,
-                saveCount: counts.saveCount ?? r.saveCount,
-              }
-            : r,
-        ),
-      );
-    },
-    [],
-  );
+  const handleLiveResourceCounts = useCallback((id: string, counts: ResourceCounts): void => {
+    setResources((prev) =>
+      prev.map((r) =>
+        r.id === id
+          ? {
+              ...r,
+              upvoteCount: counts.upvoteCount ?? r.upvoteCount,
+              downvoteCount: counts.downvoteCount ?? r.downvoteCount,
+              saveCount: counts.saveCount ?? r.saveCount,
+            }
+          : r,
+      ),
+    );
+  }, []);
 
   const handleResourceClick = (cardItem: ResourceItem): void => {
     if (isOwnProfile) {
@@ -816,7 +830,9 @@ export default function ProfilePage(): JSX.Element {
                   </div>
 
                   {bio && (
-                    <p className="text-xs sm:text-sm text-text/80 leading-relaxed max-w-2xl">{bio}</p>
+                    <p className="text-xs sm:text-sm text-text/80 leading-relaxed max-w-2xl">
+                      {bio}
+                    </p>
                   )}
 
                   {/* Social & Meta Links */}
@@ -866,7 +882,11 @@ export default function ProfilePage(): JSX.Element {
                           <span className="text-border/80 hidden sm:inline">|</span>
                         )}
                         <a
-                          href={twitter.startsWith("http") ? twitter : `https://x.com/${twitter.replace("@", "")}`}
+                          href={
+                            twitter.startsWith("http")
+                              ? twitter
+                              : `https://x.com/${twitter.replace("@", "")}`
+                          }
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center gap-1 text-[#1DA1F2] hover:underline font-medium"
@@ -883,7 +903,9 @@ export default function ProfilePage(): JSX.Element {
                           <span className="text-border/80 hidden sm:inline">|</span>
                         )}
                         <a
-                          href={linkedInUrl.startsWith("http") ? linkedInUrl : `https://${linkedInUrl}`}
+                          href={
+                            linkedInUrl.startsWith("http") ? linkedInUrl : `https://${linkedInUrl}`
+                          }
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center gap-1 text-[#0A66C2] hover:underline font-medium"
@@ -1028,7 +1050,9 @@ export default function ProfilePage(): JSX.Element {
                     excerpt={art.excerpt || art.content.slice(0, 110) + "..."}
                     tagNames={art.tags || art.tagNames || []}
                     coverImage={art.coverImageUrl || art.coverImage}
-                    authorName={art.author?.name || art.author?.userName || art.authorName || displayName}
+                    authorName={
+                      art.author?.name || art.author?.userName || art.authorName || displayName
+                    }
                     authorAvatar={art.author?.avatarUrl || avatarUrl}
                     authorRole={profile?.role as string | undefined}
                     createdAt={art.createdAt}
@@ -1110,10 +1134,7 @@ export default function ProfilePage(): JSX.Element {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {resources.map((item) => (
                   <div key={item.id}>
-                    <ResourceLiveSync
-                      id={item.id}
-                      onCounts={handleLiveResourceCounts}
-                    />
+                    <ResourceLiveSync id={item.id} onCounts={handleLiveResourceCounts} />
                     <ResourceCard
                       resource={mapToResourceCardItem(item)}
                       onClick={handleResourceClick}
@@ -1180,7 +1201,10 @@ export default function ProfilePage(): JSX.Element {
                         <p className="text-xs text-text/60">
                           {describeActivity(item)}:{" "}
                           {href ? (
-                            <Link to={href} className="font-semibold text-text hover:text-primary hover:underline">
+                            <Link
+                              to={href}
+                              className="font-semibold text-text hover:text-primary hover:underline"
+                            >
                               {item.targetTitle}
                             </Link>
                           ) : (
@@ -1252,7 +1276,11 @@ export default function ProfilePage(): JSX.Element {
                   )}
                   {twitter && (
                     <a
-                      href={twitter.startsWith("http") ? twitter : `https://x.com/${twitter.replace("@", "")}`}
+                      href={
+                        twitter.startsWith("http")
+                          ? twitter
+                          : `https://x.com/${twitter.replace("@", "")}`
+                      }
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-[#1DA1F2] border border-border/60 hover:border-sky-300 transition-colors"

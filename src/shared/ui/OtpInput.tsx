@@ -1,10 +1,4 @@
-import {
-  useRef,
-  type ChangeEvent,
-  type KeyboardEvent,
-  type ClipboardEvent,
-  type JSX,
-} from "react";
+import { useRef, type ChangeEvent, type KeyboardEvent, type ClipboardEvent, type JSX } from "react";
 import { cn } from "@/shared/lib/utils/cn";
 
 export interface OtpInputProps {

@@ -65,11 +65,10 @@ function normalizeComment(comment: Comment | DisplayComment): DisplayComment {
           ? (c.replyCount as number)
           : 0;
 
-  const repliesArray = Array.isArray(rawReplies)
-    ? rawReplies.map(normalizeComment)
-    : [];
+  const repliesArray = Array.isArray(rawReplies) ? rawReplies.map(normalizeComment) : [];
 
-  const rawLiked = comment.liked ?? (c.isLiked as boolean | undefined) ?? (c.liked as boolean | undefined);
+  const rawLiked =
+    comment.liked ?? (c.isLiked as boolean | undefined) ?? (c.liked as boolean | undefined);
   const rawLikeCount =
     comment.likeCount ??
     (c.likes as number | undefined) ??
@@ -162,7 +161,11 @@ function findCommentById(comments: DisplayComment[], id: string): DisplayComment
   return null;
 }
 
-function setCommentRepliesOpen(comments: DisplayComment[], id: string, isOpen: boolean): DisplayComment[] {
+function setCommentRepliesOpen(
+  comments: DisplayComment[],
+  id: string,
+  isOpen: boolean,
+): DisplayComment[] {
   return comments.map((c) => {
     if (c.id === id) {
       return { ...c, isRepliesOpen: isOpen };
@@ -174,7 +177,11 @@ function setCommentRepliesOpen(comments: DisplayComment[], id: string, isOpen: b
   });
 }
 
-function setCommentLoadingReplies(comments: DisplayComment[], id: string, isLoading: boolean): DisplayComment[] {
+function setCommentLoadingReplies(
+  comments: DisplayComment[],
+  id: string,
+  isLoading: boolean,
+): DisplayComment[] {
   return comments.map((c) => {
     if (c.id === id) {
       return { ...c, isLoadingReplies: isLoading };
@@ -186,7 +193,11 @@ function setCommentLoadingReplies(comments: DisplayComment[], id: string, isLoad
   });
 }
 
-function setCommentRepliesData(comments: DisplayComment[], id: string, replies: DisplayComment[]): DisplayComment[] {
+function setCommentRepliesData(
+  comments: DisplayComment[],
+  id: string,
+  replies: DisplayComment[],
+): DisplayComment[] {
   return comments.map((c) => {
     if (c.id === id) {
       return {
@@ -268,17 +279,18 @@ function CommentItem({
   const displayAvatar = comment.user?.avatarUrl || comment.user?.avatar || undefined;
 
   const { mentionUsername, displayMessage } =
-    depth > 0 ? extractLeadingMention(comment.message) : { mentionUsername: null, displayMessage: comment.message };
+    depth > 0
+      ? extractLeadingMention(comment.message)
+      : { mentionUsername: null, displayMessage: comment.message };
   const repliedToUsername = depth > 0 ? (mentionUsername ?? threadRootUsername ?? null) : null;
 
-  const isOwnComment =
-    Boolean(currentUser?.id && (currentUser.id === comment.userId || (comment.user?.id && currentUser.id === comment.user.id)));
+  const isOwnComment = Boolean(
+    currentUser?.id &&
+    (currentUser.id === comment.userId || (comment.user?.id && currentUser.id === comment.user.id)),
+  );
 
   const currentUserName =
-    currentUser?.userName ||
-    currentUser?.username ||
-    currentUser?.firstName ||
-    "You";
+    currentUser?.userName || currentUser?.username || currentUser?.firstName || "You";
 
   const currentUserAvatar = currentUser?.avatarUrl || undefined;
 
@@ -362,9 +374,7 @@ function CommentItem({
               aria-label={comment.liked ? "Unlike comment" : "Like comment"}
               className={cn(
                 "group flex items-center gap-1.5 text-[9px] transition-colors sm:text-[10px]",
-                comment.liked
-                  ? "font-semibold text-blue-600"
-                  : "text-gray-500 hover:text-blue-600",
+                comment.liked ? "font-semibold text-blue-600" : "text-gray-500 hover:text-blue-600",
                 comment.isLiking && "cursor-not-allowed opacity-60",
               )}
             >
@@ -773,7 +783,9 @@ export function ArticleComments({
 
     const isTopLevel = comments.some((c) => c.id === comment.id);
     const mentionUsername = !isTopLevel
-      ? comment.user?.username?.trim() || comment.user?.userName?.trim() || comment.user?.name?.trim()
+      ? comment.user?.username?.trim() ||
+        comment.user?.userName?.trim() ||
+        comment.user?.name?.trim()
       : null;
 
     setReplyingTo(comment.id);
@@ -903,7 +915,7 @@ export function ArticleComments({
         liked: !previousLiked,
         likeCount: Math.max(0, previousLikeCount + (previousLiked ? -1 : 1)),
         isLiking: true,
-      }))
+      })),
     );
 
     try {
@@ -913,7 +925,7 @@ export function ArticleComments({
         updateCommentLikeState(previous, commentId, (comment) => ({
           ...comment,
           isLiking: false,
-        }))
+        })),
       );
     } catch (err: unknown) {
       console.error("Error liking comment:", err);
@@ -925,7 +937,7 @@ export function ArticleComments({
           liked: previousLiked,
           likeCount: previousLikeCount,
           isLiking: false,
-        }))
+        })),
       );
 
       toast.error(getApiErrorMessage(err) || "Failed to update like status");
@@ -1016,7 +1028,11 @@ export function ArticleComments({
             sm:text-sm
           "
         >
-          Comments ({isLoading ? (initialCommentCount ?? countAllComments(comments)) : countAllComments(comments)})
+          Comments (
+          {isLoading
+            ? (initialCommentCount ?? countAllComments(comments))
+            : countAllComments(comments)}
+          )
         </h2>
       </div>
 
@@ -1202,11 +1218,7 @@ function updateCommentLikeState(
     if (comment.replies && comment.replies.length > 0) {
       return {
         ...comment,
-        replies: updateCommentLikeState(
-          comment.replies as DisplayComment[],
-          commentId,
-          updater,
-        ),
+        replies: updateCommentLikeState(comment.replies as DisplayComment[], commentId, updater),
       };
     }
 
@@ -1215,4 +1227,3 @@ function updateCommentLikeState(
 }
 
 export default ArticleComments;
-

@@ -28,7 +28,8 @@ export function NotFoundPage(): JSX.Element {
         Page Not Found
       </h1>
       <p className="text-sm sm:text-base text-text/60 max-w-md mx-auto mb-8 leading-relaxed">
-        Oops! The page you're looking for doesn't exist, has been removed, or is temporarily unavailable.
+        Oops! The page you're looking for doesn't exist, has been removed, or is temporarily
+        unavailable.
       </p>
 
       {/* Action Buttons */}

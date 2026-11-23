@@ -1,11 +1,7 @@
 import { useState, useEffect, type JSX } from "react";
 import { Link } from "react-router-dom";
 
-import {
-  Card,
-  Avatar,
-  Button,
-} from "@/shared/ui";
+import { Card, Avatar, Button } from "@/shared/ui";
 
 import type { AuthorInfo } from "@/features/articles/api/articleApi";
 import { getArticles, getMyPosts } from "@/features/articles/api/articleApi";
@@ -51,15 +47,10 @@ export function AuthorCard({
 
   const displayRole = authorRole ?? "Community Author";
 
-  const displayCompany = company
-    ? company.startsWith("@")
-      ? company
-      : `@ ${company}`
-    : "";
+  const displayCompany = company ? (company.startsWith("@") ? company : `@ ${company}`) : "";
 
   const displayBio =
-    authorBio ||
-    "Building accessible, resilient, and performant web applications.";
+    authorBio || "Building accessible, resilient, and performant web applications.";
 
   /**
    * Converts the different possible API
@@ -68,23 +59,14 @@ export function AuthorCard({
    * This follows the same logic used
    * in ProfilePage.
    */
-  const getStatNumber = (
-    ...candidates: unknown[]
-  ): number => {
+  const getStatNumber = (...candidates: unknown[]): number => {
     for (const value of candidates) {
-      if (
-        typeof value === "number" &&
-        Number.isFinite(value)
-      ) {
+      if (typeof value === "number" && Number.isFinite(value)) {
         return value;
       }
 
-      if (
-        typeof value === "string" &&
-        value.trim() !== ""
-      ) {
-        const parsed =
-          Number.parseInt(value, 10);
+      if (typeof value === "string" && value.trim() !== "") {
+        const parsed = Number.parseInt(value, 10);
 
         if (Number.isFinite(parsed)) {
           return parsed;
@@ -168,8 +150,7 @@ export function AuthorCard({
                   art.author?.id === targetAuthorId ||
                   (authorName &&
                     authorName !== "DevSpace Author" &&
-                    (art.authorName === authorName ||
-                      art.author?.name === authorName)),
+                    (art.authorName === authorName || art.author?.name === authorName)),
               );
           setFetchedArticlesCount(userArticles.length);
         }
@@ -185,15 +166,9 @@ export function AuthorCard({
     };
   }, [targetAuthorId, isAuthor, authorName, articlesCount, articlesCounts, author]);
 
-  const totalFollowers = getStatNumber(
-    author?.totalFollowers,
-    followersCount,
-  );
+  const totalFollowers = getStatNumber(author?.totalFollowers, followersCount);
 
-  const totalFollowing = getStatNumber(
-    author?.totalFollowed,
-    followingCount,
-  );
+  const totalFollowing = getStatNumber(author?.totalFollowed, followingCount);
 
   const totalArticles = getStatNumber(
     articlesCount,

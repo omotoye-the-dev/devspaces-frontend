@@ -90,9 +90,7 @@ export function NotificationBell({ className }: NotificationBellProps): JSX.Elem
 
     connection.on("ReceiveNotification", (incoming: NotificationItem) => {
       if (isCancelled || !incoming?.id) return;
-      setItems((prev) =>
-        prev.some((n) => n.id === incoming.id) ? prev : [incoming, ...prev],
-      );
+      setItems((prev) => (prev.some((n) => n.id === incoming.id) ? prev : [incoming, ...prev]));
       if (!incoming.isRead) setUnreadCount((c) => c + 1);
     });
 
@@ -335,10 +333,7 @@ export function NotificationBell({ className }: NotificationBellProps): JSX.Elem
 
                     <div className="flex flex-col items-center gap-2 shrink-0">
                       {!n.isRead && (
-                        <span
-                          className="w-2 h-2 rounded-full bg-blue-500"
-                          aria-label="Unread"
-                        />
+                        <span className="w-2 h-2 rounded-full bg-blue-500" aria-label="Unread" />
                       )}
                       <button
                         type="button"

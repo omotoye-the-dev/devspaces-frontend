@@ -26,15 +26,12 @@ export function ConfirmDialogProvider({ children }: ConfirmDialogProviderProps):
     });
   }, []);
 
-  const resolveRequest = useCallback(
-    (confirmed: boolean): void => {
-      setRequest((current) => {
-        current?.resolve(confirmed);
-        return null;
-      });
-    },
-    [],
-  );
+  const resolveRequest = useCallback((confirmed: boolean): void => {
+    setRequest((current) => {
+      current?.resolve(confirmed);
+      return null;
+    });
+  }, []);
 
   useEffect(() => {
     const cleanup = setGlobalConfirmDispatcher(requestConfirm);

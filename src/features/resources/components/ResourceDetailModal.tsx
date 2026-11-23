@@ -17,10 +17,7 @@ import {
   voteResource,
   saveResource,
 } from "@/features/resources/api/resources.api";
-import {
-  calculateVoteTransition,
-  applyVoteResponse,
-} from "@/features/resources/utils/voteHelper";
+import { calculateVoteTransition, applyVoteResponse } from "@/features/resources/utils/voteHelper";
 import { ResourceLinkPreviewCard } from "./ResourceLinkPreviewCard";
 import {
   isPartAFile,
@@ -549,7 +546,9 @@ export function ResourceDetailModal({
                     : "bg-white text-text/80 hover:text-primary hover:bg-slate-50",
                 )}
                 aria-label={`Upvote (${detail?.upvoteCount ?? 0})`}
-                title={detail?.isDownvotedByMe ? "Remove downvote first before upvoting" : undefined}
+                title={
+                  detail?.isDownvotedByMe ? "Remove downvote first before upvoting" : undefined
+                }
               >
                 <FiArrowUp className="w-3.5 h-3.5" />
                 <span>Upvote ({detail?.upvoteCount ?? 0})</span>

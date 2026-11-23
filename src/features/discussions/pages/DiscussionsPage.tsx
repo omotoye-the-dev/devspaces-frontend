@@ -123,9 +123,7 @@ export default function DiscussionsPage(): JSX.Element {
         setDiscussions((current) => {
           const exists = current.some((item) => item.id === fullDiscussion.id);
           if (exists) {
-            return current.map((item) =>
-              item.id === fullDiscussion.id ? fullDiscussion : item,
-            );
+            return current.map((item) => (item.id === fullDiscussion.id ? fullDiscussion : item));
           }
 
           return [fullDiscussion, ...current];
@@ -154,14 +152,9 @@ export default function DiscussionsPage(): JSX.Element {
   }, [discussions]);
 
   // Patch live count updates from SignalR into the discussion list state
-  const handleLiveCounts = useCallback(
-    (id: string, counts: DiscussionCounts): void => {
-      setDiscussions((prev) =>
-        prev.map((d) => (d.id === id ? { ...d, ...counts } : d)),
-      );
-    },
-    [],
-  );
+  const handleLiveCounts = useCallback((id: string, counts: DiscussionCounts): void => {
+    setDiscussions((prev) => prev.map((d) => (d.id === id ? { ...d, ...counts } : d)));
+  }, []);
 
   // Refresh comments for the open discussion when the comment hub fires
   const handleLiveCommentUpdate = useCallback(async (): Promise<void> => {
@@ -169,9 +162,7 @@ export default function DiscussionsPage(): JSX.Element {
     try {
       const updatedDiscussion = await getDiscussionById(selectedDiscussionId);
       setDiscussions((prev) =>
-        prev.map((d) =>
-          d.id === selectedDiscussionId ? updatedDiscussion : d,
-        ),
+        prev.map((d) => (d.id === selectedDiscussionId ? updatedDiscussion : d)),
       );
     } catch {
       // Silently ignore real-time refresh failures
@@ -190,10 +181,7 @@ export default function DiscussionsPage(): JSX.Element {
   });
 
   // Handle discussion vote (up / down)
-  const handleVote = async (
-    discussionId: string,
-    direction: "up" | "down",
-  ): Promise<void> => {
+  const handleVote = async (discussionId: string, direction: "up" | "down"): Promise<void> => {
     if (direction === "down") {
       toast.info("Discussions support likes; replies support upvotes and downvotes.");
       return;
@@ -224,9 +212,7 @@ export default function DiscussionsPage(): JSX.Element {
   const handleToggleBookmark = async (discussionId: string): Promise<void> => {
     const previous = discussions;
     setDiscussions((current) =>
-      current.map((d) =>
-        d.id === discussionId ? { ...d, isBookmarked: !d.isBookmarked } : d,
-      ),
+      current.map((d) => (d.id === discussionId ? { ...d, isBookmarked: !d.isBookmarked } : d)),
     );
 
     try {
@@ -238,10 +224,7 @@ export default function DiscussionsPage(): JSX.Element {
   };
 
   // Handle adding comment
-  const handleAddComment = async (
-    discussionId: string,
-    content: string,
-  ): Promise<void> => {
+  const handleAddComment = async (discussionId: string, content: string): Promise<void> => {
     try {
       const newComment = await createDiscussionReply(discussionId, { content });
       setDiscussions((current) =>
@@ -261,10 +244,7 @@ export default function DiscussionsPage(): JSX.Element {
   };
 
   // Handle deleting a reply
-  const handleDeleteComment = async (
-    discussionId: string,
-    commentId: string,
-  ): Promise<void> => {
+  const handleDeleteComment = async (discussionId: string, commentId: string): Promise<void> => {
     const previous = discussions;
     setDiscussions((current) =>
       current.map((discussion) =>
@@ -366,9 +346,7 @@ export default function DiscussionsPage(): JSX.Element {
       .filter((disc) => {
         // Tag filter
         if (selectedTag) {
-          const matchTag = disc.tags.some(
-            (t) => t.toLowerCase() === selectedTag.toLowerCase(),
-          );
+          const matchTag = disc.tags.some((t) => t.toLowerCase() === selectedTag.toLowerCase());
           if (!matchTag) return false;
         }
 
@@ -426,7 +404,8 @@ export default function DiscussionsPage(): JSX.Element {
             </span>
           </div>
           <p className="text-xs sm:text-sm text-text/60 leading-relaxed max-w-2xl">
-            Ask technical questions, share problem-solving solutions, and collaborate with developers.
+            Ask technical questions, share problem-solving solutions, and collaborate with
+            developers.
           </p>
         </div>
 
@@ -535,10 +514,7 @@ export default function DiscussionsPage(): JSX.Element {
               {filteredDiscussions.map((discussion) => (
                 <div key={discussion.id}>
                   {/* Render-null SignalR sync — one connection per visible card */}
-                  <DiscussionLiveSync
-                    id={discussion.id}
-                    onCounts={handleLiveCounts}
-                  />
+                  <DiscussionLiveSync id={discussion.id} onCounts={handleLiveCounts} />
                   <DiscussionCard
                     discussion={discussion}
                     onOpenDetails={handleOpenDetails}

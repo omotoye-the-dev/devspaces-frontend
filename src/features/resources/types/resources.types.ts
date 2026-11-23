@@ -40,8 +40,7 @@ export const ResourceAccessType = {
   ExternalLink: 1,
 } as const;
 
-export type ResourceAccessTypeValue =
-  (typeof ResourceAccessType)[keyof typeof ResourceAccessType];
+export type ResourceAccessTypeValue = (typeof ResourceAccessType)[keyof typeof ResourceAccessType];
 
 export type ResourceAccessTypeString = "FileUpload" | "ExternalLink";
 

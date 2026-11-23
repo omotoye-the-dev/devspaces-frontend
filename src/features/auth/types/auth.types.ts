@@ -79,6 +79,3 @@ export interface ResendOtpPayload {
 export interface LogoutPayload {
   refreshToken?: string;
 }
-
-
-

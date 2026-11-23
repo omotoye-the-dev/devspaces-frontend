@@ -133,7 +133,11 @@ export default function PeoplePage(): JSX.Element {
           try {
             const response = await apiClient.get<unknown>(endpoint);
             const users = extractPeopleUsers(response.data).filter((person) => {
-              const normalizedName = [person.firstName, person.lastName].filter(Boolean).join(" ").trim().toLowerCase();
+              const normalizedName = [person.firstName, person.lastName]
+                .filter(Boolean)
+                .join(" ")
+                .trim()
+                .toLowerCase();
               const username = (person.username || "").trim().toLowerCase();
 
               return !(
@@ -210,7 +214,9 @@ export default function PeoplePage(): JSX.Element {
       const isActiveMatch =
         activeFilter === "all" ||
         (activeFilter === "active" && person.status === "online") ||
-        (activeFilter === "recent" && Number.isFinite(joinedAtTime) && now - joinedAtTime < recentCutoff);
+        (activeFilter === "recent" &&
+          Number.isFinite(joinedAtTime) &&
+          now - joinedAtTime < recentCutoff);
 
       const matchesQuery =
         query.length === 0 ||
@@ -286,9 +292,7 @@ export default function PeoplePage(): JSX.Element {
                     onClick={() => setView(option.id)}
                     className={cn(
                       "flex h-8 w-8 items-center justify-center rounded-full transition-colors",
-                      isActive
-                        ? "bg-white text-primary shadow-sm"
-                        : "text-text/50 hover:text-text",
+                      isActive ? "bg-white text-primary shadow-sm" : "text-text/50 hover:text-text",
                     )}
                   >
                     <Icon className="h-4 w-4" />
@@ -302,9 +306,7 @@ export default function PeoplePage(): JSX.Element {
         {isLoading ? (
           <section
             className={cn(
-              view === "grid"
-                ? "grid gap-4 md:grid-cols-2 xl:grid-cols-3"
-                : "flex flex-col gap-4",
+              view === "grid" ? "grid gap-4 md:grid-cols-2 xl:grid-cols-3" : "flex flex-col gap-4",
             )}
           >
             {Array.from({ length: 6 }).map((_, index) => (
@@ -312,7 +314,8 @@ export default function PeoplePage(): JSX.Element {
                 key={index}
                 className={cn(
                   "rounded-2xl border border-border bg-white p-4 shadow-sm",
-                  view === "list" && "flex flex-col gap-4 md:flex-row md:items-center md:justify-between",
+                  view === "list" &&
+                    "flex flex-col gap-4 md:flex-row md:items-center md:justify-between",
                 )}
               >
                 <div className="flex items-center gap-3">
@@ -328,7 +331,13 @@ export default function PeoplePage(): JSX.Element {
                   <Skeleton variant="text" width="90%" height={13} />
                 </div>
 
-                <div className={cn(view === "list" ? "grid w-full grid-cols-4 gap-2 md:w-md" : "mt-5 grid grid-cols-4 gap-2")}>
+                <div
+                  className={cn(
+                    view === "list"
+                      ? "grid w-full grid-cols-4 gap-2 md:w-md"
+                      : "mt-5 grid grid-cols-4 gap-2",
+                  )}
+                >
                   {Array.from({ length: 4 }).map((__, statIndex) => (
                     <Skeleton key={statIndex} variant="rounded" height={44} />
                   ))}
@@ -337,79 +346,132 @@ export default function PeoplePage(): JSX.Element {
             ))}
           </section>
         ) : (
-        <section
-          className={cn(
-            view === "grid"
-              ? "grid gap-4 md:grid-cols-2 xl:grid-cols-3"
-              : "flex flex-col gap-4",
-          )}
-        >
-          {filteredPeople.map((person) => (
-            <button
-              key={person.id}
-              type="button"
-              onClick={() => navigate(`/profile/${person.id}`)}
-              className={cn(
-                "group w-full rounded-2xl border border-border bg-white p-4 text-left shadow-sm transition-all duration-200 hover:border-primary/30 hover:shadow-md",
-                view === "list" && "flex flex-col gap-4 md:flex-row md:items-center md:justify-between",
-              )}
-            >
-              <div className={cn(view === "list" ? "flex min-w-0 items-center gap-3" : "flex items-start justify-between gap-3")}>
-                <div className="flex min-w-0 items-center gap-3">
-                  <Avatar src={person.avatarUrl || undefined} name={person.name} size="lg" href={null} status={person.status} />
-                  <div className="min-w-0">
-                    <p className="truncate text-base font-semibold text-text">{person.name}</p>
-                    <p className="truncate text-sm text-text/55">{person.username}</p>
+          <section
+            className={cn(
+              view === "grid" ? "grid gap-4 md:grid-cols-2 xl:grid-cols-3" : "flex flex-col gap-4",
+            )}
+          >
+            {filteredPeople.map((person) => (
+              <button
+                key={person.id}
+                type="button"
+                onClick={() => navigate(`/profile/${person.id}`)}
+                className={cn(
+                  "group w-full rounded-2xl border border-border bg-white p-4 text-left shadow-sm transition-all duration-200 hover:border-primary/30 hover:shadow-md",
+                  view === "list" &&
+                    "flex flex-col gap-4 md:flex-row md:items-center md:justify-between",
+                )}
+              >
+                <div
+                  className={cn(
+                    view === "list"
+                      ? "flex min-w-0 items-center gap-3"
+                      : "flex items-start justify-between gap-3",
+                  )}
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Avatar
+                      src={person.avatarUrl || undefined}
+                      name={person.name}
+                      size="lg"
+                      href={null}
+                      status={person.status}
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate text-base font-semibold text-text">{person.name}</p>
+                      <p className="truncate text-sm text-text/55">{person.username}</p>
+                    </div>
+                  </div>
+
+                  <Tag
+                    variant={person.status === "online" ? "primary" : "neutral"}
+                    size="sm"
+                    className={cn(view === "list" && "hidden sm:inline-flex")}
+                  >
+                    {person.status === "online" ? "Active" : "Offline"}
+                  </Tag>
+                </div>
+
+                <div
+                  className={cn(
+                    view === "list"
+                      ? "flex flex-1 flex-col gap-3 md:flex-row md:items-center md:justify-between"
+                      : "mt-4",
+                  )}
+                >
+                  <div className={cn(view === "list" ? "min-w-0" : "")}>
+                    <p className="text-sm font-medium text-text">{person.role}</p>
+                    <p className="mt-1 line-clamp-2 text-sm text-text/55">{person.bio}</p>
+                  </div>
+
+                  <div
+                    className={cn(
+                      view === "list"
+                        ? "flex flex-wrap gap-2 text-xs text-text/55"
+                        : "mt-4 flex flex-wrap gap-2 text-xs text-text/55",
+                    )}
+                  >
+                    <span className="rounded-full bg-background px-2 py-1">
+                      {person.followersCount} followers
+                    </span>
+                    <span className="rounded-full bg-background px-2 py-1">
+                      {person.followingCount} following
+                    </span>
                   </div>
                 </div>
 
-                <Tag variant={person.status === "online" ? "primary" : "neutral"} size="sm" className={cn(view === "list" && "hidden sm:inline-flex")}>
-                  {person.status === "online" ? "Active" : "Offline"}
-                </Tag>
-              </div>
-
-              <div className={cn(view === "list" ? "flex flex-1 flex-col gap-3 md:flex-row md:items-center md:justify-between" : "mt-4")}>
-                <div className={cn(view === "list" ? "min-w-0" : "")}> 
-                  <p className="text-sm font-medium text-text">{person.role}</p>
-                  <p className="mt-1 line-clamp-2 text-sm text-text/55">{person.bio}</p>
+                <div
+                  className={cn(
+                    view === "list"
+                      ? "mt-4 grid w-full grid-cols-4 gap-2 md:mt-0 md:w-md"
+                      : "mt-5 grid grid-cols-4 gap-2",
+                  )}
+                >
+                  <div className="rounded-lg bg-background p-2 text-center">
+                    <p className="text-[10px] uppercase tracking-[0.14em] text-text/40">Articles</p>
+                    <p className="mt-1 text-sm font-semibold text-text">
+                      {person.contributions.articlesCount}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-background p-2 text-center">
+                    <p className="text-[10px] uppercase tracking-[0.14em] text-text/40">
+                      Resources
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-text">
+                      {person.contributions.resourcesCount}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-background p-2 text-center">
+                    <p className="text-[10px] uppercase tracking-[0.14em] text-text/40">Discuss</p>
+                    <p className="mt-1 text-sm font-semibold text-text">
+                      {person.contributions.discussionsCount}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-background p-2 text-center">
+                    <p className="text-[10px] uppercase tracking-[0.14em] text-text/40">Total</p>
+                    <p className="mt-1 text-sm font-semibold text-text">
+                      {person.contributions.totalContributions}
+                    </p>
+                  </div>
                 </div>
 
-                <div className={cn(view === "list" ? "flex flex-wrap gap-2 text-xs text-text/55" : "mt-4 flex flex-wrap gap-2 text-xs text-text/55")}>
-                  <span className="rounded-full bg-background px-2 py-1">{person.followersCount} followers</span>
-                  <span className="rounded-full bg-background px-2 py-1">{person.followingCount} following</span>
+                <div
+                  className={cn(
+                    view === "list"
+                      ? "mt-4 flex items-center justify-between md:mt-0 md:min-w-40"
+                      : "mt-5 flex items-center justify-between",
+                  )}
+                >
+                  <span className="text-sm font-medium text-primary">
+                    {person.githubUrl ? "View profile" : "Open profile"}
+                  </span>
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-white">
+                    <FiArrowRight className="h-4 w-4" />
+                  </span>
                 </div>
-              </div>
-
-              <div className={cn(view === "list" ? "mt-4 grid w-full grid-cols-4 gap-2 md:mt-0 md:w-md" : "mt-5 grid grid-cols-4 gap-2")}>
-                <div className="rounded-lg bg-background p-2 text-center">
-                  <p className="text-[10px] uppercase tracking-[0.14em] text-text/40">Articles</p>
-                  <p className="mt-1 text-sm font-semibold text-text">{person.contributions.articlesCount}</p>
-                </div>
-                <div className="rounded-lg bg-background p-2 text-center">
-                  <p className="text-[10px] uppercase tracking-[0.14em] text-text/40">Resources</p>
-                  <p className="mt-1 text-sm font-semibold text-text">{person.contributions.resourcesCount}</p>
-                </div>
-                <div className="rounded-lg bg-background p-2 text-center">
-                  <p className="text-[10px] uppercase tracking-[0.14em] text-text/40">Discuss</p>
-                  <p className="mt-1 text-sm font-semibold text-text">{person.contributions.discussionsCount}</p>
-                </div>
-                <div className="rounded-lg bg-background p-2 text-center">
-                  <p className="text-[10px] uppercase tracking-[0.14em] text-text/40">Total</p>
-                  <p className="mt-1 text-sm font-semibold text-text">{person.contributions.totalContributions}</p>
-                </div>
-              </div>
-
-              <div className={cn(view === "list" ? "mt-4 flex items-center justify-between md:mt-0 md:min-w-40" : "mt-5 flex items-center justify-between")}>
-                <span className="text-sm font-medium text-primary">
-                  {person.githubUrl ? "View profile" : "Open profile"}
-                </span>
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-white">
-                  <FiArrowRight className="h-4 w-4" />
-                </span>
-              </div>
-            </button>
-          ))}
-        </section>
+              </button>
+            ))}
+          </section>
         )}
 
         {!isLoading && filteredPeople.length === 0 && (

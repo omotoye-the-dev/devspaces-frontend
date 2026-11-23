@@ -183,7 +183,7 @@ export function ArticleCard({
   const targetAuthorHref = authorLink || (authorId ? `/profile/${authorId}` : "/profile");
   const destinationHref = targetHref || (isEditable ? `/articles/${id}/edit` : `/articles/${id}`);
 
-  const hasLiked = onLike ? isLiked : (likedOverride !== null ? likedOverride : isLiked);
+  const hasLiked = onLike ? isLiked : likedOverride !== null ? likedOverride : isLiked;
   // Apply optimistic offset on top of live count
   const localLikes = onLike ? liveLikes : Math.max(0, liveLikes + likeOffset);
 
@@ -321,8 +321,8 @@ export function ArticleCard({
               {tagNames.slice(0, 3).map((tag) => {
                 const isSelected = Boolean(
                   selectedTag &&
-                    selectedTag.trim().toLowerCase() !== "all" &&
-                    tag.trim().toLowerCase() === selectedTag.trim().toLowerCase(),
+                  selectedTag.trim().toLowerCase() !== "all" &&
+                  tag.trim().toLowerCase() === selectedTag.trim().toLowerCase(),
                 );
                 return (
                   <span
@@ -486,8 +486,8 @@ export function ArticleCard({
               {tagNames.map((tag) => {
                 const isSelected = Boolean(
                   selectedTag &&
-                    selectedTag.trim().toLowerCase() !== "all" &&
-                    tag.trim().toLowerCase() === selectedTag.trim().toLowerCase(),
+                  selectedTag.trim().toLowerCase() !== "all" &&
+                  tag.trim().toLowerCase() === selectedTag.trim().toLowerCase(),
                 );
                 return (
                   <span

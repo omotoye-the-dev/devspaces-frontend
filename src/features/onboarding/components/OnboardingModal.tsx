@@ -44,9 +44,7 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps): JSX
       .then((tags) => {
         if (active) {
           setAvailableTags(
-            tags
-              .filter((t) => t.id)
-              .map((t) => ({ id: t.id as string, name: t.name })),
+            tags.filter((t) => t.id).map((t) => ({ id: t.id as string, name: t.name })),
           );
         }
       })
@@ -65,9 +63,7 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps): JSX
   if (!open) return <></>;
 
   const toggleTag = (id: string): void => {
-    setSelectedTagIds((prev) =>
-      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id],
-    );
+    setSelectedTagIds((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
   };
 
   const handleAvatarChange = (e: ChangeEvent<HTMLInputElement>): void => {
@@ -77,14 +73,16 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps): JSX
     setAvatarPreview(URL.createObjectURL(file));
   };
 
-  const finishOnboarding = async (profileFields: Partial<{
-    bio: string;
-    xUrl: string;
-    githubUrl: string;
-    linkedInUrl: string;
-    websiteUrl: string;
-    avatar: File;
-  }> = {}): Promise<void> => {
+  const finishOnboarding = async (
+    profileFields: Partial<{
+      bio: string;
+      xUrl: string;
+      githubUrl: string;
+      linkedInUrl: string;
+      websiteUrl: string;
+      avatar: File;
+    }> = {},
+  ): Promise<void> => {
     setIsSubmitting(true);
     try {
       await updateInterestedTags(selectedTagIds);
@@ -128,12 +126,29 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps): JSX
   };
 
   return (
-    <Modal open={open} onClose={() => {}} closeOnOverlayClick={false} closeOnEscape={false} size="lg" showCloseButton={false}>
+    <Modal
+      open={open}
+      onClose={() => {}}
+      closeOnOverlayClick={false}
+      closeOnEscape={false}
+      size="lg"
+      showCloseButton={false}
+    >
       <div className="space-y-5">
         {/* Step indicator */}
         <div className="flex items-center gap-2">
-          <div className={cn("h-1.5 flex-1 rounded-full", step === "tags" ? "bg-primary" : "bg-primary/40")} />
-          <div className={cn("h-1.5 flex-1 rounded-full", step === "profile" ? "bg-primary" : "bg-border")} />
+          <div
+            className={cn(
+              "h-1.5 flex-1 rounded-full",
+              step === "tags" ? "bg-primary" : "bg-primary/40",
+            )}
+          />
+          <div
+            className={cn(
+              "h-1.5 flex-1 rounded-full",
+              step === "profile" ? "bg-primary" : "bg-border",
+            )}
+          />
         </div>
 
         {step === "tags" ? (
@@ -150,7 +165,9 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps): JSX
             {isLoadingTags ? (
               <div className="py-8 text-center text-sm text-text/50">Loading topics...</div>
             ) : availableTags.length === 0 ? (
-              <div className="py-8 text-center text-sm text-text/50">No topics available right now.</div>
+              <div className="py-8 text-center text-sm text-text/50">
+                No topics available right now.
+              </div>
             ) : (
               <div className="flex flex-wrap gap-2 max-h-64 overflow-y-auto hover-scrollbar pr-1">
                 {availableTags.map((tag) => {
@@ -187,9 +204,7 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps): JSX
         ) : (
           <div className="space-y-4">
             <div className="space-y-1">
-              <h2 className="text-lg font-bold text-text tracking-tight">
-                Tell us about yourself
-              </h2>
+              <h2 className="text-lg font-bold text-text tracking-tight">Tell us about yourself</h2>
               <p className="text-sm text-text/60">
                 Add a photo, bio, and links so other developers can get to know you.
               </p>
@@ -260,7 +275,11 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps): JSX
             </div>
 
             <div className="flex items-center justify-between pt-3 border-t border-border">
-              <Button variant="ghost" onClick={() => void handleProfileSkip()} disabled={isSubmitting}>
+              <Button
+                variant="ghost"
+                onClick={() => void handleProfileSkip()}
+                disabled={isSubmitting}
+              >
                 Skip for now
               </Button>
               <Button

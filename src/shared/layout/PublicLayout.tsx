@@ -23,16 +23,14 @@ const PublicLayout = (): JSX.Element => {
 
   // Profile page route: /profile and /profile/*
   const isProfilePage =
-    location.pathname === "/profile" ||
-    location.pathname.startsWith("/profile");
+    location.pathname === "/profile" || location.pathname.startsWith("/profile");
 
   // Article view/details route: /articles/:id (excluding /articles listing page)
   const isArticleViewPage = /^\/articles\/[^/]+/.test(location.pathname);
 
   // Resources page route: /resources
   const isResourcesPage =
-    location.pathname === "/resources" ||
-    location.pathname.startsWith("/resources");
+    location.pathname === "/resources" || location.pathname.startsWith("/resources");
 
   // Hide sidebar completely on write article, profile, article view, and resources pages
   const shouldHideSidebar =

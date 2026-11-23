@@ -37,12 +37,12 @@ interface DisplayArticle {
 function getArticleAuthor(art: Article): { name: string; userName: string; avatar?: string } {
   if (art.author && typeof art.author === "object") {
     const a = art.author;
-    const name =(a.userName && a.userName.trim()) || (a.name && a.name.trim());
+    const name = (a.userName && a.userName.trim()) || (a.name && a.name.trim());
     if (name) {
       return {
         name,
         avatar: a.avatarUrl || undefined,
-        userName: a.userName as string
+        userName: a.userName as string,
       };
     }
   }
@@ -50,7 +50,7 @@ function getArticleAuthor(art: Article): { name: string; userName: string; avata
     return {
       name: art.authorName.trim(),
       avatar: undefined,
-      userName: "" as string
+      userName: "" as string,
     };
   }
   return { name: "DevSpace Author", userName: "devspace", avatar: undefined };
@@ -90,11 +90,7 @@ function mapArticle(art: Article): DisplayArticle {
             : 0;
 
   const isSaved = Boolean(
-    raw.saved ??
-    raw.isBookmarked ??
-    raw.isSaved ??
-    art.saved ??
-    art.isBookmarked,
+    raw.saved ?? raw.isBookmarked ?? raw.isSaved ?? art.saved ?? art.isBookmarked,
   );
 
   return {
@@ -332,7 +328,7 @@ export function ArticlesPage(): JSX.Element {
       } else {
         next.add(id);
       }
-      return next; 
+      return next;
     });
 
     try {
@@ -745,11 +741,7 @@ export function ArticlesPage(): JSX.Element {
             {loadMoreError && !isLoadingMore && (
               <div className="py-6 flex flex-col items-center justify-center space-y-2">
                 <p className="text-xs text-rose-500">{loadMoreError}</p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => void loadMore()}
-                >
+                <Button variant="outline" size="sm" onClick={() => void loadMore()}>
                   Retry Loading
                 </Button>
               </div>

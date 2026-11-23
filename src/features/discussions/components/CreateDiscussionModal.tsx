@@ -40,7 +40,10 @@ export function CreateDiscussionModal({
   }, [open]);
 
   const handleAddTag = (tagToAdd: string): void => {
-    const formatted = tagToAdd.trim().toLowerCase().replace(/^[#\s]+/, "");
+    const formatted = tagToAdd
+      .trim()
+      .toLowerCase()
+      .replace(/^[#\s]+/, "");
     if (!formatted) return;
 
     if (tags.includes(formatted)) {
@@ -143,20 +146,13 @@ export function CreateDiscussionModal({
 
         {/* Tags Selection */}
         <div className="space-y-2">
-          <label className="text-xs font-medium text-text block">
-            Tags (up to 4)
-          </label>
+          <label className="text-xs font-medium text-text block">Tags (up to 4)</label>
 
           {/* Active Tags */}
           {tags.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 pb-1">
               {tags.map((tag) => (
-                <Tag
-                  key={tag}
-                  size="sm"
-                  variant="primary"
-                  onRemove={() => handleRemoveTag(tag)}
-                >
+                <Tag key={tag} size="sm" variant="primary" onRemove={() => handleRemoveTag(tag)}>
                   #{tag}
                 </Tag>
               ))}
@@ -184,16 +180,15 @@ export function CreateDiscussionModal({
             </Button>
           </div>
 
-          {errors.tags && (
-            <p className="text-xs text-red-500 font-medium">{errors.tags}</p>
-          )}
+          {errors.tags && <p className="text-xs text-red-500 font-medium">{errors.tags}</p>}
 
           {/* Suggested tags */}
           {tags.length < 4 && suggestedTags.some((t) => !tags.includes(t)) && (
             <div className="pt-1">
               <span className="text-[11px] text-text/50 block mb-1">Suggested topics:</span>
               <div className="flex flex-wrap items-center gap-1">
-                {suggestedTags.filter((t) => !tags.includes(t))
+                {suggestedTags
+                  .filter((t) => !tags.includes(t))
                   .slice(0, 8)
                   .map((suggested) => (
                     <button
@@ -216,8 +211,8 @@ export function CreateDiscussionModal({
           placeholder="Describe your situation, what you've tried, code snippets or error messages, and what outcome you're looking for..."
           value={content}
           onChange={(e) => {
-            setContent(e.target.value)}
-          }
+            setContent(e.target.value);
+          }}
           errorMessage={errors.content}
           rows={5}
         />

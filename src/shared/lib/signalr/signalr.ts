@@ -44,14 +44,10 @@ export function createLiveHubConnection(
         if (token) return token;
         return storage.get(STORAGE_KEYS.token) || "";
       },
-      transport:
-        signalR.HttpTransportType.WebSockets |
-        signalR.HttpTransportType.LongPolling,
+      transport: signalR.HttpTransportType.WebSockets | signalR.HttpTransportType.LongPolling,
     })
     .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
-    .configureLogging(
-      import.meta.env.DEV ? signalR.LogLevel.Information : signalR.LogLevel.Warning,
-    )
+    .configureLogging(import.meta.env.DEV ? signalR.LogLevel.Information : signalR.LogLevel.Warning)
     .build();
 }
 
@@ -68,13 +64,9 @@ export function createNotificationHubConnection(token?: string | null): signalR.
         if (token) return token;
         return storage.get(STORAGE_KEYS.token) || "";
       },
-      transport:
-        signalR.HttpTransportType.WebSockets |
-        signalR.HttpTransportType.LongPolling,
+      transport: signalR.HttpTransportType.WebSockets | signalR.HttpTransportType.LongPolling,
     })
     .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
-    .configureLogging(
-      import.meta.env.DEV ? signalR.LogLevel.Information : signalR.LogLevel.Warning,
-    )
+    .configureLogging(import.meta.env.DEV ? signalR.LogLevel.Information : signalR.LogLevel.Warning)
     .build();
 }

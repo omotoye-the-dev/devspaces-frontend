@@ -121,7 +121,7 @@ export function SidebarSkeleton({ className }: { className?: string }): JSX.Elem
 
 const MAIN_NAV_ITEMS: NavItem[] = [
   { id: "feed", label: "Feed", icon: <HiHome className="w-4.5 h-4.5" /> },
- 
+
   { id: "bookmarks", label: "Saved", icon: <HiOutlineBookmark className="w-4.5 h-4.5" /> },
   // {
   //   id: "reading-list",
@@ -129,7 +129,7 @@ const MAIN_NAV_ITEMS: NavItem[] = [
   //   icon: <HiOutlineBookOpen className="w-4.5 h-4.5" />,
   // },
   { id: "history", label: "History", icon: <HiOutlineClock className="w-4.5 h-4.5" /> },
-   { id: "explore", label: "Explore", icon: <HiOutlineGlobeAlt className="w-4.5 h-4.5" /> },  
+  { id: "explore", label: "Explore", icon: <HiOutlineGlobeAlt className="w-4.5 h-4.5" /> },
 ];
 
 const COMMUNITY_NAV_ITEMS: NavItem[] = [
@@ -417,7 +417,9 @@ export function Sidebar({
                       <span className={cn("shrink-0", isActive ? "text-primary" : "text-text/50")}>
                         {item.icon}
                       </span>
-                      {isExpanded && <span className="truncate whitespace-nowrap">{item.label}</span>}
+                      {isExpanded && (
+                        <span className="truncate whitespace-nowrap">{item.label}</span>
+                      )}
                     </button>
                   );
                 })}

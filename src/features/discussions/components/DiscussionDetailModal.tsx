@@ -24,11 +24,7 @@ export interface DiscussionDetailModalProps {
   onClose: () => void;
   onVote: (discussionId: string, direction: "up" | "down") => void;
   onAddComment: (discussionId: string, content: string) => void;
-  onVoteComment: (
-    discussionId: string,
-    commentId: string,
-    direction: "up" | "down",
-  ) => void;
+  onVoteComment: (discussionId: string, commentId: string, direction: "up" | "down") => void;
   onToggleBookmark?: (discussionId: string) => void;
   onTagClick?: (tag: string) => void;
   onDelete?: (discussionId: string) => void;
