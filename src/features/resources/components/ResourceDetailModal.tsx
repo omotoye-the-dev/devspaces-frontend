@@ -1,4 +1,4 @@
-import { useState, useEffect, type JSX } from "react";
+import { useMemo, useState, type JSX } from "react";
 import {
   FiExternalLink,
   FiDownload,
@@ -10,26 +10,26 @@ import {
   FiCalendar,
   FiX,
 } from "react-icons/fi";
-import { Modal, Button, Avatar, Skeleton } from "@/components/common";
+import { Modal, Button, Avatar, Skeleton } from "@/shared/ui";
 import {
   getResourceById,
   downloadResource,
   voteResource,
   saveResource,
-} from "../api/resources.api";
-import {
-  calculateVoteTransition,
-  applyVoteResponse,
-} from "../utils/voteHelper";
+} from "@/features/resources/api/resources.api";
+import { calculateVoteTransition, applyVoteResponse } from "@/features/resources/utils/voteHelper";
 import { ResourceLinkPreviewCard } from "./ResourceLinkPreviewCard";
 import {
   isPartAFile,
   type ResourceDetail,
   type ResourcePart,
-} from "@/types/resources.types";
-import { getApiErrorMessage } from "@/lib/utils/apiError";
-import { toast } from "@/hooks/useToast";
-import { cn } from "@/lib/utils/cn";
+} from "@/features/resources/types/resources.types";
+import { getApiErrorMessage } from "@/shared/lib/utils/apiError";
+import { toast } from "@/shared/hooks/useToast";
+import { cn } from "@/shared/lib/utils/cn";
+import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/shared/lib/queryKeys";
+import { useCacheValue } from "@/shared/lib/useCacheField";
 
 export interface ResourceDetailModalProps {
   resourceId: string | null;
@@ -73,53 +73,27 @@ export function ResourceDetailModal({
   onVoteChange,
   onSaveChange,
 }: ResourceDetailModalProps): JSX.Element | null {
-  const [detail, setDetail] = useState<ResourceDetail | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  // Shares the cached resource record with the details page and editor.
+  const queryKey = useMemo(() => queryKeys.resources.detail(resourceId ?? ""), [resourceId]);
+  const query = useQuery({
+    queryKey,
+    enabled: open && Boolean(resourceId),
+    retry: false,
+    queryFn: async ({ signal }) => {
+      try {
+        return (await getResourceById(resourceId as string)).data ?? null;
+      } catch (err: unknown) {
+        toast.error(getApiErrorMessage(err, "Failed to load resource details"));
+        if (!signal.aborted) onClose();
+        throw err;
+      }
+    },
+  });
+  const [cachedDetail, setDetail] = useCacheValue<ResourceDetail | null>(queryKey, query.data);
+  const detail = open ? cachedDetail : null;
+  const isLoading = open && Boolean(resourceId) && query.isLoading;
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
   const [downloadingPartId, setDownloadingPartId] = useState<string | null>(null);
-
-  const [prevId, setPrevId] = useState<string | null>(null);
-  if (open && resourceId && resourceId !== prevId) {
-    setPrevId(resourceId);
-    setDetail(null);
-    setIsLoading(true);
-  } else if (!open && prevId !== null) {
-    setPrevId(null);
-    setDetail(null);
-    setIsLoading(false);
-  }
-
-  useEffect(() => {
-    if (!open || !resourceId) {
-      return;
-    }
-
-    let isMounted = true;
-
-    async function fetchDetail(): Promise<void> {
-      try {
-        const response = await getResourceById(resourceId as string);
-        if (isMounted) {
-          setDetail(response.data);
-        }
-      } catch (err: unknown) {
-        if (isMounted) {
-          toast.error(getApiErrorMessage(err, "Failed to load resource details"));
-          onClose();
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    void fetchDetail();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [open, resourceId, onClose]);
 
   const handleVoteToggle = async (): Promise<void> => {
     if (!detail) return;
@@ -549,7 +523,9 @@ export function ResourceDetailModal({
                     : "bg-white text-text/80 hover:text-primary hover:bg-slate-50",
                 )}
                 aria-label={`Upvote (${detail?.upvoteCount ?? 0})`}
-                title={detail?.isDownvotedByMe ? "Remove downvote first before upvoting" : undefined}
+                title={
+                  detail?.isDownvotedByMe ? "Remove downvote first before upvoting" : undefined
+                }
               >
                 <FiArrowUp className="w-3.5 h-3.5" />
                 <span>Upvote ({detail?.upvoteCount ?? 0})</span>

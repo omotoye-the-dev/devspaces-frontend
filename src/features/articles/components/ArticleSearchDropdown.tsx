@@ -2,9 +2,9 @@ import { useEffect, useState, useMemo, useRef, type JSX } from "react";
 import { clsx } from "clsx";
 import { LuTag, LuTrendingUp, LuFlame, LuClock, LuEye } from "react-icons/lu";
 import { AiOutlineHeart } from "react-icons/ai";
-import { getTags, type Tag } from "@/features/articles/api/tagApi";
 import { getTrendingPosts, type TrendingPost } from "@/features/articles/api/articleApi";
-import { Skeleton } from "@/components/common";
+import { Skeleton } from "@/shared/ui";
+import { useTags } from "@/features/articles/api/tagQueries";
 
 export interface ArticleSearchDropdownProps {
   isOpen: boolean;
@@ -24,9 +24,6 @@ export function ArticleSearchDropdown({
   onSelectTopic,
 }: ArticleSearchDropdownProps): JSX.Element | null {
   const containerRef = useRef<HTMLDivElement>(null);
-
-  const [tags, setTags] = useState<Tag[]>([]);
-  const [isTagsLoading, setIsTagsLoading] = useState<boolean>(true);
 
   const [trendingPosts, setTrendingPosts] = useState<TrendingPost[]>([]);
   const [isTrendingLoading, setIsTrendingLoading] = useState<boolean>(true);
@@ -56,31 +53,9 @@ export function ArticleSearchDropdown({
     };
   }, [isOpen, onClose]);
 
-  // Fetch all popular tags once opened
-  useEffect(() => {
-    if (!isOpen) return;
-    let cancelled = false;
-
-    async function loadTags(): Promise<void> {
-      try {
-        setIsTagsLoading(true);
-        const data = await getTags({ pageSize: 50 });
-        if (!cancelled) {
-          setTags(data);
-        }
-      } catch {
-        if (!cancelled) setTags([]);
-      } finally {
-        if (!cancelled) setIsTagsLoading(false);
-      }
-    }
-
-    void loadTags();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen]);
+  // Popular tags, fetched once opened (shared cache)
+  const { data: tagsData, isLoading: isTagsLoading } = useTags(50, isOpen);
+  const tags = useMemo(() => tagsData ?? [], [tagsData]);
 
   // Fetch trending topics (with debounced search query support)
   useEffect(() => {
@@ -160,15 +135,16 @@ export function ArticleSearchDropdown({
             )}
           </div>
 
-          <p className="text-[11px] text-text/50 mb-3">
-            Click to filter articles by tag.
-          </p>
+          <p className="text-[11px] text-text/50 mb-3">Click to filter articles by tag.</p>
 
           <div className="flex-1 overflow-y-auto pr-1 max-h-64 sm:max-h-80 space-y-1.5 scrollbar-thin">
             {isTagsLoading ? (
               <div className="space-y-2 py-1">
                 {Array.from({ length: 6 }).map((_, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-2 rounded-xl bg-white border border-border/40">
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-2 rounded-xl bg-white border border-border/40"
+                  >
                     <Skeleton variant="text" width={90} height={14} />
                     <Skeleton variant="rounded" width={24} height={16} />
                   </div>
@@ -185,8 +161,8 @@ export function ArticleSearchDropdown({
               filteredTags.map((tag) => {
                 const isTagActive = Boolean(
                   selectedTag &&
-                    selectedTag.trim().toLowerCase() !== "all" &&
-                    tag.name.trim().toLowerCase() === selectedTag.trim().toLowerCase(),
+                  selectedTag.trim().toLowerCase() !== "all" &&
+                  tag.name.trim().toLowerCase() === selectedTag.trim().toLowerCase(),
                 );
                 return (
                   <button
@@ -201,7 +177,12 @@ export function ArticleSearchDropdown({
                     )}
                   >
                     <span className="flex items-center gap-1.5 truncate">
-                      <span className={clsx("font-bold text-xs", isTagActive ? "text-white" : "text-primary")}>
+                      <span
+                        className={clsx(
+                          "font-bold text-xs",
+                          isTagActive ? "text-white" : "text-primary",
+                        )}
+                      >
                         #
                       </span>
                       <span className="truncate">{tag.name}</span>
@@ -245,15 +226,16 @@ export function ArticleSearchDropdown({
             )}
           </div>
 
-          <p className="text-[11px] text-text/50 mb-3">
-            Click any topic to read its discussion.
-          </p>
+          <p className="text-[11px] text-text/50 mb-3">Click any topic to read its discussion.</p>
 
           <div className="flex-1 overflow-y-auto pr-1 max-h-64 sm:max-h-80 space-y-2.5 scrollbar-thin">
             {isTrendingLoading ? (
               <div className="space-y-3 py-1">
                 {Array.from({ length: 4 }).map((_, idx) => (
-                  <div key={idx} className="p-3 rounded-xl border border-border/40 space-y-2 bg-slate-50/50">
+                  <div
+                    key={idx}
+                    className="p-3 rounded-xl border border-border/40 space-y-2 bg-slate-50/50"
+                  >
                     <Skeleton variant="text" width="80%" height={14} />
                     <Skeleton variant="text" width="50%" height={10} />
                   </div>
@@ -301,12 +283,13 @@ export function ArticleSearchDropdown({
                       </span>
                     )}
 
-                    {typeof topic.readingTimeMinutes === "number" && topic.readingTimeMinutes > 0 && (
-                      <span className="flex items-center gap-1 ml-auto">
-                        <LuClock className="w-3 h-3" />
-                        <span>{topic.readingTimeMinutes}m</span>
-                      </span>
-                    )}
+                    {typeof topic.readingTimeMinutes === "number" &&
+                      topic.readingTimeMinutes > 0 && (
+                        <span className="flex items-center gap-1 ml-auto">
+                          <LuClock className="w-3 h-3" />
+                          <span>{topic.readingTimeMinutes}m</span>
+                        </span>
+                      )}
                   </div>
                 </button>
               ))
@@ -317,7 +300,13 @@ export function ArticleSearchDropdown({
 
       {/* ── Dropdown Footer ────────────────────────────────────────── */}
       <div className="px-4 py-2.5 bg-slate-50 border-t border-border/60 flex items-center justify-between text-[11px] text-text/50">
-        <span>Tip: Press <kbd className="px-1.5 py-0.5 rounded bg-white border border-border text-[10px] font-mono text-text/70">Esc</kbd> to close</span>
+        <span>
+          Tip: Press{" "}
+          <kbd className="px-1.5 py-0.5 rounded bg-white border border-border text-[10px] font-mono text-text/70">
+            Esc
+          </kbd>{" "}
+          to close
+        </span>
         <button
           type="button"
           onClick={onClose}

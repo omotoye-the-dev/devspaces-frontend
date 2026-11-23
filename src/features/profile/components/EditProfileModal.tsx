@@ -1,11 +1,16 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type JSX } from "react";
 import { HiOutlineCamera } from "react-icons/hi2";
-import { Modal, Button, Input, Textarea, Avatar } from "@/components/common";
-import { toast } from "@/hooks/useToast";
-import { getApiErrorMessage } from "@/lib/utils/apiError";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { Modal, Button, Input, Textarea, Avatar } from "@/shared/ui";
+import { toast } from "@/shared/hooks/useToast";
+import { getApiErrorMessage } from "@/shared/lib/utils/apiError";
+import { useAuthStore } from "@/store";
 import { updateProfile } from "@/features/onboarding/api/onboardingApi";
-import { getProfileAvatar, getProfileLinks, type UserProfile } from "@/lib/api/user.api";
+import {
+  getProfileAvatar,
+  getProfileLinks,
+  type UserProfile,
+} from "@/features/profile/api/user.api";
+import { invalidateProfiles } from "@/features/profile/api/profileQueries";
 
 export interface EditProfileModalProps {
   open: boolean;
@@ -95,6 +100,7 @@ export function EditProfileModal({
 
       toast.success("Profile updated successfully");
       onUpdated(updated);
+      void invalidateProfiles();
       onClose();
     } catch (err: unknown) {
       toast.error(getApiErrorMessage(err, "Failed to update profile"));

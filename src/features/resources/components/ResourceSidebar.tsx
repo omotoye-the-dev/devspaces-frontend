@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import { FiBookmark } from "react-icons/fi";
-import { Button } from "@/components/common";
-import { cn } from "@/lib/utils/cn";
+import { Button } from "@/shared/ui";
+import { cn } from "@/shared/lib/utils/cn";
 import {
   RESOURCE_CATEGORIES,
   type ResourceCategory,
@@ -65,9 +65,7 @@ export function ResourceSidebar({
                   <span
                     className={cn(
                       "text-[11px] font-semibold px-2 py-0.5 rounded-full",
-                      isSelected
-                        ? "bg-primary text-white"
-                        : "bg-slate-100 text-text/60",
+                      isSelected ? "bg-primary text-white" : "bg-slate-100 text-text/60",
                     )}
                   >
                     {count}

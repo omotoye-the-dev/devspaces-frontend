@@ -1,18 +1,16 @@
-import { apiClient } from "@/lib/api/client";
-import { ENDPOINTS } from "@/lib/api/endpoints";
-import type { ApiResponse, PaginatedResponse } from "@/types/resources.types";
+import { apiClient } from "@/shared/lib/api/client";
+import { ENDPOINTS } from "@/shared/lib/api/endpoints";
+import type { ApiResponse, PaginatedResponse } from "@/features/resources/types/resources.types";
 import type {
   CreateCommentDto,
   CreateDiscussionDto,
   Discussion,
   DiscussionAuthor,
   DiscussionComment,
-} from "@/types/discussions.types";
+} from "@/features/discussions/types/discussions.types";
 
 type DiscussionCollectionResponse =
-  | ApiResponse<Discussion[]>
-  | PaginatedResponse<Discussion>
-  | Discussion[];
+  ApiResponse<Discussion[]> | PaginatedResponse<Discussion> | Discussion[];
 
 type DiscussionResponse = ApiResponse<Discussion> | Discussion;
 type ReplyCollectionResponse = ApiResponse<DiscussionComment[]> | DiscussionComment[];
@@ -74,8 +72,7 @@ function normalizeAuthor(value: unknown): DiscussionAuthor {
     id: getString(author.id ?? author.userId, "unknown-author"),
     name: displayName,
     username,
-    avatarUrl:
-      typeof author.avatarUrl === "string" ? author.avatarUrl : undefined,
+    avatarUrl: typeof author.avatarUrl === "string" ? author.avatarUrl : undefined,
     role: typeof author.role === "string" ? author.role : undefined,
   };
 }
@@ -120,23 +117,18 @@ function normalizeDiscussion(value: unknown): Discussion {
       ? discussion.tags.filter((tag): tag is string => typeof tag === "string")
       : [],
     createdAt: getString(discussion.createdAt, "Recently"),
-    upvotes:
-      typeof discussion.upvotes === "number" ? discussion.upvotes : 0,
-    downvotes:
-      typeof discussion.downvotes === "number" ? discussion.downvotes : 0,
+    upvotes: typeof discussion.upvotes === "number" ? discussion.upvotes : 0,
+    downvotes: typeof discussion.downvotes === "number" ? discussion.downvotes : 0,
     likeCount:
       typeof discussion.likeCount === "number"
         ? discussion.likeCount
         : typeof discussion.likes === "number"
           ? discussion.likes
           : 0,
-    saveCount:
-      typeof discussion.saveCount === "number" ? discussion.saveCount : 0,
+    saveCount: typeof discussion.saveCount === "number" ? discussion.saveCount : 0,
     isLiked: Boolean(discussion.isLiked ?? discussion.liked ?? false),
     userVote:
-      discussion.userVote === "up" || discussion.userVote === "down"
-        ? discussion.userVote
-        : null,
+      discussion.userVote === "up" || discussion.userVote === "down" ? discussion.userVote : null,
     commentsCount:
       typeof discussion.replyCount === "number"
         ? discussion.replyCount
@@ -159,27 +151,20 @@ export interface DiscussionQueryParams {
   pageSize?: number;
 }
 
-export async function getDiscussions(
-  params?: DiscussionQueryParams,
-): Promise<Discussion[]> {
-  const response = await apiClient.get<DiscussionCollectionResponse>(
-    ENDPOINTS.DISCUSSIONS.BASE,
-    { params },
-  );
+export async function getDiscussions(params?: DiscussionQueryParams): Promise<Discussion[]> {
+  const response = await apiClient.get<DiscussionCollectionResponse>(ENDPOINTS.DISCUSSIONS.BASE, {
+    params,
+  });
   return unwrapCollection(response.data).map(normalizeDiscussion);
 }
 
 export async function getSavedDiscussions(): Promise<Discussion[]> {
-  const response = await apiClient.get<DiscussionCollectionResponse>(
-    ENDPOINTS.DISCUSSIONS.SAVED,
-  );
+  const response = await apiClient.get<DiscussionCollectionResponse>(ENDPOINTS.DISCUSSIONS.SAVED);
   return unwrapCollection(response.data).map(normalizeDiscussion);
 }
 
 export async function getDiscussionHistory(): Promise<Discussion[]> {
-  const response = await apiClient.get<DiscussionCollectionResponse>(
-    ENDPOINTS.DISCUSSIONS.HISTORY,
-  );
+  const response = await apiClient.get<DiscussionCollectionResponse>(ENDPOINTS.DISCUSSIONS.HISTORY);
   return unwrapCollection(response.data).map(normalizeDiscussion);
 }
 
@@ -206,9 +191,7 @@ export async function getDiscussionById(id: string): Promise<Discussion> {
   };
 }
 
-export async function createDiscussion(
-  payload: CreateDiscussionDto,
-): Promise<Discussion> {
+export async function createDiscussion(payload: CreateDiscussionDto): Promise<Discussion> {
   const requestBody = {
     title: payload.title,
     details: payload.content,
@@ -226,9 +209,7 @@ export async function deleteDiscussion(id: string): Promise<void> {
   await apiClient.delete(ENDPOINTS.DISCUSSIONS.DETAIL(id));
 }
 
-export async function getDiscussionReplies(
-  discussionId: string,
-): Promise<DiscussionComment[]> {
+export async function getDiscussionReplies(discussionId: string): Promise<DiscussionComment[]> {
   const response = await apiClient.get<ReplyCollectionResponse>(
     ENDPOINTS.DISCUSSIONS.REPLIES(discussionId),
   );
@@ -246,13 +227,8 @@ export async function createDiscussionReply(
   return normalizeComment(unwrap(response.data));
 }
 
-export async function deleteDiscussionReply(
-  discussionId: string,
-  replyId: string,
-): Promise<void> {
-  await apiClient.delete(
-    ENDPOINTS.DISCUSSIONS.REPLY_DETAIL(discussionId, replyId),
-  );
+export async function deleteDiscussionReply(discussionId: string, replyId: string): Promise<void> {
+  await apiClient.delete(ENDPOINTS.DISCUSSIONS.REPLY_DETAIL(discussionId, replyId));
 }
 
 export async function voteDiscussionReply(
@@ -260,10 +236,7 @@ export async function voteDiscussionReply(
   replyId: string,
   action: 0 | 1,
 ): Promise<void> {
-  await apiClient.post(
-    ENDPOINTS.DISCUSSIONS.REPLY_VOTE(discussionId, replyId, action),
-    { action },
-  );
+  await apiClient.post(ENDPOINTS.DISCUSSIONS.REPLY_VOTE(discussionId, replyId, action), { action });
 }
 
 export async function saveDiscussion(id: string): Promise<void> {

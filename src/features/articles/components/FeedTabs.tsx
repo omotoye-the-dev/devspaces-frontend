@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import { HiOutlineCog6Tooth } from "react-icons/hi2";
 
-export const FEED_TABS = ["For You", "Following", "Latest", "Trending"] as const;
+const FEED_TABS = ["For You", "Following", "Latest", "Trending"] as const;
 
 export function FeedTabs({
   activeTab,

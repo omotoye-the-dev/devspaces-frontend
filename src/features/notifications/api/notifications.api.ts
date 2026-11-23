@@ -1,10 +1,10 @@
-import { apiClient } from "@/lib/api/client";
-import { ENDPOINTS } from "@/lib/api/endpoints";
+import { apiClient } from "@/shared/lib/api/client";
+import { ENDPOINTS } from "@/shared/lib/api/endpoints";
 import type {
   NotificationItem,
   NotificationListResult,
   NotificationPagination,
-} from "@/types/notifications.types";
+} from "@/features/notifications/types/notifications.types";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;

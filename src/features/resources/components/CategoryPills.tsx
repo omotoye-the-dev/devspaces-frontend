@@ -3,7 +3,7 @@ import {
   RESOURCE_CATEGORIES,
   type ResourceCategory,
 } from "@/features/resources/constants/resourceCategories";
-import { cn } from "@/lib/utils/cn";
+import { cn } from "@/shared/lib/utils/cn";
 
 export interface CategoryPillsProps {
   selectedCategory: string;
@@ -60,9 +60,7 @@ export function CategoryPills({
               <span
                 className={cn(
                   "text-[10px] sm:text-[11px] font-semibold px-1.5 py-0.5 rounded-full ml-0.5",
-                  isSelected
-                    ? "bg-white/20 text-white"
-                    : "bg-slate-100 text-text/60",
+                  isSelected ? "bg-white/20 text-white" : "bg-slate-100 text-text/60",
                 )}
               >
                 {count}

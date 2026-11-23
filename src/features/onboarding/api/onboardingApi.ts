@@ -1,6 +1,6 @@
-import { apiClient } from "@/lib/api/client";
-import { ENDPOINTS } from "@/lib/api/endpoints";
-import type { UserProfile } from "@/lib/api/user.api";
+import { apiClient } from "@/shared/lib/api/client";
+import { ENDPOINTS } from "@/shared/lib/api/endpoints";
+import type { UserProfile } from "@/features/profile/api/user.api";
 
 export interface UpdateProfilePayload {
   firstName?: string;
@@ -48,7 +48,13 @@ export async function updateProfile(payload: UpdateProfilePayload): Promise<User
   );
 
   const body = response.data;
-  if (body && typeof body === "object" && "data" in body && body.data && typeof body.data === "object") {
+  if (
+    body &&
+    typeof body === "object" &&
+    "data" in body &&
+    body.data &&
+    typeof body.data === "object"
+  ) {
     return body.data as UserProfile;
   }
   return body as UserProfile;

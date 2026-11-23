@@ -49,9 +49,7 @@ export function normalizeDiscussionUpdate(raw: unknown): DiscussionCounts | null
  * Parses a raw SignalR broadcast payload into a `DiscussionCommentCounts` object.
  * Returns `null` when the payload carries no recognisable count fields.
  */
-export function normalizeDiscussionCommentUpdate(
-  raw: unknown,
-): DiscussionCommentCounts | null {
+export function normalizeDiscussionCommentUpdate(raw: unknown): DiscussionCommentCounts | null {
   if (!raw || typeof raw !== "object") return null;
   const d = raw as Record<string, unknown>;
 

@@ -1,5 +1,5 @@
-import { apiClient } from "../../../lib/api/client";
-import { ENDPOINTS } from "../../../lib/api/endpoints";
+import { apiClient } from "@/shared/lib/api/client";
+import { ENDPOINTS } from "@/shared/lib/api/endpoints";
 import type {
   OAuthCallbackPayload,
   AuthResponse,
@@ -11,7 +11,7 @@ import type {
   VerifyAccountPayload,
   ResendOtpPayload,
   LogoutPayload,
-} from "@/types/auth.types";
+} from "@/features/auth/types/auth.types";
 import axios from "axios";
 
 export interface RefreshTokenPayload {
