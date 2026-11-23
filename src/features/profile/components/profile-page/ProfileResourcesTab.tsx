@@ -4,7 +4,7 @@ import { ResourceCard, type ResourceItem } from "@/features/resources/components
 import { ResourceLiveSync } from "@/features/resources/components/ResourceLiveSync";
 import type { ResourceCounts } from "@/features/resources/utils/liveUpdate";
 import type { ResourceListItem } from "@/features/resources/types/resources.types";
-import { mapToResourceCardItem } from "@/features/profile/utils/profileHelpers";
+import { mapToResourceCardItem } from "@/features/resources/utils/mapResourceCard";
 import { FiFolder, FiArrowUp, FiArrowDown, FiDownload } from "react-icons/fi";
 
 type ResourceAction = (resId: string, e: MouseEvent<HTMLButtonElement>) => Promise<void>;

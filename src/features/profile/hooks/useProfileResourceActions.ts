@@ -12,20 +12,23 @@ export function useProfileResourceActions(
   resources: ResourceListItem[],
   setResources: Dispatch<SetStateAction<ResourceListItem[]>>,
 ) {
-  const handleLiveResourceCounts = useCallback((id: string, counts: ResourceCounts): void => {
-    setResources((prev) =>
-      prev.map((r) =>
-        r.id === id
-          ? {
-              ...r,
-              upvoteCount: counts.upvoteCount ?? r.upvoteCount,
-              downvoteCount: counts.downvoteCount ?? r.downvoteCount,
-              saveCount: counts.saveCount ?? r.saveCount,
-            }
-          : r,
-      ),
-    );
-  }, [setResources]);
+  const handleLiveResourceCounts = useCallback(
+    (id: string, counts: ResourceCounts): void => {
+      setResources((prev) =>
+        prev.map((r) =>
+          r.id === id
+            ? {
+                ...r,
+                upvoteCount: counts.upvoteCount ?? r.upvoteCount,
+                downvoteCount: counts.downvoteCount ?? r.downvoteCount,
+                saveCount: counts.saveCount ?? r.saveCount,
+              }
+            : r,
+        ),
+      );
+    },
+    [setResources],
+  );
 
   const requireAuth = useRequireAuth();
 

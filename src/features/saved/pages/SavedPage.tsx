@@ -27,10 +27,8 @@ import {
   normalizeDiscussionUpdate,
   type DiscussionCounts,
 } from "@/features/discussions/utils/liveUpdate";
-import {
-  normalizeResourceUpdate,
-  type ResourceCounts,
-} from "@/features/resources/utils/liveUpdate";
+import { type ResourceCounts } from "@/features/resources/utils/liveUpdate";
+import { ResourceLiveSync } from "@/features/resources/components/ResourceLiveSync";
 
 function DiscussionLiveSync({
   id,
@@ -44,24 +42,6 @@ function DiscussionLiveSync({
     id,
     onUpdate: (data) => {
       const counts = normalizeDiscussionUpdate(data);
-      if (counts) onCounts(id, counts);
-    },
-  });
-  return null;
-}
-
-function ResourceLiveSync({
-  id,
-  onCounts,
-}: {
-  id: string;
-  onCounts: (id: string, counts: ResourceCounts) => void;
-}): null {
-  useLiveHub({
-    type: "resource",
-    id,
-    onUpdate: (data) => {
-      const counts = normalizeResourceUpdate(data);
       if (counts) onCounts(id, counts);
     },
   });
