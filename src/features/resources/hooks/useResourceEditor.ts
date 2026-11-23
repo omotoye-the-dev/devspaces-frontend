@@ -11,6 +11,7 @@ import {
 import type { ResourceDetail, ResourcePart } from "@/features/resources/types/resources.types";
 import { toast } from "@/shared/hooks/useToast";
 import { getApiErrorMessage } from "@/shared/lib/utils/apiError";
+import { invalidateResources } from "@/features/resources/api/resourceQueries";
 
 /** State and actions for editing a resource you own: details, logo/file, tags, chapters, and deletion. */
 export function useResourceEditor() {
@@ -156,6 +157,7 @@ export function useResourceEditor() {
       });
 
       toast.success("Resource updated successfully!");
+      void invalidateResources();
       // Refresh details
       const refreshed = await getResourceById(id);
       setResource(refreshed.data);
@@ -176,6 +178,7 @@ export function useResourceEditor() {
       setIsDeleting(true);
       await deleteResource(id);
       toast.success("Resource deleted permanently");
+      void invalidateResources();
       setShowDeleteModal(false);
       navigate("/profile");
     } catch (err: unknown) {
@@ -237,6 +240,7 @@ export function useResourceEditor() {
           partFile: partAccessType === 0 ? partFile : null,
         });
         toast.success("Sub-part updated successfully");
+        void invalidateResources();
       } else {
         // Create new part (POST /api/resources/{id}/parts)
         await addResourcePart(id, {
@@ -248,6 +252,7 @@ export function useResourceEditor() {
           partFile: partAccessType === 0 ? partFile : null,
         });
         toast.success("Sub-part added successfully");
+        void invalidateResources();
       }
 
       setIsPartModalOpen(false);
@@ -269,6 +274,7 @@ export function useResourceEditor() {
       setIsDeletingPart(true);
       await deleteResourcePart(id, partToDelete.partId);
       toast.success("Sub-part removed");
+      void invalidateResources();
       setPartToDelete(null);
 
       // Reload parts

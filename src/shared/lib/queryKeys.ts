@@ -18,6 +18,7 @@ export const queryKeys = {
   resources: {
     all: ["resources"] as const,
     popular: () => ["resources", "popular"] as const,
+    detail: (id: string) => ["resources", "detail", id] as const,
   },
   discussions: {
     all: ["discussions"] as const,

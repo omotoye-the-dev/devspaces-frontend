@@ -27,6 +27,7 @@ import { ChaptersBuilder } from "./add-resource/ChaptersBuilder";
 import { ResourceTagInput } from "./add-resource/ResourceTagInput";
 import { ComposerFooter } from "./add-resource/ComposerFooter";
 import { useTags } from "@/features/articles/api/tagQueries";
+import { invalidateResources } from "@/features/resources/api/resourceQueries";
 
 export type {
   NewPartDraft,
@@ -243,6 +244,7 @@ export function AddResourceModal({
       }
 
       onSubmitSuccess?.(response.data);
+      void invalidateResources();
       toast.success(
         parts.length > 0
           ? `Resource & ${parts.length} chapter${parts.length > 1 ? "s" : ""} shared!`

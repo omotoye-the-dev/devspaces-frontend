@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   getResourceById,
@@ -17,6 +17,9 @@ import { useAuthStore } from "@/store";
 import { useLiveHub } from "@/shared/hooks/useLiveHub";
 import { toast } from "@/shared/hooks/useToast";
 import { useRequireAuth } from "@/features/auth/hooks/useRequireAuth";
+import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/shared/lib/queryKeys";
+import { useCacheValue } from "@/shared/lib/useCacheField";
 
 /** Loads one resource and exposes voting, saving, sharing and chapter/preview state for the details page. */
 export function useResourceDetails() {
@@ -24,9 +27,19 @@ export function useResourceDetails() {
   const navigate = useNavigate();
   const currentUser = useAuthStore((state) => state.user);
 
-  const [resource, setResource] = useState<ResourceDetail | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  // The resource record lives in the query cache (shared with the resource modal and
+  // editor); the optimistic vote/save handlers below write to it via setResource.
+  const queryKey = useMemo(() => queryKeys.resources.detail(id ?? ""), [id]);
+  const query = useQuery({
+    queryKey,
+    enabled: Boolean(id),
+    queryFn: async () => (await getResourceById(id as string)).data,
+  });
+  const [resource, setResource] = useCacheValue<ResourceDetail>(queryKey, query.data);
+  const isLoading = Boolean(id) && query.isLoading;
+  const error = query.error
+    ? getApiErrorMessage(query.error, "Failed to load resource details.")
+    : null;
 
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
   const [downloadingPartId, setDownloadingPartId] = useState<string | null>(null);
@@ -47,38 +60,8 @@ export function useResourceDetails() {
   const [prevId, setPrevId] = useState<string | undefined>(id);
   if (id !== prevId) {
     setPrevId(id);
-    setIsLoading(true);
-    setError(null);
     setBannerError(false);
   }
-
-  useEffect(() => {
-    if (!id) return;
-    let isMounted = true;
-
-    async function loadResource(): Promise<void> {
-      try {
-        const res = await getResourceById(id as string);
-        if (isMounted) {
-          setResource(res.data);
-        }
-      } catch (err: unknown) {
-        if (isMounted) {
-          setError(getApiErrorMessage(err, "Failed to load resource details."));
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    void loadResource();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [id]);
 
   // Real-time updates via SignalR (/ws/hub/resources/{id}/live)
   useLiveHub({
@@ -295,9 +278,7 @@ export function useResourceDetails() {
     resource,
     setResource,
     isLoading,
-    setIsLoading,
     error,
-    setError,
     isDownloading,
     setIsDownloading,
     downloadingPartId,

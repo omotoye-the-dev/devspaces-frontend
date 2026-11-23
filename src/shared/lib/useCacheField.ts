@@ -32,3 +32,27 @@ export function useCacheField<T extends object, K extends keyof T>(
   );
   return [data === undefined ? fallback : data[field], setValue];
 }
+
+/**
+ * `useState`-shaped access to a whole cached query result (e.g. one resource record).
+ * Setting `null` keeps the cached value; updaters receive `null` before data exists.
+ */
+export function useCacheValue<T>(
+  queryKey: QueryKey,
+  data: T | undefined,
+): [T | null, (value: SetStateAction<T | null>) => void] {
+  const queryClient = useQueryClient();
+  const setValue = useCallback(
+    (value: SetStateAction<T | null>) => {
+      queryClient.setQueryData<T>(queryKey, (old) => {
+        const next =
+          typeof value === "function"
+            ? (value as (prev: T | null) => T | null)(old ?? null)
+            : value;
+        return next ?? old;
+      });
+    },
+    [queryClient, queryKey],
+  );
+  return [data ?? null, setValue];
+}
